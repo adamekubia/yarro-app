@@ -1,0 +1,171 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import { User, Bot, Phone } from 'lucide-react'
+
+export type MessageRole = 'user' | 'tenant' | 'assistant' | 'system' | 'agent'
+
+type ChatMessageProps = {
+  role: MessageRole | string
+  text: string
+  timestamp?: string
+  className?: string
+  allowHtml?: boolean
+  compact?: boolean
+}
+
+const roleConfig: Record<string, {
+  label: string
+  bgColor: string
+  textColor: string
+  align: 'left' | 'right'
+  icon: React.ComponentType<{ className?: string }>
+}> = {
+  user: {
+    label: 'User',
+    bgColor: 'bg-primary',
+    textColor: 'text-primary-foreground',
+    align: 'right',
+    icon: User,
+  },
+  tenant: {
+    label: 'Tenant',
+    bgColor: 'bg-primary',
+    textColor: 'text-primary-foreground',
+    align: 'right',
+    icon: Phone,
+  },
+  assistant: {
+    label: 'Yarro',
+    bgColor: 'bg-muted',
+    textColor: 'text-foreground',
+    align: 'left',
+    icon: Bot,
+  },
+  agent: {
+    label: 'Yarro',
+    bgColor: 'bg-muted',
+    textColor: 'text-foreground',
+    align: 'left',
+    icon: Bot,
+  },
+  system: {
+    label: 'System',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-900',
+    align: 'left',
+    icon: Bot,
+  },
+}
+
+// Convert markdown-style *bold* to HTML <strong> tags
+const formatMarkdown = (text: string): string => {
+  return text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+}
+
+export function ChatMessage({ role, text, timestamp, className, allowHtml = false, compact = false }: ChatMessageProps) {
+  const config = roleConfig[role.toLowerCase()] || roleConfig.system
+  const Icon = config.icon
+
+  const formattedTime = timestamp
+    ? format(new Date(timestamp), 'dd MMM, HH:mm')
+    : null
+
+  return (
+    <div
+      className={cn(
+        'flex',
+        compact ? 'gap-2' : 'gap-3',
+        config.align === 'right' && 'flex-row-reverse',
+        className
+      )}
+    >
+      {/* Avatar */}
+      <div
+        className={cn(
+          'flex-shrink-0 rounded-full flex items-center justify-center',
+          compact ? 'w-6 h-6' : 'w-8 h-8',
+          config.align === 'right' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+        )}
+      >
+        <Icon className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
+      </div>
+
+      {/* Message bubble */}
+      <div
+        className={cn(
+          'max-w-[80%]',
+          compact ? 'space-y-0.5' : 'space-y-1',
+          config.align === 'right' && 'items-end'
+        )}
+      >
+        <div className={cn('flex items-center gap-1.5', config.align === 'right' && 'flex-row-reverse')}>
+          <span className={cn('font-medium text-muted-foreground', compact ? 'text-[10px]' : 'text-xs')}>
+            {config.label}
+          </span>
+          {formattedTime && (
+            <span className={cn('text-muted-foreground/70', compact ? 'text-[10px]' : 'text-xs')}>
+              {formattedTime}
+            </span>
+          )}
+        </div>
+        <div
+          className={cn(
+            'rounded-2xl',
+            compact ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2.5 text-sm',
+            config.bgColor,
+            config.textColor,
+            config.align === 'right' ? 'rounded-tr-sm' : 'rounded-tl-sm'
+          )}
+        >
+          {allowHtml ? (
+            <p
+              className="whitespace-pre-wrap break-words"
+              dangerouslySetInnerHTML={{ __html: formatMarkdown(text || '') }}
+            />
+          ) : (
+            <p className="whitespace-pre-wrap break-words">{text || ''}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type ChatHistoryProps = {
+  messages: Array<{
+    role: string
+    text: string
+    timestamp?: string
+    allowHtml?: boolean
+  }>
+  className?: string
+  allowHtmlForAssistant?: boolean
+  compact?: boolean
+}
+
+export function ChatHistory({ messages, className, allowHtmlForAssistant = false, compact = false }: ChatHistoryProps) {
+  if (!messages || messages.length === 0) {
+    return (
+      <div className={cn('text-center py-8 text-muted-foreground', className)}>
+        No messages
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn(compact ? 'space-y-2' : 'space-y-4', className)}>
+      {messages.map((msg, i) => (
+        <ChatMessage
+          key={i}
+          role={msg.role}
+          text={msg.text}
+          timestamp={msg.timestamp}
+          allowHtml={msg.allowHtml || (allowHtmlForAssistant && msg.role.toLowerCase() === 'assistant')}
+          compact={compact}
+        />
+      ))}
+    </div>
+  )
+}

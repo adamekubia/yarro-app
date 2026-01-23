@@ -1,0 +1,232 @@
+'use client'
+
+import { useState, useMemo, ReactNode } from 'react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export type Column<T> = {
+  key: string
+  header: string
+  sortable?: boolean
+  width?: string
+  render?: (row: T) => React.ReactNode
+  getValue?: (row: T) => string | number | null
+}
+
+type DataTableProps<T> = {
+  data: T[]
+  columns: Column<T>[]
+  searchPlaceholder?: string
+  searchKeys?: string[]
+  onRowClick?: (row: T) => void
+  onViewClick?: (row: T) => void
+  getRowId: (row: T) => string
+  getRowClassName?: (row: T) => string
+  emptyMessage?: ReactNode
+  loading?: boolean
+  maxHeight?: string
+}
+
+export function DataTable<T>({
+  data,
+  columns,
+  searchPlaceholder = 'Search...',
+  searchKeys = [],
+  onRowClick,
+  onViewClick,
+  getRowId,
+  getRowClassName,
+  emptyMessage = 'No data found',
+  loading = false,
+  maxHeight = 'calc(100vh - 280px)',
+}: DataTableProps<T>) {
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const filteredData = useMemo(() => {
+    let result = [...data]
+
+    // Filter by search
+    if (search && searchKeys.length > 0) {
+      const searchLower = search.toLowerCase()
+      result = result.filter((row) =>
+        searchKeys.some((key) => {
+          const value = (row as Record<string, unknown>)[key]
+          if (typeof value === 'string') {
+            return value.toLowerCase().includes(searchLower)
+          }
+          return false
+        })
+      )
+    }
+
+    // Sort
+    if (sortKey) {
+      const col = columns.find((c) => c.key === sortKey)
+      result.sort((a, b) => {
+        let aVal = col?.getValue ? col.getValue(a) : (a as Record<string, unknown>)[sortKey]
+        let bVal = col?.getValue ? col.getValue(b) : (b as Record<string, unknown>)[sortKey]
+
+        if (aVal === null || aVal === undefined) aVal = ''
+        if (bVal === null || bVal === undefined) bVal = ''
+
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDir === 'asc'
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal)
+        }
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDir === 'asc' ? aVal - bVal : bVal - aVal
+        }
+
+        return 0
+      })
+    }
+
+    return result
+  }, [data, search, searchKeys, sortKey, sortDir, columns])
+
+  if (loading) {
+    return (
+      <div className="bg-card rounded-xl border">
+        <div className="p-4 border-b">
+          <div className="h-10 w-64 bg-muted animate-pulse rounded-lg" />
+        </div>
+        <div className="divide-y">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="p-4">
+              <div className="h-5 w-full bg-muted animate-pulse rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-card rounded-xl border">
+      {/* Search */}
+      <div className="p-4 border-b">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-10"
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-auto" style={{ maxHeight }}>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              {columns.map((col) => (
+                <TableHead
+                  key={col.key}
+                  style={{ width: col.width }}
+                  className={cn(
+                    'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                    col.sortable && 'cursor-pointer select-none hover:text-foreground'
+                  )}
+                  onClick={() => col.sortable && handleSort(col.key)}
+                >
+                  <div className="flex items-center gap-1">
+                    {col.header}
+                    {col.sortable && (
+                      <span className="ml-1">
+                        {sortKey === col.key ? (
+                          sortDir === 'asc' ? (
+                            <ArrowUp className="h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+              ))}
+              {onViewClick && <TableHead className="w-12" />}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length + (onViewClick ? 1 : 0)}
+                  className="h-32 text-center text-muted-foreground"
+                >
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredData.map((row) => (
+                <TableRow
+                  key={getRowId(row)}
+                  className={cn(
+                    'group',
+                    onRowClick && 'cursor-pointer hover:bg-muted/50',
+                    getRowClassName?.(row)
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {columns.map((col) => (
+                    <TableCell key={col.key} className="py-3">
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
+                    </TableCell>
+                  ))}
+                  {onViewClick && (
+                    <TableCell className="py-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewClick(row)
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t text-sm text-muted-foreground">
+        {filteredData.length} of {data.length} results
+      </div>
+    </div>
+  )
+}
