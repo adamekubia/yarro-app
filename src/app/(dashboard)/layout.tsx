@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { usePM } from '@/contexts/pm-context'
@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!loading && !propertyManager) {

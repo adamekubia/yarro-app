@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/types/database'
 
@@ -21,7 +21,7 @@ const PMContext = createContext<PMContextType>({
 export function PMProvider({ children }: { children: ReactNode }) {
   const [propertyManager, setPropertyManager] = useState<PropertyManager | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadSession = async () => {
