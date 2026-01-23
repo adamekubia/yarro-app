@@ -26,7 +26,7 @@ export default function DashboardLayout({
 
   // Check if PM needs onboarding (no properties yet)
   useEffect(() => {
-    if (!propertyManager || pathname === '/import') {
+    if (!propertyManager || pathname === '/import' || pathname === '/settings' || pathname === '/update-password') {
       setCheckingOnboarding(false)
       return
     }
