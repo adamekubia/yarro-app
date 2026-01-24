@@ -54,6 +54,13 @@ export function PMProvider({ children }: { children: ReactNode }) {
     // Primary: directly check session (reads from cookies, fast)
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSession(session)
+    }).catch(() => {
+      // Corrupted cookies/storage — treat as no session
+      if (mounted && !resolved.current) {
+        resolved.current = true
+        setPropertyManager(null)
+        setLoading(false)
+      }
     })
 
     // Also listen for auth changes (sign in/out after initial load)
@@ -73,13 +80,13 @@ export function PMProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Hard timeout: never stay loading forever
+    // Hard timeout: never stay loading forever (3s is generous for cookie read + 1 query)
     const timeout = setTimeout(() => {
       if (mounted && !resolved.current) {
         resolved.current = true
         setLoading(false)
       }
-    }, 5000)
+    }, 3000)
 
     return () => {
       mounted = false
@@ -92,7 +99,20 @@ export function PMProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     if (signingOut.current) return
     signingOut.current = true
-    supabase.auth.signOut().finally(() => {
+
+    // Force-clear all Supabase auth cookies to prevent stale state
+    const clearCookies = () => {
+      document.cookie.split(';').forEach(c => {
+        const name = c.trim().split('=')[0]
+        if (name.startsWith('sb-') && name.includes('auth-token')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+        }
+      })
+    }
+
+    clearCookies()
+    supabase.auth.signOut().catch(() => {}).finally(() => {
+      clearCookies() // Double-clear in case signOut restored something
       window.location.href = '/login'
     })
   }, [supabase])

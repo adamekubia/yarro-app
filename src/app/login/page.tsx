@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, ArrowLeft } from 'lucide-react'
@@ -15,8 +16,24 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [resetSent, setResetSent] = useState(false)
+  const [authSuccess, setAuthSuccess] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const { propertyManager, loading: pmLoading } = usePM()
+
+  // Navigate to dashboard once PM is confirmed loaded
+  // Handles: (1) already logged in user landing on /login, (2) after fresh login
+  useEffect(() => {
+    if (pmLoading) return
+    if (propertyManager) {
+      router.push('/')
+    } else if (authSuccess) {
+      // Auth succeeded but no PM record found — user removed from system
+      setError('Account not found. Please contact your administrator.')
+      setLoading(false)
+      setAuthSuccess(false)
+    }
+  }, [pmLoading, propertyManager, authSuccess, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,8 +55,9 @@ export default function LoginPage() {
       return
     }
 
-    // Auth successful — navigate to dashboard (client-side, keeps PMProvider mounted)
-    router.push('/')
+    // Auth successful — wait for PMProvider to load the PM before navigating
+    // This prevents the race condition where dashboard mounts before PM is fetched
+    setAuthSuccess(true)
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {

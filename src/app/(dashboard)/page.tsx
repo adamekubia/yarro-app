@@ -233,12 +233,17 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <div className="p-6 min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30">
+      <div className="p-6 h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-muted rounded-xl" />
+              <div key={i} className="h-[140px] bg-muted rounded-xl" />
+            ))}
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-[88px] bg-muted rounded-xl" />
             ))}
           </div>
         </div>
@@ -247,13 +252,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30">
+    <div className="h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
       {/* Blue haze overlay */}
       <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none" />
 
-      <div className="relative p-6 space-y-6 min-h-[calc(100vh-4rem)] flex flex-col">
+      <div className="relative p-6 h-full flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -264,7 +269,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Main KPIs */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 flex-shrink-0">
           {/* Tickets */}
           <Link href="/tickets" className="bg-white rounded-xl border-2 border-blue-500/20 p-5 hover:border-blue-500/40 hover:shadow-lg transition-all h-[140px]">
             <div className="flex items-start justify-between">
@@ -328,7 +333,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Awaiting Action */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 flex-shrink-0">
           <button
             onClick={() => showAwaitingTickets('contractor')}
             className="bg-white rounded-xl border-2 border-primary/20 p-4 text-left hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all group h-[88px]"
@@ -394,12 +399,12 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Charts + Recent Tickets - fills remaining page height */}
-        <div className="grid grid-cols-2 gap-6 flex-1">
+        {/* Charts + Recent Tickets - fills remaining space exactly */}
+        <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
           {/* Left side: Status + Category stacked */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-h-0">
             {/* Status - Open vs Closed */}
-            <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5">
+            <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
               <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">By Status</h3>
               <div className="space-y-4">
                 {/* Progress bar */}
@@ -478,7 +483,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Right side: Recent Tickets */}
-          <div className="bg-white rounded-xl border-2 border-blue-500/20 flex flex-col">
+          <div className="bg-white rounded-xl border-2 border-blue-500/20 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Tickets</h3>
               <Link href="/tickets">
