@@ -61,8 +61,9 @@ export function PMProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (!mounted) return
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Reset resolved flag for new sign-ins
+          // Reset state for new sign-ins - show loading while PM is fetched
           resolved.current = false
+          setLoading(true)
           await handleSession(session)
         } else if (event === 'SIGNED_OUT') {
           resolved.current = false

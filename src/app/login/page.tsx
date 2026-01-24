@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [resetSent, setResetSent] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,8 +38,8 @@ export default function LoginPage() {
       return
     }
 
-    // Auth successful — redirect to dashboard
-    window.location.href = '/'
+    // Auth successful — navigate to dashboard (client-side, keeps PMProvider mounted)
+    router.push('/')
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
