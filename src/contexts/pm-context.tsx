@@ -25,6 +25,7 @@ export function PMProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const resolved = { current: false }
 
     const fetchPM = async (userId: string) => {
       const { data: pm } = await supabase
@@ -35,31 +36,48 @@ export function PMProvider({ children }: { children: ReactNode }) {
       return pm
     }
 
-    // Listen for auth changes - handles ALL events including initial session
+    const handleSession = async (session: { user: { id: string } } | null) => {
+      if (!mounted || resolved.current) return
+      resolved.current = true
+      if (session?.user) {
+        const pm = await fetchPM(session.user.id)
+        if (mounted) {
+          setPropertyManager(pm)
+          setLoading(false)
+        }
+      } else {
+        setPropertyManager(null)
+        setLoading(false)
+      }
+    }
+
+    // Primary: directly check session (reads from cookies, fast)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session)
+    })
+
+    // Also listen for auth changes (sign in/out after initial load)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
-
-        if (event === 'SIGNED_OUT' || !session?.user) {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Reset resolved flag for new sign-ins
+          resolved.current = false
+          await handleSession(session)
+        } else if (event === 'SIGNED_OUT') {
+          resolved.current = false
           setPropertyManager(null)
           setLoading(false)
-        } else if (
-          event === 'INITIAL_SESSION' ||
-          event === 'SIGNED_IN' ||
-          event === 'TOKEN_REFRESHED'
-        ) {
-          const pm = await fetchPM(session!.user.id)
-          if (mounted) {
-            setPropertyManager(pm)
-            setLoading(false)
-          }
         }
       }
     )
 
-    // Fallback: never stay loading forever
+    // Hard timeout: never stay loading forever
     const timeout = setTimeout(() => {
-      if (mounted) setLoading(false)
+      if (mounted && !resolved.current) {
+        resolved.current = true
+        setLoading(false)
+      }
     }, 5000)
 
     return () => {
