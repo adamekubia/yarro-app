@@ -220,7 +220,22 @@ export default function MessagesPage() {
       header: 'Stage',
       sortable: true,
       width: '120px',
-      render: (m) => m.job_stage ? <StatusBadge status={m.job_stage} /> : '-',
+      render: (m) => {
+        if (!m.job_stage) return '-'
+        const stage = m.job_stage.toLowerCase()
+        const isGreen = stage === 'closed' || stage === 'completed'
+        const isOrange = stage === 'created'
+        if (isGreen || isOrange) {
+          return (
+            <span className={`px-2 py-0.5 text-xs rounded-full ${
+              isGreen ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+            }`}>
+              {m.job_stage}
+            </span>
+          )
+        }
+        return <StatusBadge status={m.job_stage} />
+      },
     },
     {
       key: 'contractors',
@@ -239,9 +254,9 @@ export default function MessagesPage() {
             ) : replied > 0 ? (
               <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{sent} quoted</span>
             ) : sent > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">{sent} sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">{sent} sent</span>
             ) : (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{contractors.length} pending</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">not sent</span>
             )}
           </div>
         )
@@ -259,9 +274,9 @@ export default function MessagesPage() {
         const declined = status === 'replied' && !recipient?.approval
         return (
           <span className={`px-2 py-0.5 text-xs rounded-full ${
-            approved ? 'bg-emerald-100 text-emerald-700' :
+            approved ? 'bg-green-100 text-green-700' :
             declined ? 'bg-red-100 text-red-700' :
-            'bg-purple-100 text-purple-700'
+            'bg-orange-100 text-orange-700'
           }`}>
             {approved ? 'Approved' : declined ? 'Declined' : 'Pending'}
           </span>
@@ -280,7 +295,7 @@ export default function MessagesPage() {
         const declined = status === 'replied' && !recipient?.approval
         return (
           <span className={`px-2 py-0.5 text-xs rounded-full ${
-            approved ? 'bg-amber-100 text-amber-700' :
+            approved ? 'bg-green-100 text-green-700' :
             declined ? 'bg-red-100 text-red-700' :
             'bg-orange-100 text-orange-700'
           }`}>
