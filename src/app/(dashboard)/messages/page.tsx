@@ -229,16 +229,20 @@ export default function MessagesPage() {
       render: (m) => {
         const contractors = getContractors(m.contractors)
         if (contractors.length === 0) return <span className="text-muted-foreground text-sm">-</span>
+        const sent = contractors.filter(c => c.sent_at).length
         const replied = contractors.filter(c => c.replied_at).length
         const approved = contractors.filter(c => c.manager_decision === 'approved').length
+        const pending = contractors.length - sent
         return (
           <div className="flex items-center gap-1">
             {approved > 0 ? (
               <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">{approved} approved</span>
             ) : replied > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{contractors.length} quoted</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{sent} quoted</span>
+            ) : sent > 0 ? (
+              <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">{sent} sent{pending > 0 ? `, ${pending} pending` : ''}</span>
             ) : (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">{contractors.length} sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{contractors.length} pending</span>
             )}
           </div>
         )

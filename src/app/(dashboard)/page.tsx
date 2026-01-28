@@ -119,7 +119,7 @@ export default function DashboardPage() {
         (t) => t.status?.toLowerCase() === 'open' && ['pm_approved'].includes(t.job_stage || '')
       ).length
       const scheduledJobs = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['scheduled', 'reminder_sent'].includes(t.job_stage || '')
+        (t) => t.status?.toLowerCase() === 'open' && ['scheduled', 'reminder_sent', 'll_approved'].includes(t.job_stage || '')
       ).length
 
       setStats({
