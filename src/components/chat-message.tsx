@@ -6,6 +6,12 @@ import { User, Bot, Phone } from 'lucide-react'
 
 export type MessageRole = 'user' | 'tenant' | 'assistant' | 'system' | 'agent'
 
+type MessageMeta = {
+  quote?: string
+  approved?: boolean
+  amount?: string
+}
+
 type ChatMessageProps = {
   role: MessageRole | string
   text: string
@@ -13,6 +19,7 @@ type ChatMessageProps = {
   className?: string
   allowHtml?: boolean
   compact?: boolean
+  meta?: MessageMeta
 }
 
 const roleConfig: Record<string, {
@@ -64,13 +71,30 @@ const formatMarkdown = (text: string): string => {
   return text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
 }
 
-export function ChatMessage({ role, text, timestamp, className, allowHtml = false, compact = false }: ChatMessageProps) {
+export function ChatMessage({ role, text, timestamp, className, allowHtml = false, compact = false, meta }: ChatMessageProps) {
   const config = roleConfig[role.toLowerCase()] || roleConfig.system
   const Icon = config.icon
 
   const formattedTime = timestamp
     ? format(new Date(timestamp), 'dd MMM, HH:mm')
     : null
+
+  // Build meta display text
+  const getMetaDisplay = () => {
+    if (!meta) return null
+    if (meta.quote) {
+      return meta.approved
+        ? `Quote: ${meta.quote} ✓ Approved`
+        : `Quote: ${meta.quote}`
+    }
+    if (meta.approved !== undefined) {
+      const status = meta.approved ? '✓ Approved' : '✗ Declined'
+      return meta.amount ? `${status} - ${meta.amount}` : status
+    }
+    return null
+  }
+
+  const metaDisplay = getMetaDisplay()
 
   return (
     <div
@@ -128,6 +152,16 @@ export function ChatMessage({ role, text, timestamp, className, allowHtml = fals
             <p className="whitespace-pre-wrap break-words">{text || ''}</p>
           )}
         </div>
+        {/* Meta info - shown separately below bubble */}
+        {metaDisplay && (
+          <div className={cn(
+            'mt-1 px-2 py-1 rounded-lg text-xs font-medium',
+            meta?.approved ? 'bg-green-100 text-green-700' : meta?.approved === false ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700',
+            config.align === 'right' ? 'text-right' : 'text-left'
+          )}>
+            {metaDisplay}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -139,6 +173,7 @@ type ChatHistoryProps = {
     text: string
     timestamp?: string
     allowHtml?: boolean
+    meta?: MessageMeta
   }>
   className?: string
   allowHtmlForAssistant?: boolean
@@ -164,6 +199,7 @@ export function ChatHistory({ messages, className, allowHtmlForAssistant = false
           timestamp={msg.timestamp}
           allowHtml={msg.allowHtml || (allowHtmlForAssistant && msg.role.toLowerCase() === 'assistant')}
           compact={compact}
+          meta={msg.meta}
         />
       ))}
     </div>

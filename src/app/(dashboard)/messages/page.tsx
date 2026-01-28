@@ -228,13 +228,16 @@ export default function MessagesPage() {
         if (!m.job_stage) return '-'
         const stage = m.job_stage.toLowerCase()
         const isGreen = stage === 'closed' || stage === 'completed'
+        const isTeal = stage === 'booked' || stage === 'scheduled'
         const isOrange = stage === 'created'
         // Title case: "created" → "Created", "closed" → "Closed"
         const label = m.job_stage.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-        if (isGreen || isOrange) {
+        if (isGreen || isTeal || isOrange) {
           return (
             <span className={`px-2 py-0.5 text-xs rounded-full ${
-              isGreen ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+              isGreen ? 'bg-green-100 text-green-700' :
+              isTeal ? 'bg-teal-100 text-teal-700' :
+              'bg-orange-100 text-orange-700'
             }`}>
               {label}
             </span>
@@ -315,7 +318,7 @@ export default function MessagesPage() {
 
   // Convert contractor data to chat messages format
   const getContractorMessages = (contractors: ContractorEntry[]) => {
-    const messages: { role: string; text: string; timestamp?: string; allowHtml?: boolean }[] = []
+    const messages: { role: string; text: string; timestamp?: string; allowHtml?: boolean; meta?: { quote?: string; approved?: boolean } }[] = []
 
     contractors.forEach(contractor => {
       const status = getContractorStatus(contractor)
@@ -330,13 +333,16 @@ export default function MessagesPage() {
         })
       }
 
-      // Their reply - exact text for auditability
+      // Their reply - exact text only, metadata shown separately
       if (contractor.reply_text) {
-        const statusText = status === 'approved' ? ' ✓ Approved' : ''
         messages.push({
           role: 'tenant',
-          text: `${contractor.reply_text}${contractor.quote_amount ? `\n\nQuote: ${contractor.quote_amount}${statusText}` : ''}`,
+          text: contractor.reply_text,
           timestamp: contractor.replied_at,
+          meta: contractor.quote_amount ? {
+            quote: contractor.quote_amount,
+            approved: status === 'approved',
+          } : undefined,
         })
       }
     })
@@ -348,7 +354,7 @@ export default function MessagesPage() {
   const getRecipientMessages = (entry: RecipientEntry | null, title: string) => {
     if (!entry) return []
 
-    const messages: { role: string; text: string; timestamp?: string; allowHtml?: boolean }[] = []
+    const messages: { role: string; text: string; timestamp?: string; allowHtml?: boolean; meta?: { approved?: boolean; amount?: string } }[] = []
 
     // Outbound approval request - HTML formatted
     if (entry.last_outbound_body) {
@@ -360,13 +366,16 @@ export default function MessagesPage() {
       })
     }
 
-    // Their reply - exact text for full auditability
+    // Their reply - exact text only, approval status shown separately
     if (entry.last_text) {
-      const approvalStatus = entry.approval ? '✓ Approved' : '✗ Declined'
       messages.push({
         role: 'tenant',
-        text: `${entry.last_text}\n\n${approvalStatus}${entry.approval_amount ? ` - ${entry.approval_amount}` : ''}`,
+        text: entry.last_text,
         timestamp: entry.replied_at,
+        meta: {
+          approved: entry.approval,
+          amount: entry.approval_amount,
+        },
       })
     }
 
