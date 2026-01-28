@@ -197,6 +197,13 @@ export default function MessagesPage() {
     return null
   }
 
+  // Ensure amount always has exactly one £ symbol
+  const formatAmount = (amount: string | undefined): string => {
+    if (!amount) return ''
+    // If already has £, return as is; otherwise add it
+    return amount.startsWith('£') ? amount : `£${amount}`
+  }
+
   const columns: Column<Message>[] = [
     {
       key: 'created_at',
@@ -340,7 +347,7 @@ export default function MessagesPage() {
           text: contractor.reply_text,
           timestamp: contractor.replied_at,
           meta: contractor.quote_amount ? {
-            quote: contractor.quote_amount,
+            quote: formatAmount(contractor.quote_amount),
             approved: status === 'approved',
           } : undefined,
         })
@@ -465,8 +472,8 @@ export default function MessagesPage() {
                               status === 'sent' ? 'bg-yellow-100 text-yellow-700' :
                               'bg-gray-100 text-gray-600'
                             }`}>
-                              {status === 'approved' ? `✓ ${contractor.quote_amount || 'Approved'}` :
-                               status === 'replied' ? `${contractor.quote_amount || 'Quoted'}` :
+                              {status === 'approved' ? `✓ ${formatAmount(contractor.quote_amount) || 'Approved'}` :
+                               status === 'replied' ? `${formatAmount(contractor.quote_amount) || 'Quoted'}` :
                                status === 'sent' ? 'Sent' : 'Pending'}
                             </span>
                             {isOpen ? (
