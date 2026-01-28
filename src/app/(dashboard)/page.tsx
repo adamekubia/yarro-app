@@ -106,20 +106,28 @@ export default function DashboardPage() {
 
     if (tickets) {
       const total = tickets.length
-      const open = tickets.filter((t) => t.status?.toLowerCase() === 'open').length
+      // Open = anything not closed
       const closed = tickets.filter((t) => t.status?.toLowerCase() === 'closed').length
+      const open = total - closed
+
+      // Helper to check job_stage (case-insensitive)
+      const hasStage = (t: { job_stage: string | null }, stages: string[]) => {
+        const stage = (t.job_stage || '').toLowerCase()
+        return stages.some(s => s.toLowerCase() === stage)
+      }
+      const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
 
       const awaitingContractor = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['created', 'contractor_notified'].includes(t.job_stage || '')
+        (t) => isOpen(t) && hasStage(t, ['created', 'contractor_notified'])
       ).length
       const awaitingManager = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['quote_received'].includes(t.job_stage || '')
+        (t) => isOpen(t) && hasStage(t, ['quote_received'])
       ).length
       const awaitingLandlord = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['pm_approved'].includes(t.job_stage || '')
+        (t) => isOpen(t) && hasStage(t, ['pm_approved', 'awaiting_landlord', 'll_pending'])
       ).length
       const scheduledJobs = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['scheduled', 'booked', 'reminder_sent', 'll_approved'].includes(t.job_stage || '')
+        (t) => isOpen(t) && hasStage(t, ['scheduled', 'booked', 'reminder_sent', 'll_approved'])
       ).length
 
       setStats({
@@ -155,7 +163,7 @@ export default function DashboardPage() {
     let stages: string[] = []
     if (type === 'contractor') stages = ['created', 'contractor_notified']
     if (type === 'manager') stages = ['quote_received']
-    if (type === 'landlord') stages = ['pm_approved']
+    if (type === 'landlord') stages = ['pm_approved', 'awaiting_landlord', 'll_pending']
     if (type === 'scheduled') stages = ['scheduled', 'booked', 'reminder_sent', 'll_approved']
 
     const { data } = await supabase
@@ -170,7 +178,7 @@ export default function DashboardPage() {
         c1_properties(address)
       `)
       .eq('property_manager_id', propertyManager!.id)
-      .eq('status', 'open')
+      .neq('status', 'closed')
       .in('job_stage', stages)
       .gte('date_logged', dateRange.from.toISOString())
       .lte('date_logged', dateRange.to.toISOString())
