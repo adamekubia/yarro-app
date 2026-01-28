@@ -116,9 +116,15 @@ export default function DashboardPage() {
       const open = total - closed
 
       // Use c1_messages.stage as source of truth for workflow state
-      const getMessageStage = (t: { c1_messages: { stage: string }[] | null }) => {
-        const messages = t.c1_messages as { stage: string }[] | null
-        return (messages?.[0]?.stage || '').toLowerCase()
+      // c1_messages is a one-to-one relationship (ticket_id is primary key), so it returns an object not an array
+      const getMessageStage = (t: { c1_messages: { stage: string } | { stage: string }[] | null }) => {
+        const messages = t.c1_messages
+        if (!messages) return ''
+        // Handle both single object (one-to-one) and array (one-to-many) relationships
+        if (Array.isArray(messages)) {
+          return (messages[0]?.stage || '').toLowerCase()
+        }
+        return (messages.stage || '').toLowerCase()
       }
       const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
       const isScheduled = (t: { job_stage: string | null; scheduled_date: string | null }) => {
@@ -161,13 +167,17 @@ export default function DashboardPage() {
       })
 
       const mappedTickets = tickets.map((t) => {
-        const messages = t.c1_messages as { stage: string }[] | null
+        const messages = t.c1_messages as { stage: string } | { stage: string }[] | null
+        // Handle both single object and array
+        const messageStage = messages
+          ? Array.isArray(messages) ? messages[0]?.stage : messages.stage
+          : null
         return {
           id: t.id,
           issue_description: t.issue_description,
           status: t.status,
           job_stage: t.job_stage,
-          message_stage: messages?.[0]?.stage || null,
+          message_stage: messageStage || null,
           category: t.category,
           date_logged: t.date_logged,
           scheduled_date: t.scheduled_date,
