@@ -243,7 +243,7 @@ export default function ConversationsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Conversations</h1>
           <p className="text-muted-foreground mt-1">
-            WhatsApp conversations with tenants and contractors
+            WhatsApp conversations with tenants
           </p>
         </div>
         <DateFilter value={dateRange} onChange={setDateRange} />

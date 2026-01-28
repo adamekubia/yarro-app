@@ -380,7 +380,7 @@ export default function MessagesPage() {
         <div>
           <h1 className="text-2xl font-semibold">Messages</h1>
           <p className="text-muted-foreground mt-1">
-            Outbound messaging status for tickets
+            Quotes, approvals and job coordination
           </p>
         </div>
         <DateFilter value={dateRange} onChange={setDateRange} />
