@@ -44,8 +44,10 @@ interface TicketSummary {
   issue_description: string | null
   status: string
   job_stage: string | null
+  message_stage?: string | null
   category: string | null
   date_logged: string
+  scheduled_date?: string | null
   address?: string
 }
 
@@ -72,6 +74,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setLoading(true)
 
+    // Fetch tickets with message stage (source of truth for workflow state)
     const { data: tickets } = await supabase
       .from('c1_tickets')
       .select(`
@@ -81,7 +84,9 @@ export default function DashboardPage() {
         job_stage,
         category,
         date_logged,
-        c1_properties(address)
+        scheduled_date,
+        c1_properties(address),
+        c1_messages(stage)
       `)
       .eq('property_manager_id', propertyManager!.id)
       .gte('date_logged', dateRange.from.toISOString())
@@ -110,25 +115,37 @@ export default function DashboardPage() {
       const closed = tickets.filter((t) => t.status?.toLowerCase() === 'closed').length
       const open = total - closed
 
-      // Helper to check job_stage (case-insensitive)
-      const hasStage = (t: { job_stage: string | null }, stages: string[]) => {
-        const stage = (t.job_stage || '').toLowerCase()
-        return stages.some(s => s.toLowerCase() === stage)
+      // Use c1_messages.stage as source of truth for workflow state
+      const getMessageStage = (t: { c1_messages: { stage: string }[] | null }) => {
+        const messages = t.c1_messages as { stage: string }[] | null
+        return (messages?.[0]?.stage || '').toLowerCase()
       }
       const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
+      const isScheduled = (t: { job_stage: string | null; scheduled_date: string | null }) => {
+        const stage = (t.job_stage || '').toLowerCase()
+        return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
+      }
 
-      const awaitingContractor = tickets.filter(
-        (t) => isOpen(t) && hasStage(t, ['created', 'contractor_notified'])
-      ).length
-      const awaitingManager = tickets.filter(
-        (t) => isOpen(t) && hasStage(t, ['quote_received'])
-      ).length
-      const awaitingLandlord = tickets.filter(
-        (t) => isOpen(t) && hasStage(t, ['pm_approved', 'awaiting_landlord', 'll_pending'])
-      ).length
-      const scheduledJobs = tickets.filter(
-        (t) => isOpen(t) && hasStage(t, ['scheduled', 'booked', 'reminder_sent', 'll_approved'])
-      ).length
+      // Count based on actual message thread state
+      const awaitingContractor = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = getMessageStage(t)
+        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
+      }).length
+
+      const awaitingManager = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = getMessageStage(t)
+        return msgStage === 'awaiting_manager'
+      }).length
+
+      const awaitingLandlord = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = getMessageStage(t)
+        return msgStage === 'awaiting_landlord'
+      }).length
+
+      const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t)).length
 
       setStats({
         totalTickets: total,
@@ -143,15 +160,20 @@ export default function DashboardPage() {
         totalContractors: contractorsRes.count || 0,
       })
 
-      const mappedTickets = tickets.map((t) => ({
-        id: t.id,
-        issue_description: t.issue_description,
-        status: t.status,
-        job_stage: t.job_stage,
-        category: t.category,
-        date_logged: t.date_logged,
-        address: (t.c1_properties as unknown as { address: string } | null)?.address,
-      }))
+      const mappedTickets = tickets.map((t) => {
+        const messages = t.c1_messages as { stage: string }[] | null
+        return {
+          id: t.id,
+          issue_description: t.issue_description,
+          status: t.status,
+          job_stage: t.job_stage,
+          message_stage: messages?.[0]?.stage || null,
+          category: t.category,
+          date_logged: t.date_logged,
+          scheduled_date: t.scheduled_date,
+          address: (t.c1_properties as unknown as { address: string } | null)?.address,
+        }
+      })
       setAllTickets(mappedTickets)
       setRecentTickets(mappedTickets.slice(0, 5))
     }
@@ -159,45 +181,40 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  const showAwaitingTickets = async (type: string) => {
-    let stages: string[] = []
-    if (type === 'contractor') stages = ['created', 'contractor_notified']
-    if (type === 'manager') stages = ['quote_received']
-    if (type === 'landlord') stages = ['pm_approved', 'awaiting_landlord', 'll_pending']
-    if (type === 'scheduled') stages = ['scheduled', 'booked', 'reminder_sent', 'll_approved']
+  const showAwaitingTickets = (type: string) => {
+    // Filter from already-fetched tickets using message_stage (source of truth)
+    const isOpen = (t: TicketSummary) => t.status?.toLowerCase() !== 'closed'
 
-    const { data } = await supabase
-      .from('c1_tickets')
-      .select(`
-        id,
-        issue_description,
-        status,
-        job_stage,
-        category,
-        date_logged,
-        c1_properties(address)
-      `)
-      .eq('property_manager_id', propertyManager!.id)
-      .neq('status', 'closed')
-      .in('job_stage', stages)
-      .gte('date_logged', dateRange.from.toISOString())
-      .lte('date_logged', dateRange.to.toISOString())
-      .order('date_logged', { ascending: false })
+    let filtered: TicketSummary[] = []
 
-    if (data) {
-      setAwaitingTickets(
-        data.map((t) => ({
-          id: t.id,
-          issue_description: t.issue_description,
-          status: t.status,
-          job_stage: t.job_stage,
-          category: t.category,
-          date_logged: t.date_logged,
-          address: (t.c1_properties as unknown as { address: string } | null)?.address,
-        }))
-      )
-      setAwaitingType(type)
+    if (type === 'contractor') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = (t.message_stage || '').toLowerCase()
+        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
+      })
+    } else if (type === 'manager') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = (t.message_stage || '').toLowerCase()
+        return msgStage === 'awaiting_manager'
+      })
+    } else if (type === 'landlord') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = (t.message_stage || '').toLowerCase()
+        return msgStage === 'awaiting_landlord'
+      })
+    } else if (type === 'scheduled') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const jobStage = (t.job_stage || '').toLowerCase()
+        return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
+      })
     }
+
+    setAwaitingTickets(filtered)
+    setAwaitingType(type)
   }
 
   const formatDate = (date: string) => {

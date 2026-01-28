@@ -44,7 +44,7 @@ interface Ticket {
   contractor_name?: string
 }
 
-type TicketFilter = 'all' | 'open' | 'handoff' | 'manual' | 'closed'
+type TicketFilter = 'all' | 'system' | 'handoff' | 'manual'
 
 interface TicketDetail {
   ticket_id: string
@@ -262,8 +262,12 @@ export default function TicketsPage() {
 
   // Get row class based on status for subtle left border
   const getRowClassName = (ticket: Ticket) => {
-    if (ticket.status.toLowerCase() === 'closed') {
-      return 'border-l-2 border-l-gray-300'
+    const isClosed = ticket.status?.toLowerCase() === 'closed'
+    if (isClosed) {
+      return 'border-l-2 border-l-gray-300 opacity-60'
+    }
+    if (ticket.handoff) {
+      return 'border-l-2 border-l-amber-500'
     }
     return 'border-l-2 border-l-blue-500'
   }
@@ -313,19 +317,18 @@ export default function TicketsPage() {
 
   const filteredTickets = tickets.filter((t) => {
     if (activeFilter === 'all') return true
-    if (activeFilter === 'open') return t.status === 'open' && !t.handoff
     if (activeFilter === 'handoff') return t.handoff === true
     if (activeFilter === 'manual') return t.is_manual === true
-    if (activeFilter === 'closed') return t.status === 'closed'
+    // System = automated WhatsApp tickets (not handoff, not manual)
+    if (activeFilter === 'system') return !t.handoff && !t.is_manual
     return true
   })
 
   const filterCounts = {
     all: tickets.length,
-    open: tickets.filter((t) => t.status === 'open' && !t.handoff).length,
+    system: tickets.filter((t) => !t.handoff && !t.is_manual).length,
     handoff: tickets.filter((t) => t.handoff === true).length,
     manual: tickets.filter((t) => t.is_manual === true).length,
-    closed: tickets.filter((t) => t.status === 'closed').length,
   }
 
   return (
@@ -349,7 +352,7 @@ export default function TicketsPage() {
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 border-b">
-        {(['all', 'open', 'handoff', 'manual', 'closed'] as TicketFilter[]).map((filter) => (
+        {(['all', 'system', 'handoff', 'manual'] as TicketFilter[]).map((filter) => (
           <button
             key={filter}
             onClick={() => setActiveFilter(filter)}
@@ -359,7 +362,7 @@ export default function TicketsPage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {filter}
+            {filter === 'system' ? 'Automated' : filter}
             <span className="ml-1.5 text-xs text-muted-foreground">
               {filterCounts[filter]}
             </span>
