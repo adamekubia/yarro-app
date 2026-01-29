@@ -39,7 +39,7 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             id="pm-name"
             value={details.name}
             onChange={(e) => updateField('name', e.target.value)}
-            placeholder="John Smith"
+            placeholder="Sarah Johnson"
           />
         </div>
 
@@ -50,7 +50,7 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             id="pm-business"
             value={details.business_name}
             onChange={(e) => updateField('business_name', e.target.value)}
-            placeholder="Smith Property Management"
+            placeholder="Apex Property Management"
           />
         </div>
 

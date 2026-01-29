@@ -29,13 +29,13 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
     .map((l) => ({ value: l.tempId, label: l.name }))
 
   const columns: ColumnDef[] = [
-    { key: 'address', label: 'Address', required: true, placeholder: '28 Salisbury Road, M25 0HU', width: '30%' },
+    { key: 'address', label: 'Address', required: true, placeholder: '14 Meadow Lane, Manchester, M14 5RL', width: '30%' },
     ...(landlordOptions.length > 0
       ? [{ key: 'landlordTempId', label: 'Landlord', type: 'select' as const, options: landlordOptions }]
       : []),
     { key: 'auto_approve_limit', label: 'Auto-Approve (£)', required: true, type: 'number' as const, placeholder: '0' },
-    { key: 'access_instructions', label: 'Access', placeholder: 'Key in lockbox' },
-    { key: 'emergency_access_contact', label: 'Emergency Contact', placeholder: 'Neighbour: 07...' },
+    { key: 'access_instructions', label: 'Access', placeholder: 'Key safe by front door, code 1234' },
+    { key: 'emergency_access_contact', label: 'Emergency Contact', placeholder: '07700 900300' },
   ]
 
   const rows = properties.map((p) => ({

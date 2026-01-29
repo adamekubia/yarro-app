@@ -33,10 +33,10 @@ const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
 
 export function StepContractors({ contractors, properties, onChange }: StepContractorsProps) {
   const columns: ColumnDef[] = [
-    { key: 'contractor_name', label: 'Name', required: true, placeholder: "Bob's Plumbing" },
+    { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd' },
     { key: 'category', label: 'Category', required: true, type: 'select', options: CATEGORY_OPTIONS },
-    { key: 'contractor_phone', label: 'Phone', required: true, placeholder: '07999888777' },
-    { key: 'contractor_email', label: 'Email', placeholder: 'bob@plumbing.co.uk' },
+    { key: 'contractor_phone', label: 'Phone', required: true, placeholder: '07700 900500' },
+    { key: 'contractor_email', label: 'Email', placeholder: 'info@quickfix-demo.co.uk' },
   ]
 
   const rows = contractors.map((c) => ({

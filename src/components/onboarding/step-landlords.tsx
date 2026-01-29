@@ -16,9 +16,9 @@ interface StepLandlordsProps {
 }
 
 const columns: ColumnDef[] = [
-  { key: 'name', label: 'Name', required: true, placeholder: 'John Smith' },
-  { key: 'phone', label: 'Phone', required: true, placeholder: '07123456789' },
-  { key: 'email', label: 'Email', placeholder: 'john@email.com' },
+  { key: 'name', label: 'Name', required: true, placeholder: 'David Williams' },
+  { key: 'phone', label: 'Phone', required: true, placeholder: '07700 900200' },
+  { key: 'email', label: 'Email', placeholder: 'david.williams@example.com' },
 ]
 
 const CSV_COLUMNS = ['name', 'email', 'phone']

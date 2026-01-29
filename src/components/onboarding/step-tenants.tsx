@@ -33,9 +33,9 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
   }))
 
   const columns: ColumnDef[] = [
-    { key: 'full_name', label: 'Name', required: true, placeholder: 'Mike Brown' },
-    { key: 'phone', label: 'Phone', required: true, placeholder: '07111222333' },
-    { key: 'email', label: 'Email', placeholder: 'mike@email.com' },
+    { key: 'full_name', label: 'Name', required: true, placeholder: 'Emma Thompson' },
+    { key: 'phone', label: 'Phone', required: true, placeholder: '07700 900400' },
+    { key: 'email', label: 'Email', placeholder: 'emma.t@example.com' },
     { key: 'role_tag', label: 'Role', type: 'select', options: roleOptions },
     { key: 'propertyId', label: 'Property', required: true, type: 'select', options: propertyOptions },
   ]
