@@ -12,6 +12,14 @@ import {
   DetailSection,
   DetailDivider,
 } from '@/components/detail-drawer'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
@@ -514,29 +522,34 @@ export default function TicketsPage() {
         )}
       </DetailDrawer>
 
-      {/* Create / Complete Ticket Drawer */}
-      <DetailDrawer
-        open={createDrawerOpen}
-        onClose={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
-        title={handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
-        subtitle={handoffTicketId ? 'Fill in the missing details' : 'Create a new maintenance ticket'}
-      >
-        <TicketForm
-          initialData={handoffTicketId && selectedTicketBasic ? {
-            property_id: selectedTicketBasic.property_id || '',
-            tenant_id: selectedTicketBasic.tenant_id || '',
-            issue_description: selectedTicketBasic.issue_description || '',
-            category: selectedTicketBasic.category || '',
-            priority: selectedTicketBasic.priority || 'MEDIUM',
-            contractor_id: selectedTicketBasic.contractor_id || null,  // Legacy support - converted to array in form
-            availability: selectedTicketBasic.availability || '',
-            access: selectedTicketBasic.access || '',
-          } : undefined}
-          onSubmit={handleCreateTicket}
-          onCancel={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
-          submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
-        />
-      </DetailDrawer>
+      {/* Create / Complete Ticket Modal */}
+      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) { setCreateDrawerOpen(false); setHandoffTicketId(null) } }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{handoffTicketId ? 'Complete Ticket' : 'New Ticket'}</DialogTitle>
+            <DialogDescription>
+              {handoffTicketId ? 'Fill in the missing details to dispatch this ticket' : 'Create a new maintenance ticket and assign contractors'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <TicketForm
+              initialData={handoffTicketId && selectedTicketBasic ? {
+                property_id: selectedTicketBasic.property_id || '',
+                tenant_id: selectedTicketBasic.tenant_id || '',
+                issue_description: selectedTicketBasic.issue_description || '',
+                category: selectedTicketBasic.category || '',
+                priority: selectedTicketBasic.priority || 'MEDIUM',
+                contractor_id: selectedTicketBasic.contractor_id || null,
+                availability: selectedTicketBasic.availability || '',
+                access: selectedTicketBasic.access || '',
+              } : undefined}
+              onSubmit={handleCreateTicket}
+              onCancel={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
+              submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
+            />
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

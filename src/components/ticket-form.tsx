@@ -13,9 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { DetailSection, DetailGrid, DetailDivider } from '@/components/detail-drawer'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CheckCircle2 } from 'lucide-react'
 
 interface Property {
   id: string
@@ -103,34 +102,29 @@ export function TicketForm({
     const fetchData = async () => {
       setLoading(true)
 
-      // Fetch properties
-      const { data: propsData } = await supabase
-        .from('c1_properties')
-        .select('id, address')
-        .eq('property_manager_id', propertyManager.id)
-        .order('address')
+      const [propsRes, tenantsRes, contractorsRes] = await Promise.all([
+        supabase
+          .from('c1_properties')
+          .select('id, address')
+          .eq('property_manager_id', propertyManager.id)
+          .order('address'),
+        supabase
+          .from('c1_tenants')
+          .select('id, full_name, property_id')
+          .eq('property_manager_id', propertyManager.id)
+          .order('full_name'),
+        supabase
+          .from('c1_contractors')
+          .select('id, contractor_name, category, property_ids')
+          .eq('property_manager_id', propertyManager.id)
+          .eq('active', true)
+          .order('category')
+          .order('contractor_name'),
+      ])
 
-      if (propsData) setProperties(propsData)
-
-      // Fetch tenants
-      const { data: tenantsData } = await supabase
-        .from('c1_tenants')
-        .select('id, full_name, property_id')
-        .eq('property_manager_id', propertyManager.id)
-        .order('full_name')
-
-      if (tenantsData) setTenants(tenantsData)
-
-      // Fetch contractors
-      const { data: contractorsData } = await supabase
-        .from('c1_contractors')
-        .select('id, contractor_name, category, property_ids')
-        .eq('property_manager_id', propertyManager.id)
-        .eq('active', true)
-        .order('category')
-        .order('contractor_name')
-
-      if (contractorsData) setContractors(contractorsData)
+      if (propsRes.data) setProperties(propsRes.data)
+      if (tenantsRes.data) setTenants(tenantsRes.data)
+      if (contractorsRes.data) setContractors(contractorsRes.data)
 
       setLoading(false)
     }
@@ -224,31 +218,33 @@ export function TicketForm({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
           {error}
         </div>
       )}
 
-      <DetailSection title="Location">
-        <div className="space-y-3">
+      {/* Two column grid for main fields */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Left column */}
+        <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
+            <label className="text-sm font-medium">
               Property <span className="text-destructive">*</span>
             </label>
             <Select
               value={formData.property_id}
               onValueChange={(v) => updateField('property_id', v)}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder="Select property..." />
               </SelectTrigger>
               <SelectContent>
@@ -262,7 +258,7 @@ export function TicketForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
+            <label className="text-sm font-medium">
               Tenant <span className="text-destructive">*</span>
             </label>
             <Select
@@ -270,7 +266,7 @@ export function TicketForm({
               onValueChange={(v) => updateField('tenant_id', v)}
               disabled={!formData.property_id}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder={formData.property_id ? 'Select tenant...' : 'Select property first'} />
               </SelectTrigger>
               <SelectContent>
@@ -282,40 +278,21 @@ export function TicketForm({
               </SelectContent>
             </Select>
             {formData.property_id && filteredTenants.length === 0 && (
-              <p className="text-xs text-muted-foreground">No tenants at this property</p>
+              <p className="text-xs text-amber-600">No tenants at this property</p>
             )}
           </div>
-        </div>
-      </DetailSection>
 
-      <DetailDivider />
-
-      <DetailSection title="Issue Details">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
-              Description <span className="text-destructive">*</span>
-            </label>
-            <Textarea
-              value={formData.issue_description}
-              onChange={(e) => updateField('issue_description', e.target.value)}
-              placeholder="Describe the maintenance issue..."
-              rows={4}
-              className="text-sm"
-            />
-          </div>
-
-          <DetailGrid columns={2}>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
+              <label className="text-sm font-medium">
                 Category <span className="text-destructive">*</span>
               </label>
               <Select
                 value={formData.category}
                 onValueChange={(v) => updateField('category', v)}
               >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select category..." />
+                <SelectTrigger>
+                  <SelectValue placeholder="Category..." />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORY_OPTIONS.map((opt) => (
@@ -328,14 +305,14 @@ export function TicketForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
+              <label className="text-sm font-medium">
                 Priority <span className="text-destructive">*</span>
               </label>
               <Select
                 value={formData.priority}
                 onValueChange={(v) => updateField('priority', v)}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -347,140 +324,135 @@ export function TicketForm({
                 </SelectContent>
               </Select>
             </div>
-          </DetailGrid>
-        </div>
-      </DetailSection>
+          </div>
 
-      <DetailDivider />
-
-      <DetailSection title="Contractor Assignment">
-        <div className="space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
+            <label className="text-sm font-medium">
+              Issue Description <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              value={formData.issue_description}
+              onChange={(e) => updateField('issue_description', e.target.value)}
+              placeholder="Describe the maintenance issue..."
+              rows={4}
+            />
+          </div>
+        </div>
+
+        {/* Right column - Contractors */}
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
               Contractors <span className="text-destructive">*</span>
             </label>
-            {!formData.category ? (
-              <p className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-                Select a category first to see available contractors
-              </p>
-            ) : filteredContractors.length === 0 ? (
-              <p className="text-xs text-muted-foreground p-2 bg-amber-50 rounded border border-amber-200">
-                No {formData.category} contractors available for this property.
-                Add contractors in the Contractors page first.
-              </p>
-            ) : (
-              <>
-                {/* Available contractors to select */}
-                <div className="border rounded-lg divide-y">
-                  {filteredContractors.map((c) => {
-                    const isSelected = formData.contractor_ids.includes(c.id)
-                    const orderIndex = formData.contractor_ids.indexOf(c.id)
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            // Remove from list
-                            setFormData((prev) => ({
-                              ...prev,
-                              contractor_ids: prev.contractor_ids.filter((id) => id !== c.id),
-                            }))
-                          } else {
-                            // Add to end of list
-                            setFormData((prev) => ({
-                              ...prev,
-                              contractor_ids: [...prev.contractor_ids, c.id],
-                            }))
-                          }
-                        }}
-                        className={`w-full flex items-center justify-between p-2.5 text-left hover:bg-muted/50 transition-colors ${
-                          isSelected ? 'bg-primary/5' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {isSelected && (
-                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                              {orderIndex + 1}
-                            </span>
-                          )}
-                          <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
-                            {c.contractor_name}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <span className="text-xs text-muted-foreground">Click to remove</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+            <p className="text-xs text-muted-foreground">
+              Click to select. First contractor contacted immediately, others after 6h if no response.
+            </p>
+          </div>
 
-                {/* Selected order display */}
-                {formData.contractor_ids.length > 0 && (
-                  <div className="p-2.5 bg-muted/50 rounded-lg space-y-1">
-                    <p className="text-xs font-medium">Contact Order:</p>
-                    <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal list-inside">
-                      {formData.contractor_ids.map((id, i) => {
-                        const contractor = contractors.find((c) => c.id === id)
-                        return (
-                          <li key={id}>
-                            {contractor?.contractor_name}
-                            {i === 0 && <span className="text-primary ml-1">(contacted first)</span>}
-                          </li>
-                        )
-                      })}
-                    </ol>
-                    {formData.contractor_ids.length > 1 && (
-                      <p className="text-xs text-muted-foreground mt-1.5 pt-1.5 border-t border-muted">
-                        Next contractor contacted after 6 hours if no response
-                      </p>
+          {!formData.category ? (
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">
+                Select a category first
+              </p>
+            </div>
+          ) : filteredContractors.length === 0 ? (
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-center">
+              <p className="text-sm text-amber-700">
+                No {formData.category} contractors for this property
+              </p>
+            </div>
+          ) : (
+            <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+              {filteredContractors.map((c) => {
+                const isSelected = formData.contractor_ids.includes(c.id)
+                const orderIndex = formData.contractor_ids.indexOf(c.id)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          contractor_ids: prev.contractor_ids.filter((id) => id !== c.id),
+                        }))
+                      } else {
+                        setFormData((prev) => ({
+                          ...prev,
+                          contractor_ids: [...prev.contractor_ids, c.id],
+                        }))
+                      }
+                    }}
+                    className={`w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors ${
+                      isSelected ? 'bg-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {isSelected ? (
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                          {orderIndex + 1}
+                        </span>
+                      ) : (
+                        <span className="w-6 h-6 rounded-full border-2 border-muted-foreground/30" />
+                      )}
+                      <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
+                        {c.contractor_name}
+                      </span>
+                    </div>
+                    {isSelected && orderIndex === 0 && (
+                      <span className="text-xs text-primary font-medium">First</span>
                     )}
-                  </div>
-                )}
-              </>
-            )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Selected summary */}
+          {formData.contractor_ids.length > 0 && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-green-800">
+                    {formData.contractor_ids.length} contractor{formData.contractor_ids.length > 1 ? 's' : ''} selected
+                  </p>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    {contractors.find((c) => c.id === formData.contractor_ids[0])?.contractor_name} will be contacted first
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Additional details */}
+          <div className="pt-2 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Additional Details (Optional)
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Tenant Availability</label>
+              <Input
+                value={formData.availability}
+                onChange={(e) => updateField('availability', e.target.value)}
+                placeholder="e.g., Weekdays after 5pm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Access Instructions</label>
+              <Input
+                value={formData.access}
+                onChange={(e) => updateField('access', e.target.value)}
+                placeholder="e.g., Key under mat"
+              />
+            </div>
           </div>
         </div>
-      </DetailSection>
+      </div>
 
-      <DetailDivider />
-
-      <DetailSection title="Additional Details (Optional)">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
-              Tenant Availability
-            </label>
-            <Input
-              value={formData.availability}
-              onChange={(e) => updateField('availability', e.target.value)}
-              placeholder="e.g., Weekdays after 5pm, Saturdays all day"
-              className="h-9 text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              When can the tenant be present for the work?
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
-              Access Instructions
-            </label>
-            <Input
-              value={formData.access}
-              onChange={(e) => updateField('access', e.target.value)}
-              placeholder="e.g., Key under mat, call tenant on arrival"
-              className="h-9 text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              How should the contractor access the property?
-            </p>
-          </div>
-        </div>
-      </DetailSection>
-
-      <div className="flex justify-end gap-2 pt-4">
+      {/* Footer */}
+      <div className="flex justify-end gap-3 pt-4 border-t">
         <Button variant="outline" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>
