@@ -175,12 +175,13 @@ export default function TicketsPage() {
     issue_description: string
     category: string
     priority: string
-    contractor_id: string | null
+    contractor_ids: string[]
+    availability: string
+    access: string
   }) => {
-    let ticketId: string
-
     if (handoffTicketId) {
       // Update existing handoff ticket
+      // For handoff, we update the ticket and create c1_messages manually
       const { error } = await supabase
         .from('c1_tickets')
         .update({
@@ -189,7 +190,9 @@ export default function TicketsPage() {
           issue_description: data.issue_description,
           category: data.category,
           priority: data.priority,
-          contractor_id: data.contractor_id,
+          contractor_id: data.contractor_ids[0] || null,
+          availability: data.availability || null,
+          access: data.access || null,
           handoff: false,
         })
         .eq('id', handoffTicketId)
@@ -197,54 +200,34 @@ export default function TicketsPage() {
       if (error) {
         throw new Error(error.message)
       }
-      ticketId = handoffTicketId
+
+      // TODO: Call c1_complete_handoff_ticket RPC when available
+      // For now, just update the ticket (contractor dispatch handled separately)
+
+      toast.success('Ticket completed')
     } else {
-      // Create new manual ticket
-      const { data: newTicket, error } = await supabase
-        .from('c1_tickets')
-        .insert({
-          property_id: data.property_id,
-          tenant_id: data.tenant_id,
-          property_manager_id: propertyManager!.id,
-          issue_description: data.issue_description,
-          category: data.category,
-          priority: data.priority,
-          contractor_id: data.contractor_id,
-          status: 'open',
-          job_stage: 'created',
-          date_logged: new Date().toISOString(),
-          reporter_role: 'manager',
-          verified_by: 'manual',
-          is_manual: true,
-        })
-        .select('id')
-        .single()
+      // Create new manual ticket via RPC
+      // This creates the ticket, c1_messages row, and triggers the dispatcher
+      const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
+        p_property_manager_id: propertyManager!.id,
+        p_property_id: data.property_id,
+        p_tenant_id: data.tenant_id,
+        p_issue_description: data.issue_description,
+        p_category: data.category,
+        p_priority: data.priority,
+        p_contractor_ids: data.contractor_ids,
+        p_availability: data.availability || null,
+        p_access: data.access || null,
+        p_images: [],
+      })
 
       if (error) {
         throw new Error(error.message)
       }
-      ticketId = newTicket.id
+
+      toast.success('Ticket created - contractor notified')
     }
 
-    // If contractor assigned, trigger the n8n webhook
-    const webhookUrl = process.env.NEXT_PUBLIC_MANUAL_TICKET_WEBHOOK_URL
-    if (data.contractor_id && webhookUrl) {
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ticket_id: ticketId,
-            contractor_id: data.contractor_id,
-            trigger: handoffTicketId ? 'handoff_complete' : 'manual',
-          }),
-        })
-      } catch (webhookError) {
-        console.error('Failed to trigger webhook:', webhookError)
-      }
-    }
-
-    toast.success(handoffTicketId ? 'Ticket completed' : 'Ticket created')
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
     fetchTickets()
@@ -545,7 +528,9 @@ export default function TicketsPage() {
             issue_description: selectedTicketBasic.issue_description || '',
             category: selectedTicketBasic.category || '',
             priority: selectedTicketBasic.priority || 'MEDIUM',
-            contractor_id: selectedTicketBasic.contractor_id || null,
+            contractor_id: selectedTicketBasic.contractor_id || null,  // Legacy support - converted to array in form
+            availability: selectedTicketBasic.availability || '',
+            access: selectedTicketBasic.access || '',
           } : undefined}
           onSubmit={handleCreateTicket}
           onCancel={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
