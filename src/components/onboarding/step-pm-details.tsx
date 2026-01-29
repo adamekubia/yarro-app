@@ -75,7 +75,7 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             id="pm-phone"
             value={details.phone}
             onChange={(e) => updateField('phone', e.target.value)}
-            placeholder="07508743333"
+            placeholder="07700 900123"
           />
           <p className="text-xs text-muted-foreground">
             Format: 07XXX XXXXXX — we&apos;ll normalize to 447...

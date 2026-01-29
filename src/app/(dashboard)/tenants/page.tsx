@@ -346,13 +346,13 @@ export default function TenantsPage() {
               type="tel"
               value={data.phone}
               onChange={(e) => update('phone', e.target.value)}
-              placeholder="07508 743333"
+              placeholder="07700 900123"
               className={`h-9 ${validationErrors.phone ? 'border-destructive' : ''}`}
             />
             {validationErrors.phone ? (
               <p className="text-xs text-destructive">{validationErrors.phone}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+              <p className="text-xs text-muted-foreground">UK mobile format</p>
             )}
           </div>
           <div className="space-y-1.5">

@@ -1,6 +1,6 @@
 /**
  * Phone: Normalize to 447XXXXXXXXX format (UK, no plus sign)
- * DB format: 447508743333
+ * DB format: 447XXXXXXXXX
  * Handles: 07123456789, +447123456789, 7123456789, 447123456789, 0044...
  * Also handles: +44 (0)7xxx pattern (strips the (0))
  */

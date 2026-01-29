@@ -382,13 +382,13 @@ export default function PropertiesPage() {
                 type="tel"
                 value={data.landlord_phone || ''}
                 onChange={(e) => update('landlord_phone', e.target.value || null)}
-                placeholder="07508 743333"
+                placeholder="07700 900123"
                 className={`h-9 ${validationErrors.landlord_phone ? 'border-destructive' : ''}`}
               />
               {validationErrors.landlord_phone ? (
                 <p className="text-xs text-destructive">{validationErrors.landlord_phone}</p>
               ) : (
-                <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+                <p className="text-xs text-muted-foreground">UK mobile format</p>
               )}
             </div>
             <div className="space-y-1.5">

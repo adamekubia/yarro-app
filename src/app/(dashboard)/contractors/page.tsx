@@ -430,13 +430,13 @@ export default function ContractorsPage() {
               type="tel"
               value={data.contractor_phone}
               onChange={(e) => update('contractor_phone', e.target.value)}
-              placeholder="07508 743333"
+              placeholder="07700 900123"
               className={`h-9 ${validationErrors.contractor_phone ? 'border-destructive' : ''}`}
             />
             {validationErrors.contractor_phone ? (
               <p className="text-xs text-destructive">{validationErrors.contractor_phone}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+              <p className="text-xs text-muted-foreground">UK mobile format</p>
             )}
           </div>
           <div className="space-y-1.5">
