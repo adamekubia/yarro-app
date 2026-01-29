@@ -6,18 +6,20 @@ import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from './onboarding/progress-bar'
+import { StepPMDetails, PMDetailsEntry } from './onboarding/step-pm-details'
 import { StepLandlords, LandlordPersona } from './onboarding/step-landlords'
 import { StepProperties, PropertyEntry } from './onboarding/step-properties'
 import { StepTenants, TenantEntry } from './onboarding/step-tenants'
 import { StepContractors, ContractorEntry } from './onboarding/step-contractors'
-import { normalizeRecord } from '@/lib/normalize'
+import { normalizeRecord, normalizePhone, isValidUKPhone } from '@/lib/normalize'
 import { validatePhone, validateEmail } from '@/lib/validate'
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2, SkipForward } from 'lucide-react'
 
-type OnboardingStep = 'landlords' | 'properties' | 'tenants' | 'contractors' | 'complete'
+type OnboardingStep = 'pm_details' | 'landlords' | 'properties' | 'tenants' | 'contractors' | 'complete'
 
 interface OnboardingState {
   step: OnboardingStep
+  pmDetails: PMDetailsEntry
   landlords: LandlordPersona[]
   properties: PropertyEntry[]
   tenants: TenantEntry[]
@@ -27,7 +29,7 @@ interface OnboardingState {
   existingProperties: { id: string; address: string }[]
 }
 
-const STEP_ORDER: OnboardingStep[] = ['landlords', 'properties', 'tenants', 'contractors', 'complete']
+const STEP_ORDER: OnboardingStep[] = ['pm_details', 'landlords', 'properties', 'tenants', 'contractors', 'complete']
 
 export function OnboardingWizard() {
   const { propertyManager } = usePM()
@@ -36,7 +38,8 @@ export function OnboardingWizard() {
   const [error, setError] = useState<string | null>(null)
 
   const [state, setState] = useState<OnboardingState>({
-    step: 'landlords',
+    step: 'pm_details',
+    pmDetails: { name: propertyManager?.name || '', business_name: '', phone: '', emergency_contact: '' },
     landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
     properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
     tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
@@ -78,6 +81,8 @@ export function OnboardingWizard() {
   }
 
   const canGoBack = () => {
+    if (state.step === 'pm_details') return false // Can't go back from first step
+    if (state.step === 'landlords') return false // Don't go back to PM details once done
     if (state.step === 'tenants' && state.insertedCounts.properties > 0) return false
     if (state.step === 'contractors' && state.insertedCounts.tenants > 0) return false
     return currentStepIndex > 0
@@ -89,7 +94,44 @@ export function OnboardingWizard() {
     setSaving(true)
 
     try {
-      if (state.step === 'landlords') {
+      if (state.step === 'pm_details') {
+        // Validate PM details
+        if (!state.pmDetails.name.trim()) {
+          setError('Your name is required')
+          setSaving(false)
+          return
+        }
+        if (!state.pmDetails.phone.trim()) {
+          setError('Your phone number is required')
+          setSaving(false)
+          return
+        }
+        if (!isValidUKPhone(state.pmDetails.phone)) {
+          setError('Enter a valid UK phone number')
+          setSaving(false)
+          return
+        }
+
+        // Update property_managers record
+        const { error: updateError } = await supabase
+          .from('c1_property_managers')
+          .update({
+            name: state.pmDetails.name.trim(),
+            business_name: state.pmDetails.business_name.trim() || null,
+            phone: normalizePhone(state.pmDetails.phone),
+            emergency_contact: state.pmDetails.emergency_contact.trim() || null,
+          })
+          .eq('id', propertyManager.id)
+
+        if (updateError) {
+          setError(`Failed to update your details: ${updateError.message}`)
+          setSaving(false)
+          return
+        }
+
+        toast.success('Your details saved')
+        setState((prev) => ({ ...prev, step: 'landlords' }))
+      } else if (state.step === 'landlords') {
         // Landlords are just stored in state, nothing to insert
         setState((prev) => ({ ...prev, step: 'properties' }))
       } else if (state.step === 'properties') {
@@ -282,7 +324,8 @@ export function OnboardingWizard() {
 
   const resetWizard = () => {
     setState({
-      step: 'landlords',
+      step: 'landlords', // Skip PM details on reset - already done
+      pmDetails: state.pmDetails, // Keep PM details
       landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
       properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
       tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
@@ -308,6 +351,14 @@ export function OnboardingWizard() {
 
       {/* Step Content */}
       <div className="bg-white rounded-xl border p-6">
+        {state.step === 'pm_details' && (
+          <StepPMDetails
+            details={state.pmDetails}
+            email={propertyManager?.email || ''}
+            onChange={(pmDetails) => setState((prev) => ({ ...prev, pmDetails }))}
+          />
+        )}
+
         {state.step === 'landlords' && (
           <StepLandlords
             landlords={state.landlords}
@@ -386,10 +437,12 @@ export function OnboardingWizard() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={skip} disabled={saving}>
-              <SkipForward className="h-4 w-4 mr-1" />
-              Skip
-            </Button>
+            {state.step !== 'pm_details' && (
+              <Button variant="ghost" onClick={skip} disabled={saving}>
+                <SkipForward className="h-4 w-4 mr-1" />
+                Skip
+              </Button>
+            )}
             <Button onClick={handleNext} disabled={saving}>
               {saving ? (
                 <>

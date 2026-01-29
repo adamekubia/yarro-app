@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { Building2, User, Phone, Mail, Wrench, Ticket, Plus } from 'lucide-react'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
-import { normalizeRecord } from '@/lib/normalize'
+import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import type { Json } from '@/types/database'
 
 interface PropertyHub {
@@ -91,6 +91,7 @@ export default function PropertiesPage() {
   const [selectedProperty, setSelectedProperty] = useState<PropertyHub | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -112,6 +113,14 @@ export default function PropertiesPage() {
 
   // Save handler for edit mode
   const handleSave = useCallback(async (data: PropertyEditable, auditEntry: { at: string; by: string; changes: Record<string, { from: unknown; to: unknown }> }) => {
+    // Validate first
+    const errors = validateProperty(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     // First get current audit log
     const { data: current } = await supabase
       .from('c1_properties')
@@ -163,6 +172,14 @@ export default function PropertiesPage() {
 
   // Create handler for new properties
   const handleCreate = useCallback(async (data: PropertyEditable) => {
+    // Validate first
+    const errors = validateProperty(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     const normalized = normalizeRecord('properties', {
       address: data.address,
       landlord_name: data.landlord_name,
@@ -242,6 +259,7 @@ export default function PropertiesPage() {
     if (isEditing) {
       cancelEditing()
     }
+    setValidationErrors({})
     setDrawerOpen(false)
     router.push('/properties')
     setSelectedProperty(null)
@@ -249,12 +267,14 @@ export default function PropertiesPage() {
 
   const handleAddClick = () => {
     setSelectedProperty(null)
+    setValidationErrors({})
     startCreating()
     setDrawerOpen(true)
   }
 
   const handleCloseCreateDrawer = () => {
     cancelCreating()
+    setValidationErrors({})
     setDrawerOpen(false)
   }
 
@@ -332,9 +352,14 @@ export default function PropertiesPage() {
         <Input
           value={data.address}
           onChange={(e) => update('address', e.target.value)}
-          placeholder="123 Main Street, City"
-          className="h-9"
+          placeholder="123 Main Street, Manchester, M1 1AA"
+          className={`h-9 ${validationErrors.address ? 'border-destructive' : ''}`}
         />
+        {validationErrors.address ? (
+          <p className="text-xs text-destructive">{validationErrors.address}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Comma-separated, ending with UK postcode</p>
+        )}
       </div>
 
       <DetailSection title="Landlord">
@@ -350,14 +375,21 @@ export default function PropertiesPage() {
           </div>
           <DetailGrid columns={2}>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Phone</label>
+              <label className="text-xs text-muted-foreground">
+                Phone <span className="text-destructive">*</span>
+              </label>
               <Input
                 type="tel"
                 value={data.landlord_phone || ''}
                 onChange={(e) => update('landlord_phone', e.target.value || null)}
-                placeholder="07123456789"
-                className="h-9"
+                placeholder="07508 743333"
+                className={`h-9 ${validationErrors.landlord_phone ? 'border-destructive' : ''}`}
               />
+              {validationErrors.landlord_phone ? (
+                <p className="text-xs text-destructive">{validationErrors.landlord_phone}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Email</label>
@@ -366,8 +398,11 @@ export default function PropertiesPage() {
                 value={data.landlord_email || ''}
                 onChange={(e) => update('landlord_email', e.target.value || null)}
                 placeholder="landlord@email.com"
-                className="h-9"
+                className={`h-9 ${validationErrors.landlord_email ? 'border-destructive' : ''}`}
               />
+              {validationErrors.landlord_email && (
+                <p className="text-xs text-destructive">{validationErrors.landlord_email}</p>
+              )}
             </div>
           </DetailGrid>
         </div>
@@ -378,14 +413,19 @@ export default function PropertiesPage() {
       <DetailSection title="Settings">
         <DetailGrid columns={2}>
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Auto-Approve Limit (£)</label>
+            <label className="text-xs text-muted-foreground">
+              Auto-Approve Limit (£) <span className="text-destructive">*</span>
+            </label>
             <Input
               type="number"
               value={data.auto_approve_limit ?? ''}
               onChange={(e) => update('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)}
               placeholder="500"
-              className="h-9"
+              className={`h-9 ${validationErrors.auto_approve_limit ? 'border-destructive' : ''}`}
             />
+            {validationErrors.auto_approve_limit && (
+              <p className="text-xs text-destructive">{validationErrors.auto_approve_limit}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Emergency Contact</label>
@@ -475,7 +515,7 @@ export default function PropertiesPage() {
                     {selectedProperty.landlord_phone && (
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Phone className="h-3 w-3" />
-                        {selectedProperty.landlord_phone}
+                        {formatPhoneDisplay(selectedProperty.landlord_phone)}
                       </p>
                     )}
                     {selectedProperty.landlord_email && (

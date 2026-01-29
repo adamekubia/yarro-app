@@ -29,11 +29,11 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
     .map((l) => ({ value: l.tempId, label: l.name }))
 
   const columns: ColumnDef[] = [
-    { key: 'address', label: 'Address', required: true, placeholder: '28 Salisbury Road', width: '30%' },
+    { key: 'address', label: 'Address', required: true, placeholder: '28 Salisbury Road, M25 0HU', width: '30%' },
     ...(landlordOptions.length > 0
       ? [{ key: 'landlordTempId', label: 'Landlord', type: 'select' as const, options: landlordOptions }]
       : []),
-    { key: 'auto_approve_limit', label: 'Auto-Approve (£)', type: 'number' as const, placeholder: '500' },
+    { key: 'auto_approve_limit', label: 'Auto-Approve (£)', required: true, type: 'number' as const, placeholder: '0' },
     { key: 'access_instructions', label: 'Access', placeholder: 'Key in lockbox' },
     { key: 'emergency_access_contact', label: 'Emergency Contact', placeholder: 'Neighbour: 07...' },
   ]
@@ -92,6 +92,18 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
       </div>
 
       <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
+
+      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium">Address:</span> Include full UK postcode (e.g., 28 Salisbury Road, M25 0HU)
+        </p>
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium">Auto-Approve:</span> Max amount contractors can spend without landlord approval. Enter 0 if no auto-approve.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          <span className="text-destructive">*</span> Address and Auto-Approve are required. Access and Emergency Contact are optional.
+        </p>
+      </div>
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}

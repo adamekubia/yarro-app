@@ -26,7 +26,7 @@ import Link from 'next/link'
 import { Phone, Mail, Building2, Wrench, Plus, X } from 'lucide-react'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
-import { normalizeRecord } from '@/lib/normalize'
+import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
 
 interface Contractor {
@@ -80,6 +80,7 @@ export default function ContractorsPage() {
   const [allProperties, setAllProperties] = useState<PropertyAddress[]>([])
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -100,6 +101,14 @@ export default function ContractorsPage() {
 
   // Save handler for edit mode
   const handleSave = useCallback(async (data: ContractorEditable, auditEntry: { at: string; by: string; changes: Record<string, { from: unknown; to: unknown }> }) => {
+    // Validate first
+    const errors = validateContractor(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     const { data: current } = await supabase
       .from('c1_contractors')
       .select('_audit_log')
@@ -149,6 +158,14 @@ export default function ContractorsPage() {
 
   // Create handler for new contractors
   const handleCreate = useCallback(async (data: ContractorEditable) => {
+    // Validate first
+    const errors = validateContractor(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     const normalized = normalizeRecord('contractors', {
       contractor_name: data.contractor_name,
       contractor_phone: data.contractor_phone,
@@ -260,6 +277,7 @@ export default function ContractorsPage() {
     if (isEditing) {
       cancelEditing()
     }
+    setValidationErrors({})
     setDrawerOpen(false)
     router.push('/contractors')
     setSelectedContractor(null)
@@ -268,12 +286,14 @@ export default function ContractorsPage() {
 
   const handleAddClick = () => {
     setSelectedContractor(null)
+    setValidationErrors({})
     startCreating()
     setDrawerOpen(true)
   }
 
   const handleCloseCreateDrawer = () => {
     cancelCreating()
+    setValidationErrors({})
     setDrawerOpen(false)
   }
 
@@ -300,7 +320,7 @@ export default function ContractorsPage() {
       header: 'Phone',
       sortable: true,
       render: (c) => (
-        <span className="font-mono text-sm">{c.contractor_phone || '-'}</span>
+        <span className="font-mono text-sm">{formatPhoneDisplay(c.contractor_phone) || '-'}</span>
       ),
     },
     {
@@ -348,8 +368,11 @@ export default function ContractorsPage() {
           value={data.contractor_name}
           onChange={(e) => update('contractor_name', e.target.value)}
           placeholder="ABC Plumbing"
-          className="h-9"
+          className={`h-9 ${validationErrors.contractor_name ? 'border-destructive' : ''}`}
         />
+        {validationErrors.contractor_name && (
+          <p className="text-xs text-destructive">{validationErrors.contractor_name}</p>
+        )}
       </div>
 
       <DetailSection title="Details">
@@ -362,7 +385,7 @@ export default function ContractorsPage() {
               value={data.category}
               onValueChange={(v) => update('category', v)}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className={`h-9 ${validationErrors.category ? 'border-destructive' : ''}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -373,6 +396,9 @@ export default function ContractorsPage() {
                 ))}
               </SelectContent>
             </Select>
+            {validationErrors.category && (
+              <p className="text-xs text-destructive">{validationErrors.category}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Status</label>
@@ -404,9 +430,14 @@ export default function ContractorsPage() {
               type="tel"
               value={data.contractor_phone}
               onChange={(e) => update('contractor_phone', e.target.value)}
-              placeholder="07123456789"
-              className="h-9"
+              placeholder="07508 743333"
+              className={`h-9 ${validationErrors.contractor_phone ? 'border-destructive' : ''}`}
             />
+            {validationErrors.contractor_phone ? (
+              <p className="text-xs text-destructive">{validationErrors.contractor_phone}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Email</label>
@@ -415,8 +446,11 @@ export default function ContractorsPage() {
               value={data.contractor_email || ''}
               onChange={(e) => update('contractor_email', e.target.value || null)}
               placeholder="contractor@email.com"
-              className="h-9"
+              className={`h-9 ${validationErrors.contractor_email ? 'border-destructive' : ''}`}
             />
+            {validationErrors.contractor_email && (
+              <p className="text-xs text-destructive">{validationErrors.contractor_email}</p>
+            )}
           </div>
         </DetailGrid>
       </DetailSection>

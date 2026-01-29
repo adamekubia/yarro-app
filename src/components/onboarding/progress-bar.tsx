@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 
 const STEPS = [
+  { key: 'pm_details', label: 'Your Details' },
   { key: 'landlords', label: 'Landlords' },
   { key: 'properties', label: 'Properties' },
   { key: 'tenants', label: 'Tenants' },

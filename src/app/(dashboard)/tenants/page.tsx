@@ -25,7 +25,7 @@ import {
 import Link from 'next/link'
 import { Phone, Mail, Building2, CheckCircle, Plus, Users } from 'lucide-react'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
-import { normalizeRecord } from '@/lib/normalize'
+import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
 
 interface Tenant {
@@ -77,6 +77,7 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [properties, setProperties] = useState<PropertyOption[]>([])
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -96,6 +97,14 @@ export default function TenantsPage() {
 
   // Save handler for edit mode
   const handleSave = useCallback(async (data: TenantEditable, auditEntry: { at: string; by: string; changes: Record<string, { from: unknown; to: unknown }> }) => {
+    // Validate first
+    const errors = validateTenant(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     const { data: current } = await supabase
       .from('c1_tenants')
       .select('_audit_log')
@@ -144,6 +153,14 @@ export default function TenantsPage() {
 
   // Create handler for new tenants
   const handleCreate = useCallback(async (data: TenantEditable) => {
+    // Validate first
+    const errors = validateTenant(data)
+    if (hasErrors(errors)) {
+      setValidationErrors(errors)
+      throw new Error('Please fix the validation errors')
+    }
+    setValidationErrors({})
+
     const normalized = normalizeRecord('tenants', {
       full_name: data.full_name,
       phone: data.phone,
@@ -239,6 +256,7 @@ export default function TenantsPage() {
     if (isEditing) {
       cancelEditing()
     }
+    setValidationErrors({})
     setDrawerOpen(false)
     router.push('/tenants')
     setSelectedTenant(null)
@@ -246,21 +264,15 @@ export default function TenantsPage() {
 
   const handleAddClick = () => {
     setSelectedTenant(null)
+    setValidationErrors({})
     startCreating()
     setDrawerOpen(true)
   }
 
   const handleCloseCreateDrawer = () => {
     cancelCreating()
+    setValidationErrors({})
     setDrawerOpen(false)
-  }
-
-  const formatPhone = (phone: string | null) => {
-    if (!phone) return '-'
-    if (phone.startsWith('+44')) {
-      return phone.replace(/^\+44(\d{4})(\d{6})$/, '+44 $1 $2')
-    }
-    return phone
   }
 
   const columns: Column<Tenant>[] = [
@@ -275,7 +287,7 @@ export default function TenantsPage() {
       header: 'Phone',
       sortable: true,
       render: (t) => (
-        <span className="font-mono text-sm">{formatPhone(t.phone)}</span>
+        <span className="font-mono text-sm">{formatPhoneDisplay(t.phone) || '-'}</span>
       ),
     },
     {
@@ -319,23 +331,29 @@ export default function TenantsPage() {
           value={data.full_name}
           onChange={(e) => update('full_name', e.target.value)}
           placeholder="John Smith"
-          className="h-9"
+          className={`h-9 ${validationErrors.full_name ? 'border-destructive' : ''}`}
         />
+        {validationErrors.full_name && (
+          <p className="text-xs text-destructive">{validationErrors.full_name}</p>
+        )}
       </div>
 
       <DetailSection title="Contact">
         <DetailGrid columns={2}>
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
-              Phone <span className="text-destructive">*</span>
-            </label>
+            <label className="text-xs text-muted-foreground">Phone</label>
             <Input
               type="tel"
               value={data.phone}
               onChange={(e) => update('phone', e.target.value)}
-              placeholder="07123456789"
-              className="h-9"
+              placeholder="07508 743333"
+              className={`h-9 ${validationErrors.phone ? 'border-destructive' : ''}`}
             />
+            {validationErrors.phone ? (
+              <p className="text-xs text-destructive">{validationErrors.phone}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">UK format: (44) 7508 743333</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Email</label>
@@ -344,8 +362,11 @@ export default function TenantsPage() {
               value={data.email || ''}
               onChange={(e) => update('email', e.target.value || null)}
               placeholder="tenant@email.com"
-              className="h-9"
+              className={`h-9 ${validationErrors.email ? 'border-destructive' : ''}`}
             />
+            {validationErrors.email && (
+              <p className="text-xs text-destructive">{validationErrors.email}</p>
+            )}
           </div>
         </DetailGrid>
       </DetailSection>
@@ -355,12 +376,14 @@ export default function TenantsPage() {
       <DetailSection title="Assignment">
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Property</label>
+            <label className="text-xs text-muted-foreground">
+              Property <span className="text-destructive">*</span>
+            </label>
             <Select
               value={data.property_id || ''}
               onValueChange={(v) => update('property_id', v || null)}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className={`h-9 ${validationErrors.property_id ? 'border-destructive' : ''}`}>
                 <SelectValue placeholder="Select property..." />
               </SelectTrigger>
               <SelectContent>
@@ -371,6 +394,9 @@ export default function TenantsPage() {
                 ))}
               </SelectContent>
             </Select>
+            {validationErrors.property_id && (
+              <p className="text-xs text-destructive">{validationErrors.property_id}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Role</label>
@@ -478,7 +504,7 @@ export default function TenantsPage() {
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-xs text-muted-foreground">Phone</p>
-                        <p className="font-mono text-sm">{formatPhone(selectedTenant.phone)}</p>
+                        <p className="font-mono text-sm">{formatPhoneDisplay(selectedTenant.phone)}</p>
                       </div>
                     </div>
                   )}
