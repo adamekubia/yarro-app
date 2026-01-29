@@ -61,15 +61,6 @@ export function StepLandlords({ landlords, onChange }: StepLandlordsProps) {
 
       <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
 
-      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium">Phone format:</span> Enter as 07XXX XXXXXX — we&apos;ll normalize to 447...
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-destructive">*</span> Name and Phone are required
-        </p>
-      </div>
-
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}

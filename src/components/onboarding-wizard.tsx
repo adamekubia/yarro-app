@@ -37,9 +37,18 @@ export function OnboardingWizard() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Check if PM details are already configured (name and phone exist)
+  const pmDetailsConfigured = !!(propertyManager?.name && propertyManager?.phone)
+
   const [state, setState] = useState<OnboardingState>({
-    step: 'pm_details',
-    pmDetails: { name: propertyManager?.name || '', business_name: '', phone: '', emergency_contact: '' },
+    // Start at landlords if PM details already configured, otherwise start at pm_details
+    step: pmDetailsConfigured ? 'landlords' : 'pm_details',
+    pmDetails: {
+      name: propertyManager?.name || '',
+      business_name: propertyManager?.business_name || '',
+      phone: propertyManager?.phone || '',
+      emergency_contact: propertyManager?.emergency_contact || ''
+    },
     landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
     properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
     tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
@@ -48,6 +57,23 @@ export function OnboardingWizard() {
     insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
     existingProperties: [],
   })
+
+  // Update pmDetails and step when propertyManager loads
+  useEffect(() => {
+    if (!propertyManager) return
+    const hasDetails = !!(propertyManager.name && propertyManager.phone)
+    setState((prev) => ({
+      ...prev,
+      // Only update step if still at pm_details and details already configured
+      step: prev.step === 'pm_details' && hasDetails ? 'landlords' : prev.step,
+      pmDetails: {
+        name: propertyManager.name || prev.pmDetails.name,
+        business_name: propertyManager.business_name || prev.pmDetails.business_name,
+        phone: propertyManager.phone || prev.pmDetails.phone,
+        emergency_contact: propertyManager.emergency_contact || prev.pmDetails.emergency_contact,
+      },
+    }))
+  }, [propertyManager])
 
   // Fetch existing properties on mount (for tenant/contractor dropdowns)
   useEffect(() => {
@@ -82,7 +108,7 @@ export function OnboardingWizard() {
 
   const canGoBack = () => {
     if (state.step === 'pm_details') return false // Can't go back from first step
-    if (state.step === 'landlords') return false // Don't go back to PM details once done
+    // Allow going back to PM details from landlords (for editing)
     if (state.step === 'tenants' && state.insertedCounts.properties > 0) return false
     if (state.step === 'contractors' && state.insertedCounts.tenants > 0) return false
     return currentStepIndex > 0
@@ -437,7 +463,7 @@ export function OnboardingWizard() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {state.step !== 'pm_details' && (
+            {(state.step !== 'pm_details' || pmDetailsConfigured) && (
               <Button variant="ghost" onClick={skip} disabled={saving}>
                 <SkipForward className="h-4 w-4 mr-1" />
                 Skip

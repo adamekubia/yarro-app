@@ -63,7 +63,6 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             disabled
             className="bg-muted"
           />
-          <p className="text-xs text-muted-foreground">From your login</p>
         </div>
 
         {/* Phone - Required */}
@@ -77,9 +76,6 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             onChange={(e) => updateField('phone', e.target.value)}
             placeholder="07700 900123"
           />
-          <p className="text-xs text-muted-foreground">
-            Format: 07XXX XXXXXX — we&apos;ll normalize to 447...
-          </p>
         </div>
 
         {/* Emergency Contact - Optional */}
@@ -89,19 +85,11 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
             id="pm-emergency"
             value={details.emergency_contact}
             onChange={(e) => updateField('emergency_contact', e.target.value)}
-            placeholder="07XXX XXXXXX or name + number"
+            placeholder="07700 900123"
           />
-          <p className="text-xs text-muted-foreground">
-            Backup contact for emergencies (optional)
-          </p>
         </div>
       </div>
 
-      <div className="p-3 bg-muted/50 rounded-lg">
-        <p className="text-xs text-muted-foreground">
-          <span className="text-destructive">*</span> Required fields
-        </p>
-      </div>
-    </div>
+          </div>
   )
 }

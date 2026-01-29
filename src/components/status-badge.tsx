@@ -9,7 +9,7 @@ type StatusBadgeProps = {
   className?: string
 }
 
-const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+const statusColors: Record<string, { bg: string; text: string; dot: string; hideDot?: boolean }> = {
   // Ticket statuses
   open: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
   closed: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
@@ -20,9 +20,10 @@ const statusColors: Record<string, { bg: string; text: string; dot: string }> = 
   quote_received: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
   pm_approved: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
   ll_approved: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  booked: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', hideDot: true },
   scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500' },
   reminder_sent: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500' },
-  completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+  completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500', hideDot: true },
 
   // Priority
   urgent: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
@@ -63,7 +64,7 @@ export function StatusBadge({ status, variant = 'default', size = 'sm', classNam
         className
       )}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', colors.dot)} />
+      {!colors.hideDot && <span className={cn('h-1.5 w-1.5 rounded-full', colors.dot)} />}
       {formatStatus(status)}
     </span>
   )

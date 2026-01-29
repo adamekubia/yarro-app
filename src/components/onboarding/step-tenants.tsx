@@ -93,18 +93,6 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
 
       <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
 
-      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium">Phone format:</span> Enter as 07XXX XXXXXX — we&apos;ll normalize to 447...
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium">CSV property matching:</span> Use the exact address from your Properties step for automatic linking.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-destructive">*</span> Name, Phone, and Property are required. Email and Role are optional.
-        </p>
-      </div>
-
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}

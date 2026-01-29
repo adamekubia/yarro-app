@@ -93,18 +93,6 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
 
       <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
 
-      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium">Address:</span> Include full UK postcode (e.g., 28 Salisbury Road, M25 0HU)
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium">Auto-Approve:</span> Max amount contractors can spend without landlord approval. Enter 0 if no auto-approve.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-destructive">*</span> Address and Auto-Approve are required. Access and Emergency Contact are optional.
-        </p>
-      </div>
-
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}

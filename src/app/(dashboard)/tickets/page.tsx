@@ -25,7 +25,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket } from 'lucide-react'
+import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2 } from 'lucide-react'
 
 interface Ticket {
   id: string
@@ -84,6 +84,7 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<TicketDetail | null>(null)
   const [selectedTicketBasic, setSelectedTicketBasic] = useState<Ticket | null>(null)
   const [hasMessage, setHasMessage] = useState(false)
+  const [hasCompletion, setHasCompletion] = useState(false)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
@@ -155,15 +156,17 @@ export default function TicketsPage() {
   }
 
   const fetchTicketDetail = async (ticketId: string) => {
-    const [ticketRes, messageRes] = await Promise.all([
+    const [ticketRes, messageRes, completionRes] = await Promise.all([
       supabase.rpc('c1_ticket_context', { ticket_uuid: ticketId }),
       supabase.from('c1_messages').select('ticket_id').eq('ticket_id', ticketId).single(),
+      supabase.from('c1_completions').select('id').eq('ticket_id', ticketId).single(),
     ])
 
     if (ticketRes.data && ticketRes.data.length > 0) {
       setSelectedTicket(ticketRes.data[0])
     }
     setHasMessage(!!messageRes.data)
+    setHasCompletion(!!completionRes.data)
   }
 
   const handleRowClick = (ticket: Ticket) => {
@@ -477,6 +480,17 @@ export default function TicketsPage() {
                     <span className="text-xs font-medium">Contractor</span>
                   </Link>
                 )}
+                {/* Completion */}
+                {hasCompletion && (
+                  <Link
+                    href={`/completions?id=${selectedTicketBasic?.id}`}
+                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    onClick={handleCloseDrawer}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium">Completion</span>
+                  </Link>
+                )}
               </div>
             </DetailSection>
 
@@ -510,10 +524,30 @@ export default function TicketsPage() {
                   <p className="text-xs text-muted-foreground">Access</p>
                   <p className="text-xs font-medium">{selectedTicket.access || '-'}</p>
                 </div>
+
+                {/* Dynamic fields that appear as ticket progresses */}
+                {selectedTicketBasic?.contractor_name && (
+                  <div className="p-2 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Contractor</p>
+                    <p className="text-xs font-medium">{selectedTicketBasic.contractor_name}</p>
+                  </div>
+                )}
+                {selectedTicketBasic?.contractor_quote && (
+                  <div className="p-2 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Quote</p>
+                    <p className="text-xs font-medium font-mono">{formatCurrency(selectedTicketBasic.contractor_quote)}</p>
+                  </div>
+                )}
+                {selectedTicketBasic?.scheduled_date && (
+                  <div className="p-2 bg-teal-50 rounded-lg col-span-2">
+                    <p className="text-xs text-teal-600">Scheduled Date</p>
+                    <p className="text-sm font-medium text-teal-700">{formatDate(selectedTicketBasic.scheduled_date)}</p>
+                  </div>
+                )}
                 {selectedTicket.ticket_status.toLowerCase() === 'closed' && selectedTicketBasic?.final_amount && (
-                  <div className="p-2 bg-primary/10 rounded-lg col-span-2 mt-2">
-                    <p className="text-xs text-muted-foreground">Final Amount</p>
-                    <p className="font-mono text-sm font-bold text-primary">{formatCurrency(selectedTicketBasic.final_amount)}</p>
+                  <div className="p-2 bg-green-50 rounded-lg col-span-2">
+                    <p className="text-xs text-green-600">Final Amount</p>
+                    <p className="font-mono text-sm font-bold text-green-700">{formatCurrency(selectedTicketBasic.final_amount)}</p>
                   </div>
                 )}
               </div>
