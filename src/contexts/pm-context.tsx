@@ -6,20 +6,30 @@ import type { Tables } from '@/types/database'
 
 type PropertyManager = Tables<'c1_property_managers'>
 
+interface AuthUser {
+  id: string
+  email: string
+}
+
 interface PMContextType {
   propertyManager: PropertyManager | null
+  authUser: AuthUser | null
   loading: boolean
   signOut: () => void
+  refreshPM: () => Promise<void>
 }
 
 const PMContext = createContext<PMContextType>({
   propertyManager: null,
+  authUser: null,
   loading: true,
   signOut: () => {},
+  refreshPM: async () => {},
 })
 
 export function PMProvider({ children }: { children: ReactNode }) {
   const [propertyManager, setPropertyManager] = useState<PropertyManager | null>(null)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false) // Track if initial session check is done
@@ -71,17 +81,20 @@ export function PMProvider({ children }: { children: ReactNode }) {
     // Middleware already validates with getUser() on every request
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
+      setAuthUser(session?.user ? { id: session.user.id, email: session.user.email! } : null)
       setInitialized(true) // Mark that we've checked - now safe to show "no user" state
     })
 
     // Listen for auth state changes - NOT async, NO Supabase calls inside
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Just update userId - the other useEffect handles PM fetching
+        // Just update userId and authUser - the other useEffect handles PM fetching
         if (event === 'SIGNED_OUT') {
           setUserId(null)
+          setAuthUser(null)
         } else if (session?.user) {
           setUserId(session.user.id)
+          setAuthUser({ id: session.user.id, email: session.user.email! })
         }
       }
     )
@@ -108,18 +121,36 @@ export function PMProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, userId])
 
+  // Refresh PM record - used after creating new PM during onboarding
+  const refreshPM = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      const { data: pm } = await supabase
+        .from('c1_property_managers')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      setPropertyManager(pm)
+    } catch {
+      setPropertyManager(null)
+    }
+    setLoading(false)
+  }, [userId, supabase])
+
   const signOut = useCallback(async () => {
     setLoading(true)
     // Use server-side logout to properly clear httpOnly cookies
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     setPropertyManager(null)
+    setAuthUser(null)
     setUserId(null)
     setLoading(false)
     window.location.href = '/login'
   }, [])
 
   return (
-    <PMContext.Provider value={{ propertyManager, loading, signOut }}>
+    <PMContext.Provider value={{ propertyManager, authUser, loading, signOut, refreshPM }}>
       {children}
     </PMContext.Provider>
   )

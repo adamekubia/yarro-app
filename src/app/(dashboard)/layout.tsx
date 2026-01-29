@@ -12,20 +12,27 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { loading, propertyManager } = usePM()
+  const { loading, propertyManager, authUser } = usePM()
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
   const supabase = createClient()
 
-  // If no PM after loading completes, redirect to login
+  // Smart redirect after loading completes
   useEffect(() => {
-    if (!loading && !propertyManager) {
+    if (loading) return
+
+    if (!authUser) {
+      // No auth at all → login
       router.push('/login')
+    } else if (!propertyManager && pathname !== '/import') {
+      // Auth exists but no PM record yet → onboarding will create PM
+      router.push('/import')
     }
-  }, [loading, propertyManager, router])
+  }, [loading, propertyManager, authUser, router, pathname])
 
   // Check if PM needs onboarding (no properties yet)
+  // Skip this check for new users without PM (they're on /import creating their PM)
   useEffect(() => {
     if (!propertyManager || pathname === '/import' || pathname === '/settings' || pathname === '/update-password') {
       setCheckingOnboarding(false)
@@ -65,10 +72,19 @@ export default function DashboardLayout({
     )
   }
 
-  if (!propertyManager) {
+  if (!authUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500">Redirecting to login...</div>
+      </div>
+    )
+  }
+
+  // Allow /import route without PM (new user onboarding)
+  if (!propertyManager && pathname !== '/import') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">Redirecting to onboarding...</div>
       </div>
     )
   }

@@ -32,7 +32,7 @@ interface OnboardingState {
 const STEP_ORDER: OnboardingStep[] = ['pm_details', 'landlords', 'properties', 'tenants', 'contractors', 'complete']
 
 export function OnboardingWizard() {
-  const { propertyManager } = usePM()
+  const { propertyManager, authUser, refreshPM } = usePM()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,7 +115,11 @@ export function OnboardingWizard() {
   }
 
   const handleNext = async () => {
-    if (!propertyManager) return
+    // For pm_details step, we need authUser (for new users) or propertyManager (for existing)
+    // For all other steps, we need propertyManager
+    if (state.step !== 'pm_details' && !propertyManager) return
+    if (state.step === 'pm_details' && !authUser) return
+
     setError(null)
     setSaving(true)
 
@@ -138,29 +142,55 @@ export function OnboardingWizard() {
           return
         }
 
-        // Update property_managers record
-        const { error: updateError } = await supabase
-          .from('c1_property_managers')
-          .update({
-            name: state.pmDetails.name.trim(),
-            business_name: state.pmDetails.business_name.trim() || null,
-            phone: normalizePhone(state.pmDetails.phone),
-            emergency_contact: state.pmDetails.emergency_contact.trim() || null,
-          })
-          .eq('id', propertyManager.id)
+        if (propertyManager) {
+          // Existing PM → UPDATE
+          const { error: updateError } = await supabase
+            .from('c1_property_managers')
+            .update({
+              name: state.pmDetails.name.trim(),
+              business_name: state.pmDetails.business_name.trim() || null,
+              phone: normalizePhone(state.pmDetails.phone),
+              emergency_contact: state.pmDetails.emergency_contact.trim() || null,
+            })
+            .eq('id', propertyManager.id)
 
-        if (updateError) {
-          setError(`Failed to update your details: ${updateError.message}`)
-          setSaving(false)
-          return
+          if (updateError) {
+            setError(`Failed to update your details: ${updateError.message}`)
+            setSaving(false)
+            return
+          }
+
+          toast.success('Your details saved')
+        } else if (authUser) {
+          // New user, no PM yet → INSERT
+          const { error: insertError } = await supabase
+            .from('c1_property_managers')
+            .insert({
+              user_id: authUser.id,
+              email: authUser.email,
+              name: state.pmDetails.name.trim(),
+              business_name: state.pmDetails.business_name.trim() || null,
+              phone: normalizePhone(state.pmDetails.phone),
+              emergency_contact: state.pmDetails.emergency_contact.trim() || null,
+            })
+
+          if (insertError) {
+            setError(`Failed to create your profile: ${insertError.message}`)
+            setSaving(false)
+            return
+          }
+
+          // Refresh context so propertyManager is available for remaining steps
+          await refreshPM()
+          toast.success('Profile created')
         }
 
-        toast.success('Your details saved')
         setState((prev) => ({ ...prev, step: 'landlords' }))
       } else if (state.step === 'landlords') {
         // Landlords are just stored in state, nothing to insert
         setState((prev) => ({ ...prev, step: 'properties' }))
       } else if (state.step === 'properties') {
+        if (!propertyManager) return
         // Insert properties
         const validProps = state.properties.filter((p) => p.address.trim())
         let insertedCount = 0
@@ -223,6 +253,7 @@ export function OnboardingWizard() {
           ],
         }))
       } else if (state.step === 'tenants') {
+        if (!propertyManager) return
         // Insert tenants
         const validTenants = state.tenants.filter((t) => t.full_name.trim() && t.phone.trim())
 
@@ -280,6 +311,7 @@ export function OnboardingWizard() {
           insertedCounts: { ...prev.insertedCounts, tenants: insertedCount },
         }))
       } else if (state.step === 'contractors') {
+        if (!propertyManager) return
         // Insert contractors
         const validContractors = state.contractors.filter(
           (c) => c.contractor_name.trim() && c.category && c.contractor_phone.trim()
@@ -380,7 +412,7 @@ export function OnboardingWizard() {
         {state.step === 'pm_details' && (
           <StepPMDetails
             details={state.pmDetails}
-            email={propertyManager?.email || ''}
+            email={propertyManager?.email || authUser?.email || ''}
             onChange={(pmDetails) => setState((prev) => ({ ...prev, pmDetails }))}
           />
         )}
