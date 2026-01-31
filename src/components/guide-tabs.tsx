@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Upload, Users, Wrench, Building } from 'lucide-react'
+import { Upload, UserCog, Users, Wrench, Building } from 'lucide-react'
 
 const tabs = [
   { href: '/guide', label: 'Import Data', icon: Upload },
+  { href: '/guide/you', label: 'For You', icon: UserCog },
   { href: '/guide/tenant', label: 'For Tenants', icon: Users },
   { href: '/guide/contractor', label: 'For Contractors', icon: Wrench },
   { href: '/guide/landlord', label: 'For Landlords', icon: Building },
