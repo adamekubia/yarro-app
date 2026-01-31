@@ -16,6 +16,8 @@ import {
   Hourglass,
   CalendarClock,
   TrendingUp,
+  AlertTriangle,
+  XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -30,9 +32,11 @@ interface DashboardStats {
   totalTickets: number
   openTickets: number
   closedTickets: number
+  handoffTickets: number
   awaitingContractor: number
   awaitingManager: number
   awaitingLandlord: number
+  landlordDeclined: number
   scheduledJobs: number
   totalProperties: number
   totalTenants: number
@@ -49,6 +53,7 @@ interface TicketSummary {
   date_logged: string
   scheduled_date?: string | null
   address?: string
+  handoff?: boolean
 }
 
 // Chart colors
@@ -85,8 +90,9 @@ export default function DashboardPage() {
         category,
         date_logged,
         scheduled_date,
+        handoff,
         c1_properties(address),
-        c1_messages(stage)
+        c1_messages(stage, landlord)
       `)
       .eq('property_manager_id', propertyManager!.id)
       .gte('date_logged', dateRange.from.toISOString())
@@ -117,20 +123,28 @@ export default function DashboardPage() {
 
       // Use c1_messages.stage as source of truth for workflow state
       // c1_messages is a one-to-one relationship (ticket_id is primary key), so it returns an object not an array
-      const getMessageStage = (t: { c1_messages: { stage: string } | { stage: string }[] | null }) => {
+      type MessageData = { stage: string; landlord?: { approval?: boolean | null } | null }
+      const getMessageData = (t: { c1_messages: MessageData | MessageData[] | null }): MessageData | null => {
         const messages = t.c1_messages
-        if (!messages) return ''
+        if (!messages) return null
         // Handle both single object (one-to-one) and array (one-to-many) relationships
         if (Array.isArray(messages)) {
-          return (messages[0]?.stage || '').toLowerCase()
+          return messages[0] || null
         }
-        return (messages.stage || '').toLowerCase()
+        return messages
+      }
+      const getMessageStage = (t: { c1_messages: MessageData | MessageData[] | null }) => {
+        const data = getMessageData(t)
+        return (data?.stage || '').toLowerCase()
       }
       const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
       const isScheduled = (t: { job_stage: string | null; scheduled_date: string | null }) => {
         const stage = (t.job_stage || '').toLowerCase()
         return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
       }
+
+      // Count handoff tickets (open and handoff = true)
+      const handoffTickets = tickets.filter((t) => isOpen(t) && t.handoff === true).length
 
       // Count based on actual message thread state
       const awaitingContractor = tickets.filter((t) => {
@@ -151,15 +165,23 @@ export default function DashboardPage() {
         return msgStage === 'awaiting_landlord'
       }).length
 
+      // Count landlord declines
+      const landlordDeclined = tickets.filter((t) => {
+        const data = getMessageData(t)
+        return data?.landlord?.approval === false
+      }).length
+
       const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t)).length
 
       setStats({
         totalTickets: total,
         openTickets: open,
         closedTickets: closed,
+        handoffTickets,
         awaitingContractor,
         awaitingManager,
         awaitingLandlord,
+        landlordDeclined,
         scheduledJobs,
         totalProperties: propertiesRes.count || 0,
         totalTenants: tenantsRes.count || 0,
@@ -167,7 +189,7 @@ export default function DashboardPage() {
       })
 
       const mappedTickets = tickets.map((t) => {
-        const messages = t.c1_messages as { stage: string } | { stage: string }[] | null
+        const messages = t.c1_messages as MessageData | MessageData[] | null
         // Handle both single object and array
         const messageStage = messages
           ? Array.isArray(messages) ? messages[0]?.stage : messages.stage
@@ -182,6 +204,7 @@ export default function DashboardPage() {
           date_logged: t.date_logged,
           scheduled_date: t.scheduled_date,
           address: (t.c1_properties as unknown as { address: string } | null)?.address,
+          handoff: t.handoff,
         }
       })
       setAllTickets(mappedTickets)
@@ -221,6 +244,8 @@ export default function DashboardPage() {
         const jobStage = (t.job_stage || '').toLowerCase()
         return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
       })
+    } else if (type === 'handoff') {
+      filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
     }
 
     setAwaitingTickets(filtered)
@@ -304,134 +329,152 @@ export default function DashboardPage() {
         </div>
 
         {/* Main KPIs */}
-        <div className="grid grid-cols-4 gap-4 flex-shrink-0">
+        <div className="grid grid-cols-5 gap-3 flex-shrink-0">
           {/* Tickets */}
-          <Link href="/tickets" className="bg-white rounded-xl border-2 border-blue-500/20 p-5 hover:border-blue-500/40 hover:shadow-lg transition-all h-[140px]">
+          <Link href="/tickets" className="bg-white rounded-xl border-2 border-blue-500/20 p-4 hover:border-blue-500/40 hover:shadow-lg transition-all">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Tickets</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalTickets || 0}</p>
-                <div className="flex items-center gap-2 mt-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tickets</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalTickets || 0}</p>
+                <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-xs font-medium text-blue-600">{stats?.openTickets || 0} open</span>
                   <span className="text-xs text-gray-400">·</span>
                   <span className="text-xs font-medium text-emerald-600">{stats?.closedTickets || 0} closed</span>
                 </div>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <Ticket className="h-5 w-5 text-blue-600" />
+              <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Ticket className="h-4 w-4 text-blue-600" />
               </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{stats && stats.totalTickets > 0 ? getPercentage(stats.closedTickets, stats.totalTickets) : 0}% resolved</span>
             </div>
           </Link>
 
+          {/* Handoff - RED alert */}
+          <button
+            onClick={() => showAwaitingTickets('handoff')}
+            className={`bg-white rounded-xl border-2 p-4 text-left hover:shadow-lg transition-all ${
+              stats?.handoffTickets ? 'border-red-500/40 hover:border-red-500/60' : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Handoff</p>
+                <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-900'}`}>
+                  {stats?.handoffTickets || 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Needs attention</p>
+              </div>
+              <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+                stats?.handoffTickets ? 'bg-red-500/10' : 'bg-gray-100'
+              }`}>
+                <AlertTriangle className={`h-4 w-4 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-400'}`} />
+              </div>
+            </div>
+          </button>
+
           {/* Properties */}
-          <Link href="/properties" className="bg-white rounded-xl border-2 border-emerald-500/20 p-5 hover:border-emerald-500/40 hover:shadow-lg transition-all h-[140px]">
+          <Link href="/properties" className="bg-white rounded-xl border-2 border-emerald-500/20 p-4 hover:border-emerald-500/40 hover:shadow-lg transition-all">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Properties</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalProperties || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalProperties || 0}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-emerald-600" />
+              <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Building2 className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
           </Link>
 
           {/* Tenants */}
-          <Link href="/tenants" className="bg-white rounded-xl border-2 border-violet-500/20 p-5 hover:border-violet-500/40 hover:shadow-lg transition-all h-[140px]">
+          <Link href="/tenants" className="bg-white rounded-xl border-2 border-violet-500/20 p-4 hover:border-violet-500/40 hover:shadow-lg transition-all">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tenants</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalTenants || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalTenants || 0}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-violet-600" />
+              <div className="h-9 w-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-violet-600" />
               </div>
             </div>
           </Link>
 
           {/* Contractors */}
-          <Link href="/contractors" className="bg-white rounded-xl border-2 border-amber-500/20 p-5 hover:border-amber-500/40 hover:shadow-lg transition-all h-[140px]">
+          <Link href="/contractors" className="bg-white rounded-xl border-2 border-amber-500/20 p-4 hover:border-amber-500/40 hover:shadow-lg transition-all">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractors</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalContractors || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalContractors || 0}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <Wrench className="h-5 w-5 text-amber-600" />
+              <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Wrench className="h-4 w-4 text-amber-600" />
               </div>
             </div>
           </Link>
         </div>
 
         {/* Awaiting Action */}
-        <div className="grid grid-cols-4 gap-4 flex-shrink-0">
+        <div className="grid grid-cols-5 gap-3 flex-shrink-0">
           <button
             onClick={() => showAwaitingTickets('contractor')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-4 text-left hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all group h-[88px]"
+            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
           >
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Awaiting Contractor</span>
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractor</span>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-2xl font-bold text-gray-900">{stats?.awaitingContractor || 0}</p>
-              <span className="text-xs text-gray-400">
-                ({stats && stats.openTickets > 0 ? getPercentage(stats.awaitingContractor, stats.openTickets) : 0}% of open)
-              </span>
-            </div>
+            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingContractor || 0}</p>
           </button>
 
           <button
             onClick={() => showAwaitingTickets('manager')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-4 text-left hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all group h-[88px]"
+            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
           >
-            <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Awaiting Manager</span>
+            <div className="flex items-center gap-1.5">
+              <UserCheck className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manager</span>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-2xl font-bold text-gray-900">{stats?.awaitingManager || 0}</p>
-              <span className="text-xs text-gray-400">
-                ({stats && stats.openTickets > 0 ? getPercentage(stats.awaitingManager, stats.openTickets) : 0}% of open)
-              </span>
-            </div>
+            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingManager || 0}</p>
           </button>
 
           <button
             onClick={() => showAwaitingTickets('landlord')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-4 text-left hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all group h-[88px]"
+            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
           >
-            <div className="flex items-center gap-2">
-              <Hourglass className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Awaiting Landlord</span>
+            <div className="flex items-center gap-1.5">
+              <Hourglass className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Landlord</span>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-2xl font-bold text-gray-900">{stats?.awaitingLandlord || 0}</p>
-              <span className="text-xs text-gray-400">
-                ({stats && stats.openTickets > 0 ? getPercentage(stats.awaitingLandlord, stats.openTickets) : 0}% of open)
-              </span>
-            </div>
+            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingLandlord || 0}</p>
           </button>
 
           <button
             onClick={() => showAwaitingTickets('scheduled')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-4 text-left hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all group h-[88px]"
+            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
           >
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-1.5">
+              <CalendarClock className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scheduled</span>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-2xl font-bold text-gray-900">{stats?.scheduledJobs || 0}</p>
-              <span className="text-xs text-gray-400">
-                ({stats && stats.openTickets > 0 ? getPercentage(stats.scheduledJobs, stats.openTickets) : 0}% of open)
-              </span>
-            </div>
+            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.scheduledJobs || 0}</p>
           </button>
+
+          {/* Landlord Declined - only show if > 0 */}
+          {stats?.landlordDeclined ? (
+            <div className="bg-white rounded-xl border-2 border-orange-500/30 p-3 text-left">
+              <div className="flex items-center gap-1.5">
+                <XCircle className="h-3.5 w-3.5 text-orange-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">LL Declined</span>
+              </div>
+              <p className="text-xl font-bold text-orange-600 mt-1">{stats.landlordDeclined}</p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-xl border-2 border-gray-100 p-3 text-left opacity-50">
+              <div className="flex items-center gap-1.5">
+                <XCircle className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">LL Declined</span>
+              </div>
+              <p className="text-xl font-bold text-gray-400 mt-1">0</p>
+            </div>
+          )}
         </div>
 
         {/* Charts + Recent Tickets - fills remaining space exactly */}

@@ -191,31 +191,24 @@ export default function TicketsPage() {
     access: string
   }) => {
     if (handoffTicketId) {
-      // Update existing handoff ticket
-      // For handoff, we update the ticket and create c1_messages manually
-      const { error } = await supabase
-        .from('c1_tickets')
-        .update({
-          property_id: data.property_id,
-          tenant_id: data.tenant_id,
-          issue_description: data.issue_description,
-          category: data.category,
-          priority: data.priority,
-          contractor_id: data.contractor_ids[0] || null,
-          availability: data.availability || null,
-          access: data.access || null,
-          handoff: false,
-        })
-        .eq('id', handoffTicketId)
+      // Complete handoff ticket via RPC - creates messages and triggers dispatcher
+      const { error } = await supabase.rpc('c1_complete_handoff_ticket', {
+        p_ticket_id: handoffTicketId,
+        p_property_id: data.property_id,
+        p_tenant_id: data.tenant_id,
+        p_issue_description: data.issue_description,
+        p_category: data.category,
+        p_priority: data.priority,
+        p_contractor_ids: data.contractor_ids,
+        p_availability: data.availability || null,
+        p_access: data.access || null,
+      })
 
       if (error) {
         throw new Error(error.message)
       }
 
-      // TODO: Call c1_complete_handoff_ticket RPC when available
-      // For now, just update the ticket (contractor dispatch handled separately)
-
-      toast.success('Ticket completed')
+      toast.success('Handoff completed - contractor notified')
     } else {
       // Create new manual ticket via RPC
       // This creates the ticket, c1_messages row, and triggers the dispatcher

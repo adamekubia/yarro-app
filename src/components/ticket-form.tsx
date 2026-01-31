@@ -150,32 +150,34 @@ export function TicketForm({
     }
   }, [formData.property_id, tenants, formData.tenant_id])
 
-  // Filter contractors by category and property
+  // Filter contractors by property only (no category constraint)
   // Contractors with null property_ids can work on ANY property
+  // Sort: category matches first, then alphabetically
   useEffect(() => {
-    if (formData.category && formData.property_id) {
-      setFilteredContractors(
-        contractors.filter(
-          (c) =>
-            c.category === formData.category &&
-            (c.property_ids === null || c.property_ids?.includes(formData.property_id))
-        )
+    if (formData.property_id) {
+      const filtered = contractors.filter(
+        (c) => c.property_ids === null || c.property_ids?.includes(formData.property_id)
       )
-    } else if (formData.category) {
-      setFilteredContractors(contractors.filter((c) => c.category === formData.category))
+      // Sort: category matches first, then by name
+      const sorted = [...filtered].sort((a, b) => {
+        const aMatch = formData.category && a.category === formData.category ? 0 : 1
+        const bMatch = formData.category && b.category === formData.category ? 0 : 1
+        if (aMatch !== bMatch) return aMatch - bMatch
+        return a.contractor_name.localeCompare(b.contractor_name)
+      })
+      setFilteredContractors(sorted)
     } else {
-      setFilteredContractors([])
+      // Show all contractors sorted when no property selected
+      const sorted = [...contractors].sort((a, b) => {
+        const aMatch = formData.category && a.category === formData.category ? 0 : 1
+        const bMatch = formData.category && b.category === formData.category ? 0 : 1
+        if (aMatch !== bMatch) return aMatch - bMatch
+        return a.contractor_name.localeCompare(b.contractor_name)
+      })
+      setFilteredContractors(sorted)
     }
-    // Reset contractors if category changes and any selected contractor doesn't match
-    if (formData.contractor_ids.length > 0) {
-      const validIds = formData.contractor_ids.filter((id) =>
-        contractors.some((c) => c.id === id && c.category === formData.category)
-      )
-      if (validIds.length !== formData.contractor_ids.length) {
-        setFormData((prev) => ({ ...prev, contractor_ids: validIds }))
-      }
-    }
-  }, [formData.category, formData.property_id, contractors, formData.contractor_ids])
+    // Don't reset contractors on category change - allow any contractor
+  }, [formData.category, formData.property_id, contractors])
 
   const updateField = useCallback((field: keyof TicketFormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -350,16 +352,10 @@ export function TicketForm({
             </p>
           </div>
 
-          {!formData.category ? (
-            <div className="p-4 bg-muted/50 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">
-                Select a category first
-              </p>
-            </div>
-          ) : filteredContractors.length === 0 ? (
+          {filteredContractors.length === 0 ? (
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-center">
               <p className="text-sm text-amber-700">
-                No {formData.category} contractors for this property
+                No contractors available for this property
               </p>
             </div>
           ) : (
@@ -367,6 +363,7 @@ export function TicketForm({
               {filteredContractors.map((c) => {
                 const isSelected = formData.contractor_ids.includes(c.id)
                 const orderIndex = formData.contractor_ids.indexOf(c.id)
+                const isCategoryMatch = formData.category && c.category === formData.category
                 return (
                   <button
                     key={c.id}
@@ -396,13 +393,23 @@ export function TicketForm({
                       ) : (
                         <span className="w-6 h-6 rounded-full border-2 border-muted-foreground/30" />
                       )}
-                      <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
-                        {c.contractor_name}
-                      </span>
+                      <div className="flex flex-col items-start">
+                        <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
+                          {c.contractor_name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{c.category}</span>
+                      </div>
                     </div>
-                    {isSelected && orderIndex === 0 && (
-                      <span className="text-xs text-primary font-medium">First</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isCategoryMatch && (
+                        <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">
+                          Match
+                        </span>
+                      )}
+                      {isSelected && orderIndex === 0 && (
+                        <span className="text-xs text-primary font-medium">First</span>
+                      )}
+                    </div>
                   </button>
                 )
               })}
