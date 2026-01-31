@@ -96,14 +96,14 @@
   --chart-4: #01375e;
   --chart-5: #fa710f;
 
-  /* Sidebar - Dark theme */
-  --sidebar: #101011;
-  --sidebar-foreground: #fafafa;
+  /* Sidebar - Light theme (subtle gray, differentiated from white main) */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #1e293b;
   --sidebar-primary: #0059FF;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #27272a;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #27272a;
+  --sidebar-accent: #e2e8f0;
+  --sidebar-accent-foreground: #1e293b;
+  --sidebar-border: #e2e8f0;
   --sidebar-ring: #0059FF;
 }
 
@@ -131,6 +131,8 @@
   --chart-3: #a6e1ff;
   --chart-4: #3b82f6;
   --chart-5: #fa710f;
+
+  /* Sidebar - Dark theme */
   --sidebar: #09090b;
   --sidebar-foreground: #fafafa;
   --sidebar-primary: #0059FF;
@@ -168,4 +170,12 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94b8d8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }

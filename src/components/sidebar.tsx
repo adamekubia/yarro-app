@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,7 @@ import {
   BookOpen,
   Settings,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 // Core navigation - your data
 const coreNavItems = [
@@ -52,19 +55,29 @@ const dataManagementItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { propertyManager, signOut } = usePM()
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Use wordmark logo for light mode, white logo for dark mode
+  const logoSrc = mounted && resolvedTheme === 'dark' ? '/logo-white.png' : '/logo-wordmark.png'
 
   return (
-    <div className="flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground">
-      {/* Logo */}
-      <div className="p-6 border-b border-sidebar-border">
+    <div className="flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+      {/* Logo + Theme Toggle */}
+      <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
         <Image
-          src="/logo-white.png"
+          src={logoSrc}
           alt="Yarro"
           width={100}
           height={30}
           className="opacity-90"
           priority
         />
+        <ThemeToggle />
       </div>
 
       {/* Navigation */}

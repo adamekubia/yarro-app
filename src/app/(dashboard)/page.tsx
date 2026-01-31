@@ -436,7 +436,7 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractor</span>
+                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Contractor</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingContractor || 0}</p>
                   </button>
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center gap-1.5">
                       <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manager</span>
+                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Manager</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingManager || 0}</p>
                   </button>
@@ -472,7 +472,7 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center gap-1.5">
                       <Hourglass className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Landlord</span>
+                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Landlord</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingLandlord || 0}</p>
                   </button>
@@ -528,7 +528,7 @@ export default function DashboardPage() {
           </div>
 
           {/* TICKET OVERVIEW Section */}
-          <div className="flex-1 min-h-0 space-y-2">
+          <div className="flex-1 min-h-0 max-h-[340px] space-y-2">
             <SectionHeader
               icon={BarChart3}
               iconColor="bg-blue-500/10"
@@ -536,7 +536,7 @@ export default function DashboardPage() {
               title="Ticket Overview"
               description="Status and category breakdown for your tickets"
             />
-            <div className="grid grid-cols-2 gap-4 h-[calc(100%-28px)]">
+            <div className="grid grid-cols-2 gap-4 h-[calc(100%-32px)]">
               <div className="flex flex-col gap-4 min-h-0">
                 {/* Status */}
                 <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
