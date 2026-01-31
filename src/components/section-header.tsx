@@ -1,17 +1,30 @@
 'use client'
 
+import { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
 interface SectionHeaderProps {
-  icon: string        // Emoji like "🟢" or "🔴"
+  icon: LucideIcon
+  iconColor?: string        // Tailwind bg color class like "bg-emerald-500/10"
+  iconTextColor?: string    // Tailwind text color class like "text-emerald-600"
   title: string
-  description: string // Explanatory subtitle
+  description: string
 }
 
-export function SectionHeader({ icon, title, description }: SectionHeaderProps) {
+export function SectionHeader({
+  icon: Icon,
+  iconColor = 'bg-primary/10',
+  iconTextColor = 'text-primary',
+  title,
+  description,
+}: SectionHeaderProps) {
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-base">{icon}</span>
+    <div className="flex items-center gap-3">
+      <div className={cn('p-2 rounded-lg', iconColor)}>
+        <Icon className={cn('h-4 w-4', iconTextColor)} />
+      </div>
       <div>
-        <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">{title}</h2>
+        <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
         <p className="text-xs text-gray-500">{description}</p>
       </div>
     </div>
