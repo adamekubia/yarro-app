@@ -19,11 +19,11 @@ When a contractor responds with a quote:
 - Check if it's within the landlord's auto-approve limit
 - If above the limit, the landlord will be asked to approve
 
-3. APPROVE OR DECLINE REQUESTS
-Some situations need your decision:
-- Reply "Approve" to proceed with a quote
-- Reply "Decline" to reject and try another contractor
-- You can also manage everything from this dashboard
+3. APPROVE OR DECLINE QUOTES
+When a quote needs your decision:
+- Tap "Approve" or "Decline" in your WhatsApp notification
+- If approving, you can add a markup amount
+- You can also manage decisions from this dashboard
 
 4. HANDLE HANDOFFS
 When the AI can't complete a ticket automatically:
@@ -105,12 +105,12 @@ export default function PMGuidePage() {
                   <CheckCircle className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-card-foreground">3. Approve or Decline Requests</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Some situations need your decision:</p>
+                  <h3 className="font-semibold text-card-foreground">3. Approve or Decline Quotes</h3>
+                  <p className="text-sm text-muted-foreground mt-1">When a quote needs your decision:</p>
                   <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>Reply "Approve" to proceed with a quote</li>
-                    <li>Reply "Decline" to reject and try another contractor</li>
-                    <li>You can also manage everything from this dashboard</li>
+                    <li>Tap "Approve" or "Decline" in your WhatsApp notification</li>
+                    <li>If approving, you can add a markup amount</li>
+                    <li>You can also manage decisions from this dashboard</li>
                   </ul>
                 </div>
               </div>

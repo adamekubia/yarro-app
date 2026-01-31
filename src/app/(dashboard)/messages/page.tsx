@@ -242,9 +242,9 @@ export default function MessagesPage() {
         if (isGreen || isTeal || isOrange) {
           return (
             <span className={`px-2 py-0.5 text-xs rounded-full ${
-              isGreen ? 'bg-green-100 text-green-700' :
-              isTeal ? 'bg-teal-100 text-teal-700' :
-              'bg-orange-100 text-orange-700'
+              isGreen ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+              isTeal ? 'bg-teal-500/10 dark:bg-teal-400/15 text-teal-700 dark:text-teal-400' :
+              'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
             }`}>
               {label}
             </span>
@@ -267,13 +267,13 @@ export default function MessagesPage() {
         return (
           <div className="flex items-center gap-1">
             {approved > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">{approved} Approved</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400">{approved} Approved</span>
             ) : replied > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{sent} Quoted</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400">{replied}/{sent} Quoted</span>
             ) : sent > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">{sent} Sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400">{sent} Sent</span>
             ) : (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{notSent} Not Sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/10 dark:bg-gray-400/15 text-gray-600 dark:text-gray-400">{notSent} Not Sent</span>
             )}
           </div>
         )
@@ -291,9 +291,9 @@ export default function MessagesPage() {
         const declined = status === 'replied' && !recipient?.approval
         return (
           <span className={`px-2 py-0.5 text-xs rounded-full ${
-            approved ? 'bg-green-100 text-green-700' :
-            declined ? 'bg-red-100 text-red-700' :
-            'bg-orange-100 text-orange-700'
+            approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+            declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
+            'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
           }`}>
             {approved ? 'Approved' : declined ? 'Declined' : 'Pending'}
           </span>
@@ -312,9 +312,9 @@ export default function MessagesPage() {
         const declined = status === 'replied' && !recipient?.approval
         return (
           <span className={`px-2 py-0.5 text-xs rounded-full ${
-            approved ? 'bg-green-100 text-green-700' :
-            declined ? 'bg-red-100 text-red-700' :
-            'bg-orange-100 text-orange-700'
+            approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+            declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
+            'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
           }`}>
             {approved ? 'Approved' : declined ? 'Declined' : 'Pending'}
           </span>
@@ -467,10 +467,10 @@ export default function MessagesPage() {
                           <div className="flex items-center gap-2">
                             {/* Status badge with quote amount */}
                             <span className={`px-2 py-0.5 text-xs rounded-full ${
-                              status === 'approved' ? 'bg-green-100 text-green-700' :
-                              status === 'replied' ? 'bg-blue-100 text-blue-700' :
-                              status === 'sent' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-600'
+                              status === 'approved' ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+                              status === 'replied' ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
+                              status === 'sent' ? 'bg-yellow-500/10 dark:bg-yellow-400/15 text-yellow-700 dark:text-yellow-400' :
+                              'bg-gray-500/10 dark:bg-gray-400/15 text-gray-600 dark:text-gray-400'
                             }`}>
                               {status === 'approved' ? `✓ ${formatAmount(contractor.quote_amount) || 'Approved'}` :
                                status === 'replied' ? `${formatAmount(contractor.quote_amount) || 'Quoted'}` :
@@ -530,10 +530,10 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-0.5 text-xs rounded-full ${
-                          approved ? 'bg-green-100 text-green-700' :
-                          declined ? 'bg-red-100 text-red-700' :
-                          hasReplied ? 'bg-blue-100 text-blue-700' :
-                          'bg-orange-100 text-orange-700'
+                          approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+                          declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
+                          hasReplied ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
+                          'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
                         }`}>
                           {approved ? `✓ Approved${recipient?.approval_amount ? ` ${recipient.approval_amount}` : ''}` :
                            declined ? '✗ Declined' :
@@ -590,10 +590,10 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-0.5 text-xs rounded-full ${
-                          approved ? 'bg-green-100 text-green-700' :
-                          declined ? 'bg-red-100 text-red-700' :
-                          hasReplied ? 'bg-blue-100 text-blue-700' :
-                          'bg-orange-100 text-orange-700'
+                          approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+                          declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
+                          hasReplied ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
+                          'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
                         }`}>
                           {approved ? `✓ Approved${recipient?.approval_amount ? ` ${recipient.approval_amount}` : ''}` :
                            declined ? '✗ Declined' :

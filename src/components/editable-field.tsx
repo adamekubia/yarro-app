@@ -180,7 +180,7 @@ export function CompactEditableField({
         value={value?.toString() || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-7 text-sm border-0 bg-white p-1"
+        className="h-7 text-sm border-0 bg-background p-1"
       />
     </div>
   )
@@ -226,7 +226,7 @@ export function CurrencyField({
             const val = e.target.value
             onChange(val ? parseFloat(val) : null)
           }}
-          className="h-7 text-sm border-0 bg-white pl-5"
+          className="h-7 text-sm border-0 bg-background pl-5"
         />
       </div>
     </div>
