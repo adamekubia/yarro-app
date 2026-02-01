@@ -2,7 +2,7 @@
 
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
-import { Lightbulb, MapPin } from 'lucide-react'
+import { Lightbulb } from 'lucide-react'
 import type { LandlordPersona } from './step-landlords'
 
 export interface PropertyEntry {
@@ -155,34 +155,25 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
         templateFilename="properties_template.csv"
       />
 
-      {/* City extraction info */}
+      {/* Unified info box */}
       <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-medium text-blue-900 dark:text-blue-100">
-            City extraction for service areas
-          </p>
-          <p className="text-blue-700 dark:text-blue-300 mt-1">
-            We automatically extract the city from each property&apos;s postcode. In the next step, you&apos;ll assign contractors to cities they serve, and we&apos;ll auto-assign them to all properties in those cities.
-          </p>
+        <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm space-y-3">
+          <div>
+            <p className="font-medium text-blue-900 dark:text-blue-100">
+              How property import works
+            </p>
+            <ul className="text-blue-700 dark:text-blue-300 mt-1.5 space-y-1 list-disc list-inside">
+              <li>Addresses must end with a valid UK postcode (e.g., &quot;M14 5RL&quot;)</li>
+              <li>Use exact landlord names from Step 1 in your CSV &quot;landlord_name&quot; column — non-matches highlight amber</li>
+              <li>Cities are auto-extracted from postcodes for contractor service area matching</li>
+            </ul>
+          </div>
           {uniqueCities.length > 0 && (
-            <p className="text-blue-700 dark:text-blue-300 mt-2">
+            <p className="text-blue-700 dark:text-blue-300 pt-1 border-t border-blue-200 dark:border-blue-700">
               <strong>Cities found:</strong> {uniqueCities.join(', ')}
             </p>
           )}
-        </div>
-      </div>
-
-      {/* Landlord matching tip */}
-      <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-medium text-amber-900 dark:text-amber-100">
-            CSV auto-linking &amp; postcode requirement
-          </p>
-          <p className="text-amber-700 dark:text-amber-300 mt-1">
-            Use exact landlord names from Step 1 in your CSV &quot;landlord_name&quot; column for auto-matching. Non-matching names will be highlighted amber for manual selection. All addresses must include a valid UK postcode (e.g., &quot;M14 5RL&quot;).
-          </p>
         </div>
       </div>
     </div>
