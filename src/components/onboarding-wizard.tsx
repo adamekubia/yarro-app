@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
@@ -13,6 +13,7 @@ import { StepTenants, TenantEntry } from './onboarding/step-tenants'
 import { StepContractors, ContractorEntry } from './onboarding/step-contractors'
 import { normalizeRecord, normalizePhone, isValidUKPhone, hasValidUKPostcode } from '@/lib/normalize'
 import { validatePhone, validateEmail } from '@/lib/validate'
+import { getCityFromAddress } from '@/lib/postcode'
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2, SkipForward } from 'lucide-react'
 
 type OnboardingStep = 'pm_details' | 'landlords' | 'properties' | 'tenants' | 'contractors' | 'complete'
@@ -26,7 +27,7 @@ interface OnboardingState {
   contractors: ContractorEntry[]
   batchId: string
   insertedCounts: { properties: number; tenants: number; contractors: number }
-  existingProperties: { id: string; address: string }[]
+  existingProperties: { id: string; address: string; city?: string }[]
 }
 
 const STEP_ORDER: OnboardingStep[] = ['pm_details', 'landlords', 'properties', 'tenants', 'contractors', 'complete']
@@ -50,9 +51,9 @@ export function OnboardingWizard() {
       emergency_contact: propertyManager?.emergency_contact || ''
     },
     landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
-    properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
+    properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '', city: '' }],
     tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-    contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: null }],
+    contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', service_areas: [] }],
     batchId: crypto.randomUUID(),
     insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
     existingProperties: [],
@@ -81,7 +82,7 @@ export function OnboardingWizard() {
     const fetchExisting = async () => {
       const { data } = await supabase
         .from('c1_properties')
-        .select('id, address')
+        .select('id, address, city')
         .eq('property_manager_id', propertyManager.id)
         .order('address')
 
@@ -91,6 +92,31 @@ export function OnboardingWizard() {
     }
     fetchExisting()
   }, [propertyManager, supabase])
+
+  // City lookup callback for properties step
+  const handleLookupCity = useCallback(async (address: string, index: number) => {
+    const city = await getCityFromAddress(address)
+    setState((prev) => {
+      const updatedProperties = [...prev.properties]
+      if (updatedProperties[index] && updatedProperties[index].address === address) {
+        updatedProperties[index] = { ...updatedProperties[index], city: city || '' }
+      }
+      return { ...prev, properties: updatedProperties }
+    })
+  }, [])
+
+  // Batch lookup cities for all properties that need it
+  useEffect(() => {
+    const propsNeedingLookup = state.properties.filter(
+      (p) => p.address.trim() && !p.city && hasValidUKPostcode(p.address)
+    )
+    propsNeedingLookup.forEach((prop, i) => {
+      const index = state.properties.findIndex((p) => p.tempId === prop.tempId)
+      if (index !== -1) {
+        handleLookupCity(prop.address, index)
+      }
+    })
+  }, [state.properties, handleLookupCity])
 
   const currentStepIndex = STEP_ORDER.indexOf(state.step)
 
@@ -113,6 +139,13 @@ export function OnboardingWizard() {
     if (state.step === 'contractors' && state.insertedCounts.tenants > 0) return false
     return currentStepIndex > 0
   }
+
+  // Get unique cities from properties (for contractor service area selection)
+  const availableCities = [...new Set(
+    [...state.properties, ...state.existingProperties]
+      .map((p) => p.city)
+      .filter((c): c is string => !!c)
+  )].sort()
 
   const handleNext = async () => {
     // For pm_details step, we need authUser (for new users) or propertyManager (for existing)
@@ -231,7 +264,7 @@ export function OnboardingWizard() {
         // Check for existing properties to avoid duplicates
         const { data: existingProps } = await supabase
           .from('c1_properties')
-          .select('id, address')
+          .select('id, address, city')
           .eq('property_manager_id', propertyManager.id)
 
         const existingAddresses = new Set(
@@ -253,7 +286,7 @@ export function OnboardingWizard() {
               (p) => p.address.toLowerCase().trim() === prop.address.toLowerCase().trim()
             )
             if (existing) {
-              updatedProperties[i] = { ...prop, insertedId: existing.id }
+              updatedProperties[i] = { ...prop, insertedId: existing.id, city: existing.city || prop.city }
               skippedCount++
               continue
             }
@@ -268,6 +301,7 @@ export function OnboardingWizard() {
             auto_approve_limit: prop.auto_approve_limit ? parseFloat(prop.auto_approve_limit) : null,
             access_instructions: prop.access_instructions || null,
             emergency_access_contact: prop.emergency_access_contact || null,
+            city: prop.city || null,
             _import_batch_id: state.batchId,
             _imported_at: new Date().toISOString(),
           }
@@ -312,7 +346,7 @@ export function OnboardingWizard() {
             ...prev.existingProperties,
             ...updatedProperties
               .filter((p) => p.insertedId)
-              .map((p) => ({ id: p.insertedId!, address: p.address })),
+              .map((p) => ({ id: p.insertedId!, address: p.address, city: p.city })),
           ],
         }))
       } else if (state.step === 'tenants') {
@@ -490,6 +524,19 @@ export function OnboardingWizard() {
           (existingContractors || []).map((c) => c.contractor_name.toLowerCase().trim())
         )
 
+        // Get all properties with cities for service area matching
+        const { data: allProperties } = await supabase
+          .from('c1_properties')
+          .select('id, city')
+          .eq('property_manager_id', propertyManager.id)
+        const propertiesByCity = new Map<string, string[]>()
+        for (const prop of allProperties || []) {
+          if (prop.city) {
+            const existing = propertiesByCity.get(prop.city) || []
+            propertiesByCity.set(prop.city, [...existing, prop.id])
+          }
+        }
+
         let insertedCount = 0
         let skippedCount = 0
 
@@ -500,12 +547,24 @@ export function OnboardingWizard() {
             continue
           }
 
+          // Compute property_ids from service_areas
+          let property_ids: string[] = []
+          if (contractor.service_areas.length > 0) {
+            for (const city of contractor.service_areas) {
+              const propsInCity = propertiesByCity.get(city) || []
+              property_ids.push(...propsInCity)
+            }
+            // Remove duplicates
+            property_ids = [...new Set(property_ids)]
+          }
+
           const record: Record<string, unknown> = {
             contractor_name: contractor.contractor_name,
             category: contractor.category,
             contractor_phone: contractor.contractor_phone,
             contractor_email: contractor.contractor_email || null,
-            property_ids: contractor.property_ids && contractor.property_ids.length > 0 ? contractor.property_ids : null,
+            service_areas: contractor.service_areas.length > 0 ? contractor.service_areas : null,
+            property_ids: property_ids.length > 0 ? property_ids : null,
             active: true,
             property_manager_id: propertyManager.id,
             _import_batch_id: state.batchId,
@@ -553,9 +612,9 @@ export function OnboardingWizard() {
       step: 'landlords', // Skip PM details on reset - already done
       pmDetails: state.pmDetails, // Keep PM details
       landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
-      properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
+      properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '', city: '' }],
       tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-      contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: null }],
+      contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', service_areas: [] }],
       batchId: crypto.randomUUID(),
       insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
       existingProperties: state.existingProperties,
@@ -597,6 +656,7 @@ export function OnboardingWizard() {
             properties={state.properties}
             landlords={state.landlords}
             onChange={(properties) => setState((prev) => ({ ...prev, properties }))}
+            onLookupCity={handleLookupCity}
           />
         )}
 
@@ -611,7 +671,7 @@ export function OnboardingWizard() {
         {state.step === 'contractors' && (
           <StepContractors
             contractors={state.contractors}
-            properties={allPropertyOptions}
+            availableCities={availableCities}
             onChange={(contractors) => setState((prev) => ({ ...prev, contractors }))}
           />
         )}

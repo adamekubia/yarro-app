@@ -2,7 +2,7 @@
 
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
-import { Lightbulb } from 'lucide-react'
+import { Lightbulb, MapPin } from 'lucide-react'
 import type { LandlordPersona } from './step-landlords'
 
 export interface PropertyEntry {
@@ -12,6 +12,7 @@ export interface PropertyEntry {
   access_instructions: string
   emergency_access_contact: string
   auto_approve_limit: string
+  city: string // Auto-extracted from postcode
   // After insert:
   insertedId?: string
 }
@@ -20,11 +21,12 @@ interface StepPropertiesProps {
   properties: PropertyEntry[]
   landlords: LandlordPersona[]
   onChange: (properties: PropertyEntry[]) => void
+  onLookupCity?: (address: string, index: number) => void
 }
 
 const CSV_COLUMNS = ['address', 'landlord_name', 'landlord_email', 'landlord_phone', 'access_instructions', 'emergency_access_contact', 'auto_approve_limit']
 
-export function StepProperties({ properties, landlords, onChange }: StepPropertiesProps) {
+export function StepProperties({ properties, landlords, onChange, onLookupCity }: StepPropertiesProps) {
   const landlordOptions = landlords
     .filter((l) => l.name)
     .map((l) => ({ value: l.tempId, label: l.name }))
@@ -48,20 +50,31 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
   }))
 
   const handleRowsChange = (newRows: Record<string, string>[]) => {
-    const updated: PropertyEntry[] = newRows.map((row, i) => ({
-      tempId: properties[i]?.tempId || crypto.randomUUID(),
-      address: row.address || '',
-      landlordTempId: row.landlordTempId || '',
-      auto_approve_limit: row.auto_approve_limit || '',
-      access_instructions: row.access_instructions || '',
-      emergency_access_contact: row.emergency_access_contact || '',
-      insertedId: properties[i]?.insertedId,
-    }))
+    const updated: PropertyEntry[] = newRows.map((row, i) => {
+      const existingProperty = properties[i]
+      const addressChanged = row.address !== existingProperty?.address
+
+      // If address changed and we have a lookup callback, trigger it
+      if (addressChanged && row.address && onLookupCity) {
+        onLookupCity(row.address, i)
+      }
+
+      return {
+        tempId: existingProperty?.tempId || crypto.randomUUID(),
+        address: row.address || '',
+        landlordTempId: row.landlordTempId || '',
+        auto_approve_limit: row.auto_approve_limit || '',
+        access_instructions: row.access_instructions || '',
+        emergency_access_contact: row.emergency_access_contact || '',
+        city: addressChanged ? '' : (existingProperty?.city || ''), // Reset city if address changed
+        insertedId: existingProperty?.insertedId,
+      }
+    })
     onChange(updated)
   }
 
   const handleCsvParsed = (csvRows: Record<string, string>[]) => {
-    const newProperties: PropertyEntry[] = csvRows.map((row) => {
+    const newProperties: PropertyEntry[] = csvRows.map((row, i) => {
       // Try to match landlord by name
       let landlordTempId = ''
       if (row.landlord_name) {
@@ -71,16 +84,52 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
         if (match) landlordTempId = match.tempId
       }
 
-      return {
+      const prop: PropertyEntry = {
         tempId: crypto.randomUUID(),
         address: row.address || '',
         landlordTempId,
         auto_approve_limit: row.auto_approve_limit || '',
         access_instructions: row.access_instructions || '',
         emergency_access_contact: row.emergency_access_contact || '',
+        city: '', // Will be looked up by parent
       }
+
+      // Trigger city lookup for each new property
+      if (prop.address && onLookupCity) {
+        const newIndex = properties.filter((p) => p.address).length + i
+        onLookupCity(prop.address, newIndex)
+      }
+
+      return prop
     })
     onChange([...properties.filter((p) => p.address), ...newProperties])
+  }
+
+  // Get unique cities for display
+  const uniqueCities = [...new Set(properties.map((p) => p.city).filter(Boolean))]
+
+  // Action column to show city
+  const actionColumn = {
+    label: 'City',
+    width: '12%',
+    render: (rowIdx: number) => {
+      const property = properties[rowIdx]
+      if (!property?.address?.trim()) {
+        return <span className="text-xs text-muted-foreground">—</span>
+      }
+      if (!property.city) {
+        return (
+          <span className="text-xs text-amber-600 dark:text-amber-400 italic">
+            Looking up...
+          </span>
+        )
+      }
+      return (
+        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          {property.city}
+        </span>
+      )
+    },
   }
 
   return (
@@ -92,13 +141,39 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
         </p>
       </div>
 
-      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} highlightEmptySelections />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onChange={handleRowsChange}
+        highlightEmptySelections
+        actionColumn={actionColumn}
+      />
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="properties_template.csv"
       />
+
+      {/* City extraction info */}
+      <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-blue-900 dark:text-blue-100">
+            City extraction for service areas
+          </p>
+          <p className="text-blue-700 dark:text-blue-300 mt-1">
+            We automatically extract the city from each property&apos;s postcode. In the next step, you&apos;ll assign contractors to cities they serve, and we&apos;ll auto-assign them to all properties in those cities.
+          </p>
+          {uniqueCities.length > 0 && (
+            <p className="text-blue-700 dark:text-blue-300 mt-2">
+              <strong>Cities found:</strong> {uniqueCities.join(', ')}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Landlord matching tip */}
       <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
         <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm">

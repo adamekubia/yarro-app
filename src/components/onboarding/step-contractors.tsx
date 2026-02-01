@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
-import { Info, Pencil, Check } from 'lucide-react'
+import { MapPin, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,30 +19,25 @@ export interface ContractorEntry {
   category: string
   contractor_phone: string
   contractor_email: string
-  property_ids: string[] | null // null = all properties
-}
-
-interface PropertyOption {
-  id: string
-  address: string
+  service_areas: string[] // Cities they serve (empty = no auto-assignment)
 }
 
 interface StepContractorsProps {
   contractors: ContractorEntry[]
-  properties: PropertyOption[]
+  availableCities: string[] // Cities extracted from properties
   onChange: (contractors: ContractorEntry[]) => void
 }
 
-const CSV_COLUMNS = ['contractor_name', 'category', 'contractor_phone', 'contractor_email']
+const CSV_COLUMNS = ['contractor_name', 'category', 'contractor_phone', 'contractor_email', 'service_areas']
 
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
   value: c,
   label: c,
 }))
 
-export function StepContractors({ contractors, properties, onChange }: StepContractorsProps) {
+export function StepContractors({ contractors, availableCities, onChange }: StepContractorsProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
-  const [selectedProperties, setSelectedProperties] = useState<string[]>([])
+  const [selectedCities, setSelectedCities] = useState<string[]>([])
 
   const columns: ColumnDef[] = [
     { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd', width: '25%' },
@@ -64,7 +59,7 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
       category: row.category || '',
       contractor_phone: row.contractor_phone || '',
       contractor_email: row.contractor_email || '',
-      property_ids: contractors[i]?.property_ids ?? null, // Preserve existing assignment
+      service_areas: contractors[i]?.service_areas || [], // Preserve existing
     }))
     onChange(updated)
   }
@@ -80,49 +75,63 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         if (match) category = match.value
       }
 
+      // Parse service_areas from CSV (comma-separated)
+      let service_areas: string[] = []
+      if (row.service_areas) {
+        const parsed = row.service_areas.split(',').map((s) => s.trim()).filter(Boolean)
+        // Match against available cities (case-insensitive)
+        service_areas = parsed
+          .map((p) => availableCities.find((c) => c.toLowerCase() === p.toLowerCase()))
+          .filter((c): c is string => c !== undefined)
+      }
+
       return {
         contractor_name: row.contractor_name || '',
         category,
         contractor_phone: row.contractor_phone || '',
         contractor_email: row.contractor_email || '',
-        property_ids: null, // null = available for all properties
+        service_areas,
       }
     })
     onChange([...contractors.filter((c) => c.contractor_name), ...newContractors])
   }
 
-  const openPropertyModal = (idx: number) => {
+  const openCityModal = (idx: number) => {
     const contractor = contractors[idx]
-    setSelectedProperties(contractor.property_ids || [])
+    setSelectedCities(contractor.service_areas || [])
     setEditingIdx(idx)
   }
 
-  const savePropertyAssignment = () => {
+  const saveServiceAreas = () => {
     if (editingIdx === null) return
     const updated = [...contractors]
     updated[editingIdx] = {
       ...updated[editingIdx],
-      property_ids: selectedProperties.length > 0 ? selectedProperties : null,
+      service_areas: selectedCities,
     }
     onChange(updated)
     setEditingIdx(null)
   }
 
-  const toggleProperty = (propertyId: string) => {
-    setSelectedProperties((prev) =>
-      prev.includes(propertyId)
-        ? prev.filter((id) => id !== propertyId)
-        : [...prev, propertyId]
+  const toggleCity = (city: string) => {
+    setSelectedCities((prev) =>
+      prev.includes(city)
+        ? prev.filter((c) => c !== city)
+        : [...prev, city]
     )
   }
 
-  const setAllProperties = () => {
-    setSelectedProperties([])
+  const selectAllCities = () => {
+    setSelectedCities([...availableCities])
   }
 
-  // Action column for property assignment
-  const actionColumn = properties.length > 0 ? {
-    label: 'Properties',
+  const clearAllCities = () => {
+    setSelectedCities([])
+  }
+
+  // Action column for service area assignment
+  const actionColumn = availableCities.length > 0 ? {
+    label: 'Service Areas',
     width: '15%',
     render: (rowIdx: number, row: Record<string, string>) => {
       // Only show for rows with a name
@@ -130,16 +139,21 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         return <span className="text-xs text-muted-foreground">—</span>
       }
       const contractor = contractors[rowIdx]
-      const isAll = !contractor?.property_ids || contractor.property_ids.length === 0
-      const count = contractor?.property_ids?.length || 0
+      const areas = contractor?.service_areas || []
+      const hasAreas = areas.length > 0
+
       return (
         <button
           type="button"
-          onClick={() => openPropertyModal(rowIdx)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors w-full justify-between"
+          onClick={() => openCityModal(rowIdx)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors w-full justify-between ${
+            hasAreas
+              ? 'border-border hover:border-primary/50 hover:bg-primary/5'
+              : 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+          }`}
         >
-          <span className={isAll ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
-            {isAll ? 'All' : `${count}`}
+          <span className={hasAreas ? 'text-emerald-600 dark:text-emerald-400 font-medium truncate' : 'text-amber-600 dark:text-amber-400'}>
+            {hasAreas ? areas.join(', ') : 'None'}
           </span>
           <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
         </button>
@@ -170,73 +184,111 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         templateFilename="contractors_template.csv"
       />
 
-      {/* How automated tickets work */}
+      {/* Service Area Assignment Explanation */}
       <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm space-y-2">
           <p className="font-medium text-blue-900 dark:text-blue-100">
-            How automated ticket assignment works
+            Service Area Assignment
           </p>
           <p className="text-blue-700 dark:text-blue-300">
-            When a tenant reports an issue, Yarro matches it to a <strong>category</strong> (e.g., &quot;Plumber&quot; for a leak). Contractors are selected based on their category and which properties they serve. Click the <strong>Properties</strong> column to customise, or edit later from the Contractors page.
+            We&apos;ve extracted cities from your property postcodes. Assign each contractor to the cities they serve.
           </p>
+          <ul className="text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+            <li><strong>CSV:</strong> Include &quot;service_areas&quot; column (comma-separated: &quot;Manchester, Salford&quot;)</li>
+            <li><strong>UI:</strong> Click Service Areas column to select cities</li>
+            <li>Contractors are auto-assigned to <strong>all properties</strong> in their selected cities</li>
+            <li><strong>No selection = no automatic assignment</strong> (you can assign manually later)</li>
+          </ul>
+          {availableCities.length > 0 && (
+            <p className="text-blue-700 dark:text-blue-300 pt-1">
+              <strong>Cities from your properties:</strong>{' '}
+              {availableCities.map((city, i) => (
+                <span key={city} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs mr-1.5 mb-1">
+                  {city}
+                </span>
+              ))}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Property Assignment Modal */}
+      {/* Service Area Modal */}
       <Dialog open={editingIdx !== null} onOpenChange={(open) => !open && setEditingIdx(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Assign Properties — {editingIdx !== null ? contractors[editingIdx]?.contractor_name : ''}
+              Service Areas — {editingIdx !== null ? contractors[editingIdx]?.contractor_name : ''}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Select which properties this contractor can serve. Leave empty for all properties.
+              Select which cities this contractor serves. They&apos;ll be auto-assigned to all properties in those cities.
             </p>
 
-            <Button
-              type="button"
-              variant={selectedProperties.length === 0 ? 'default' : 'outline'}
-              size="sm"
-              onClick={setAllProperties}
-              className="w-full justify-start"
-            >
-              <Check className={`h-4 w-4 mr-2 ${selectedProperties.length === 0 ? 'opacity-100' : 'opacity-0'}`} />
-              All Properties (default)
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={selectAllCities}
+                className="flex-1"
+              >
+                Select All
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clearAllCities}
+                className="flex-1"
+              >
+                Clear All
+              </Button>
+            </div>
 
             <div className="border-t pt-4 space-y-2 max-h-64 overflow-y-auto">
-              {properties.map((p) => {
-                const isSelected = selectedProperties.includes(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleProperty(p.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors ${
-                      isSelected
-                        ? 'bg-primary/10 text-primary border border-primary/30'
-                        : 'bg-muted/50 hover:bg-muted border border-transparent'
-                    }`}
-                  >
-                    {isSelected ? (
-                      <Check className="h-4 w-4 flex-shrink-0" />
-                    ) : (
-                      <div className="h-4 w-4 flex-shrink-0" />
-                    )}
-                    <span className="truncate">{p.address}</span>
-                  </button>
-                )
-              })}
+              {availableCities.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No cities found. Add properties with valid UK postcodes first.
+                </p>
+              ) : (
+                availableCities.map((city) => {
+                  const isSelected = selectedCities.includes(city)
+                  return (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => toggleCity(city)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                        isSelected
+                          ? 'bg-primary/10 text-primary border border-primary/30'
+                          : 'bg-muted/50 hover:bg-muted border border-transparent'
+                      }`}
+                    >
+                      {isSelected ? (
+                        <Check className="h-4 w-4 flex-shrink-0" />
+                      ) : (
+                        <div className="h-4 w-4 flex-shrink-0" />
+                      )}
+                      <span>{city}</span>
+                    </button>
+                  )
+                })
+              )}
             </div>
+
+            {selectedCities.length === 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+                No cities selected — this contractor won&apos;t be auto-assigned to any properties.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingIdx(null)}>
               Cancel
             </Button>
-            <Button onClick={savePropertyAssignment}>
+            <Button onClick={saveServiceAreas}>
               Save
             </Button>
           </DialogFooter>
