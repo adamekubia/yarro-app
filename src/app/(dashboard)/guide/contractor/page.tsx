@@ -13,7 +13,7 @@ You'll get WhatsApp messages with quote requests including:
 - Urgency level
 
 2. SUBMIT YOUR QUOTE
-Reply with your estimated cost for the job.
+Tap to enter your estimated cost for the job.
 Example: "£200"
 
 3. GET APPROVAL NOTIFICATION
@@ -56,9 +56,9 @@ export default function ContractorGuidePage() {
                 Share this guide with your contractors so they know how the quote and job process works.
               </p>
 
-              {/* Two column grid - steps 1-3 on left, step 4 + tips on right */}
+              {/* Two column grid - all 4 steps on left, tips on right */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-                {/* Left column - steps 1-3 */}
+                {/* Left column - all 4 steps */}
                 <div className="space-y-4">
                   {/* Step 1 */}
                   <div className="flex gap-3">
@@ -84,7 +84,7 @@ export default function ContractorGuidePage() {
                     <div>
                       <h3 className="font-semibold text-card-foreground">2. Submit Your Quote</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Reply with your estimated cost for the job.
+                        Tap to enter your estimated cost for the job.
                       </p>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-500/10 inline-block px-2 py-1 rounded">
                         Example: "£200"
@@ -107,10 +107,7 @@ export default function ContractorGuidePage() {
                       </ul>
                     </div>
                   </div>
-                </div>
 
-                {/* Right column - step 4 + tips */}
-                <div className="space-y-4">
                   {/* Step 4 */}
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -125,8 +122,10 @@ export default function ContractorGuidePage() {
                       </ul>
                     </div>
                   </div>
+                </div>
 
-                  {/* Tips */}
+                {/* Right column - tips */}
+                <div>
                   <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
                     <h4 className="font-semibold text-card-foreground mb-1">Tips</h4>
                     <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
