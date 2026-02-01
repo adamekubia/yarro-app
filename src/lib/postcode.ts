@@ -1,10 +1,46 @@
 /**
  * UK Postcode utilities
- * Uses free postcodes.io API for city lookup
+ * Uses free postcodes.io API for city lookup with address text fallback
  */
 
 // UK postcode regex - matches at end of string
 const UK_POSTCODE_REGEX = /([A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2})$/i
+
+// Common UK cities/towns for fallback extraction from address text
+const UK_CITIES = [
+  'London', 'Birmingham', 'Manchester', 'Leeds', 'Liverpool', 'Sheffield',
+  'Bristol', 'Newcastle', 'Nottingham', 'Leicester', 'Coventry', 'Bradford',
+  'Cardiff', 'Belfast', 'Edinburgh', 'Glasgow', 'Aberdeen', 'Dundee',
+  'Salford', 'Bolton', 'Bury', 'Oldham', 'Rochdale', 'Stockport', 'Trafford',
+  'Wigan', 'Tameside', 'Warrington', 'Preston', 'Blackburn', 'Blackpool',
+  'Burnley', 'Lancaster', 'Sunderland', 'Gateshead', 'Durham', 'Middlesbrough',
+  'Darlington', 'Hartlepool', 'York', 'Hull', 'Doncaster', 'Barnsley',
+  'Rotherham', 'Wakefield', 'Huddersfield', 'Halifax', 'Dewsbury',
+  'Derby', 'Stoke', 'Wolverhampton', 'Walsall', 'Dudley', 'Solihull',
+  'Reading', 'Oxford', 'Cambridge', 'Milton Keynes', 'Luton', 'Northampton',
+  'Peterborough', 'Norwich', 'Ipswich', 'Colchester', 'Chelmsford',
+  'Southampton', 'Portsmouth', 'Brighton', 'Bournemouth', 'Plymouth',
+  'Exeter', 'Bath', 'Swindon', 'Gloucester', 'Cheltenham', 'Worcester',
+  'Hereford', 'Swansea', 'Newport', 'Wrexham', 'Bangor',
+]
+
+/**
+ * Try to extract city name from address text (fallback when API fails)
+ */
+function extractCityFromAddressText(address: string): string | null {
+  if (!address) return null
+  const upperAddress = address.toUpperCase()
+
+  // Look for known cities in the address (case-insensitive)
+  for (const city of UK_CITIES) {
+    // Match as whole word (surrounded by comma, space, or start/end)
+    const regex = new RegExp(`(^|[,\\s])${city}([,\\s]|$)`, 'i')
+    if (regex.test(address)) {
+      return city // Return with proper casing
+    }
+  }
+  return null
+}
 
 /**
  * Extract UK postcode from an address string
@@ -47,12 +83,19 @@ export async function lookupPostcodeCity(postcode: string): Promise<string | nul
 
 /**
  * Extract postcode from address and lookup city
+ * Uses API first, falls back to extracting city from address text
  * Returns city name or null
  */
 export async function getCityFromAddress(address: string): Promise<string | null> {
+  // Try API lookup first
   const postcode = extractUKPostcode(address)
-  if (!postcode) return null
-  return lookupPostcodeCity(postcode)
+  if (postcode) {
+    const apiCity = await lookupPostcodeCity(postcode)
+    if (apiCity) return apiCity
+  }
+
+  // Fallback: extract city from address text
+  return extractCityFromAddressText(address)
 }
 
 /**
