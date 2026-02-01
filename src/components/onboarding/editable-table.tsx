@@ -23,15 +23,22 @@ export interface ColumnDef {
   width?: string
 }
 
+interface ActionColumnDef {
+  label: string
+  width?: string
+  render: (rowIndex: number, row: Record<string, string>) => React.ReactNode
+}
+
 interface EditableTableProps {
   columns: ColumnDef[]
   rows: Record<string, string>[]
   onChange: (rows: Record<string, string>[]) => void
   minRows?: number
   highlightEmptySelections?: boolean
+  actionColumn?: ActionColumnDef
 }
 
-export function EditableTable({ columns, rows, onChange, minRows = 1, highlightEmptySelections = false }: EditableTableProps) {
+export function EditableTable({ columns, rows, onChange, minRows = 1, highlightEmptySelections = false, actionColumn }: EditableTableProps) {
   // Check if row has empty selection fields (combobox or select)
   const rowNeedsAttention = (row: Record<string, string>) => {
     if (!highlightEmptySelections) return false
@@ -111,6 +118,14 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
                   {col.required && <span className="text-destructive ml-0.5">*</span>}
                 </th>
               ))}
+              {actionColumn && (
+                <th
+                  className="text-left px-3 py-2 font-medium text-muted-foreground border-l border-border"
+                  style={{ width: actionColumn.width }}
+                >
+                  {actionColumn.label}
+                </th>
+              )}
               <th className="w-10" />
             </tr>
           </thead>
@@ -157,6 +172,11 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
                     )}
                   </td>
                 ))}
+                {actionColumn && (
+                  <td className="px-2 py-1.5 border-l border-border">
+                    {actionColumn.render(rowIdx, row)}
+                  </td>
+                )}
                 <td className="px-1 py-1.5">
                   <button
                     type="button"

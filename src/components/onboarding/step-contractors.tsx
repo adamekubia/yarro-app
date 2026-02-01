@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
-import { Info, Pencil, X, Check } from 'lucide-react'
+import { Info, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -45,10 +45,10 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
 
   const columns: ColumnDef[] = [
-    { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd' },
-    { key: 'category', label: 'Category', required: true, type: 'select', options: CATEGORY_OPTIONS },
-    { key: 'contractor_phone', label: 'Phone', required: true, placeholder: '07700 900500' },
-    { key: 'contractor_email', label: 'Email', placeholder: 'info@quickfix-demo.co.uk' },
+    { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd', width: '25%' },
+    { key: 'category', label: 'Category', required: true, type: 'select', options: CATEGORY_OPTIONS, width: '20%' },
+    { key: 'contractor_phone', label: 'Phone', required: true, placeholder: '07700 900500', width: '18%' },
+    { key: 'contractor_email', label: 'Email', placeholder: 'info@quickfix-demo.co.uk', width: '22%' },
   ]
 
   const rows = contractors.map((c) => ({
@@ -93,7 +93,6 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
 
   const openPropertyModal = (idx: number) => {
     const contractor = contractors[idx]
-    // If null (all), start with empty selection (meaning "all" until they select specific ones)
     setSelectedProperties(contractor.property_ids || [])
     setEditingIdx(idx)
   }
@@ -101,7 +100,6 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
   const savePropertyAssignment = () => {
     if (editingIdx === null) return
     const updated = [...contractors]
-    // If no properties selected, set to null (all properties)
     updated[editingIdx] = {
       ...updated[editingIdx],
       property_ids: selectedProperties.length > 0 ? selectedProperties : null,
@@ -122,7 +120,32 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
     setSelectedProperties([])
   }
 
-  const namedContractors = contractors.filter((c) => c.contractor_name.trim())
+  // Action column for property assignment
+  const actionColumn = properties.length > 0 ? {
+    label: 'Properties',
+    width: '15%',
+    render: (rowIdx: number, row: Record<string, string>) => {
+      // Only show for rows with a name
+      if (!row.contractor_name?.trim()) {
+        return <span className="text-xs text-muted-foreground">—</span>
+      }
+      const contractor = contractors[rowIdx]
+      const isAll = !contractor?.property_ids || contractor.property_ids.length === 0
+      const count = contractor?.property_ids?.length || 0
+      return (
+        <button
+          type="button"
+          onClick={() => openPropertyModal(rowIdx)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors w-full justify-between"
+        >
+          <span className={isAll ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
+            {isAll ? 'All' : `${count}`}
+          </span>
+          <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+        </button>
+      )
+    },
+  } : undefined
 
   return (
     <div className="space-y-4">
@@ -133,7 +156,13 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         </p>
       </div>
 
-      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} highlightEmptySelections />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onChange={handleRowsChange}
+        highlightEmptySelections
+        actionColumn={actionColumn}
+      />
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
@@ -149,55 +178,10 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
             How automated ticket assignment works
           </p>
           <p className="text-blue-700 dark:text-blue-300">
-            When a tenant reports an issue, Yarro automatically matches it to a <strong>category</strong> (e.g., &quot;Plumber&quot; for a leak). Contractors are then selected based on:
-          </p>
-          <ol className="list-decimal list-inside text-blue-700 dark:text-blue-300 space-y-1 ml-1">
-            <li>Their category matches the issue</li>
-            <li>They serve the property (by default: all properties)</li>
-          </ol>
-          <p className="text-blue-700 dark:text-blue-300">
-            You can customise property assignments below, or edit them later from the Contractors page.
+            When a tenant reports an issue, Yarro matches it to a <strong>category</strong> (e.g., &quot;Plumber&quot; for a leak). Contractors are selected based on their category and which properties they serve. Click the <strong>Properties</strong> column to customise, or edit later from the Contractors page.
           </p>
         </div>
       </div>
-
-      {/* Property Assignment Section */}
-      {namedContractors.length > 0 && properties.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <div>
-            <h3 className="text-sm font-medium">Assigned Properties</h3>
-            <p className="text-xs text-muted-foreground">Click to customise which properties each contractor serves. Default is all properties.</p>
-          </div>
-          <div className="border rounded-lg divide-y">
-            {namedContractors.map((contractor) => {
-              const realIdx = contractors.indexOf(contractor)
-              const isAll = contractor.property_ids === null || contractor.property_ids.length === 0
-              const assignedCount = contractor.property_ids?.length || 0
-              return (
-                <div
-                  key={realIdx}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{contractor.contractor_name}</p>
-                    <p className="text-xs text-muted-foreground">{contractor.category || 'No category'}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openPropertyModal(realIdx)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                  >
-                    <span className={isAll ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
-                      {isAll ? 'All Properties' : `${assignedCount} ${assignedCount === 1 ? 'Property' : 'Properties'}`}
-                    </span>
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Property Assignment Modal */}
       <Dialog open={editingIdx !== null} onOpenChange={(open) => !open && setEditingIdx(null)}>

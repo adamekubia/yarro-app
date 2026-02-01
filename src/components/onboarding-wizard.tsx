@@ -317,12 +317,12 @@ export function OnboardingWizard() {
         }))
       } else if (state.step === 'tenants') {
         if (!propertyManager) return
-        // Insert tenants - require name, phone, AND property
-        const validTenants = state.tenants.filter((t) => t.full_name.trim() && t.phone.trim() && t.propertyId)
+        // Insert tenants - require name AND property (phone is optional)
+        const validTenants = state.tenants.filter((t) => t.full_name.trim() && t.propertyId)
 
-        // Check for tenants with name/phone but missing property
+        // Check for tenants with name but missing property
         const tenantsWithoutProperty = state.tenants.filter(
-          (t) => t.full_name.trim() && t.phone.trim() && !t.propertyId
+          (t) => t.full_name.trim() && !t.propertyId
         )
         if (tenantsWithoutProperty.length > 0) {
           setError(`${tenantsWithoutProperty.length} ${tenantsWithoutProperty.length === 1 ? 'tenant needs' : 'tenants need'} a property selected (highlighted in amber)`)
@@ -330,13 +330,15 @@ export function OnboardingWizard() {
           return
         }
 
-        // Validate before inserting
+        // Validate before inserting (only validate phone/email if provided)
         for (const tenant of validTenants) {
-          const phoneResult = validatePhone(tenant.phone)
-          if (!phoneResult.valid) {
-            setError(`Tenant "${tenant.full_name}": ${phoneResult.error}`)
-            setSaving(false)
-            return
+          if (tenant.phone.trim()) {
+            const phoneResult = validatePhone(tenant.phone)
+            if (!phoneResult.valid) {
+              setError(`Tenant "${tenant.full_name}": ${phoneResult.error}`)
+              setSaving(false)
+              return
+            }
           }
           if (tenant.email) {
             const emailResult = validateEmail(tenant.email)
@@ -364,21 +366,29 @@ export function OnboardingWizard() {
           }
         }
 
-        // Check for existing tenants to avoid duplicates (by phone + property)
+        // Check for existing tenants to avoid duplicates
+        // For tenants with phone: duplicate = same phone + same property
+        // For tenants without phone: duplicate = same name + same property
         const { data: existingTenants } = await supabase
           .from('c1_tenants')
-          .select('phone, property_id')
+          .select('phone, full_name, property_id')
           .eq('property_manager_id', propertyManager.id)
-        const existingKeys = new Set(
-          (existingTenants || []).map((t) => `${normalizePhone(t.phone)}|${t.property_id}`)
+        const existingPhoneKeys = new Set(
+          (existingTenants || []).filter((t) => t.phone).map((t) => `${normalizePhone(t.phone)}|${t.property_id}`)
+        )
+        const existingNameKeys = new Set(
+          (existingTenants || []).map((t) => `${t.full_name.toLowerCase().trim()}|${t.property_id}`)
         )
 
         let insertedCount = 0
         let skippedCount = 0
 
         for (const tenant of validTenants) {
-          const tenantKey = `${normalizePhone(tenant.phone)}|${tenant.propertyId}`
-          if (existingKeys.has(tenantKey)) {
+          // Check for duplicates - use phone if available, otherwise use name
+          const isDuplicate = tenant.phone.trim()
+            ? existingPhoneKeys.has(`${normalizePhone(tenant.phone)}|${tenant.propertyId}`)
+            : existingNameKeys.has(`${tenant.full_name.toLowerCase().trim()}|${tenant.propertyId}`)
+          if (isDuplicate) {
             skippedCount++
             continue
           }
@@ -406,7 +416,11 @@ export function OnboardingWizard() {
             return
           }
           insertedCount++
-          existingKeys.add(tenantKey) // Prevent duplicates within same batch
+          // Prevent duplicates within same batch
+          if (tenant.phone.trim()) {
+            existingPhoneKeys.add(`${normalizePhone(tenant.phone)}|${tenant.propertyId}`)
+          }
+          existingNameKeys.add(`${tenant.full_name.toLowerCase().trim()}|${tenant.propertyId}`)
         }
 
         if (insertedCount > 0 || skippedCount > 0) {
