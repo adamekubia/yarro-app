@@ -607,9 +607,56 @@ export default function DashboardPage() {
                 )
               })()}
 
-              {/* BOTTOM SECTION (62%): Scheduled/Declined + Quick Actions */}
+              {/* BOTTOM SECTION (62%): Quick Actions + Scheduled/Declined */}
               <div className="flex flex-col gap-3 min-h-0" style={{ height: '62%' }}>
-                {/* Scheduled + Declined row */}
+                {/* Quick Actions row - at top, starting from midline */}
+                <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+                  {/* Create Manual Ticket */}
+                  <Link
+                    href="/tickets?create=true"
+                    className="bg-card rounded-xl border border-primary/30 p-3 flex items-center gap-3 hover:bg-primary/5 hover:border-primary/50 transition-colors group"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Plus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">Create Ticket</p>
+                      <p className="text-xs text-muted-foreground">Manual entry</p>
+                    </div>
+                  </Link>
+
+                  {/* Completion Rate */}
+                  <div className="bg-card rounded-xl border border-border p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Completion Rate</span>
+                      <span className="text-lg font-bold text-emerald-500">
+                        {stats && stats.totalTickets > 0 ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{ width: stats ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '0%' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Active Conversations */}
+                  <Link
+                    href="/conversations"
+                    className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-cyan-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">Conversations</p>
+                      <p className="text-xs text-muted-foreground">View active chats</p>
+                    </div>
+                  </Link>
+                </div>
+
+                {/* Scheduled + Declined row - below quick actions */}
                 <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
                   {/* Scheduled */}
                   <div className="bg-card rounded-xl border border-blue-200 dark:border-blue-900 flex flex-col min-h-0">
@@ -677,53 +724,6 @@ export default function DashboardPage() {
                       })()}
                     </div>
                   </div>
-                </div>
-
-                {/* Quick Actions row */}
-                <div className="grid grid-cols-3 gap-3 flex-shrink-0">
-                  {/* Create Manual Ticket */}
-                  <Link
-                    href="/tickets?create=true"
-                    className="bg-card rounded-xl border border-primary/30 p-3 flex items-center gap-3 hover:bg-primary/5 hover:border-primary/50 transition-colors group"
-                  >
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Plus className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-card-foreground">Create Ticket</p>
-                      <p className="text-xs text-muted-foreground">Manual entry</p>
-                    </div>
-                  </Link>
-
-                  {/* Completion Rate */}
-                  <div className="bg-card rounded-xl border border-border p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Completion Rate</span>
-                      <span className="text-lg font-bold text-emerald-500">
-                        {stats && stats.totalTickets > 0 ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '—'}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-500"
-                        style={{ width: stats ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '0%' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Active Conversations */}
-                  <Link
-                    href="/conversations"
-                    className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-cyan-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-card-foreground">Conversations</p>
-                      <p className="text-xs text-muted-foreground">View active chats</p>
-                    </div>
-                  </Link>
                 </div>
               </div>
             </div>
