@@ -104,10 +104,10 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
 
   return (
     <div className="space-y-2">
-      <div className="border rounded-lg overflow-x-auto">
+      <div className="border rounded-lg overflow-auto max-h-[400px]">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
+          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
+            <tr className="border-b">
               {columns.map((col) => (
                 <th
                   key={col.key}
