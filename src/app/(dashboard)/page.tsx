@@ -385,7 +385,7 @@ export default function DashboardPage() {
 
           {/* Main Two-Column Layout */}
           <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
-            {/* LEFT COLUMN: Status + Recent Tickets + Category */}
+            {/* LEFT COLUMN: Status + Category (above midline) + Recent Tickets (below midline) */}
             <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
               {/* Row 1: By Status (compact) */}
               <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
@@ -428,9 +428,34 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Row 2: Recent Tickets (medium height) */}
-              <div className="bg-card rounded-xl border border-border flex flex-col h-[200px]">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              {/* Row 2: By Category (compact, above midline) */}
+              <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
+                <h3 className="text-sm font-semibold text-card-foreground mb-2">By Category</h3>
+                {categoryChartData.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {categoryChartData.slice(0, 6).map((item) => (
+                      <div
+                        key={item.fullName}
+                        className="flex items-center gap-2 p-1.5 rounded-lg"
+                        style={{ backgroundColor: `${item.color}15` }}
+                      >
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs text-muted-foreground truncate flex-1">{item.name}</span>
+                        <span className="text-xs font-bold text-card-foreground">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">No category data</p>
+                )}
+              </div>
+
+              {/* Row 3: Recent Tickets (fills remaining space, below midline) */}
+              <div className="bg-card rounded-xl border border-border flex flex-col flex-1 min-h-0">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
                   <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
                   <Link href="/tickets">
                     <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
@@ -472,40 +497,11 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-
-              {/* Row 3: By Category (fills remaining space) */}
-              <div className="bg-card rounded-xl border border-border p-3 flex-1 min-h-0 flex flex-col">
-                <h3 className="text-sm font-semibold text-card-foreground mb-2 flex-shrink-0">By Category</h3>
-                {categoryChartData.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto">
-                    {categoryChartData.slice(0, 8).map((item) => (
-                      <div
-                        key={item.fullName}
-                        className="flex items-center gap-2 p-2 rounded-lg"
-                        style={{ backgroundColor: `${item.color}15` }}
-                      >
-                        <div
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground truncate">{item.name}</p>
-                          <p className="text-sm font-bold text-card-foreground">{item.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground text-center py-4">
-                    No category data
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* RIGHT COLUMN: Handoff + Awaiting + Scheduled/Declined */}
+            {/* RIGHT COLUMN: Handoff + Awaiting (above midline) + Scheduled/Declined (below midline) */}
             <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
-              {/* Row 1: Handoff Review (compact, same as By Status) */}
+              {/* Row 1: Handoff Review (matches By Status height) */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
@@ -568,12 +564,10 @@ export default function DashboardPage() {
                 )
               })()}
 
-              {/* Row 2: Awaiting Action (medium height, matches Recent Tickets) */}
-              <div className="bg-card rounded-xl border border-border flex flex-col h-[200px]">
-                <div className="px-3 py-2 border-b border-border flex-shrink-0">
-                  <h3 className="text-sm font-semibold text-card-foreground">Awaiting Action</h3>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+              {/* Row 2: Awaiting Action (compact, matches By Category) */}
+              <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
+                <h3 className="text-sm font-semibold text-card-foreground mb-2">Awaiting Action</h3>
+                <div className="space-y-1.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -628,7 +622,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Row 3: Scheduled + Declined (side by side, fills remaining space, with ticket lists) */}
+              {/* Row 3: Scheduled + Declined (side by side, fills remaining space, below midline) */}
               <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
                 {/* Scheduled */}
                 <div className="bg-card rounded-xl border border-blue-200 dark:border-blue-900 flex flex-col min-h-0">
@@ -647,7 +641,7 @@ export default function DashboardPage() {
                         return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
                       })
                       return scheduledTickets.length > 0 ? (
-                        scheduledTickets.slice(0, 4).map((ticket) => (
+                        scheduledTickets.slice(0, 6).map((ticket) => (
                           <Link
                             key={ticket.id}
                             href={`/tickets?id=${ticket.id}`}
@@ -675,14 +669,12 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {(() => {
-                      type MessageData = { stage: string; landlord?: { approval?: boolean | null } | null }
-                      const declinedTickets = allTickets.filter((t) => {
-                        const msg = t.message_stage
-                        // This is simplified - in real implementation would need full message data
-                        return false // Placeholder - declined needs message data
+                      const declinedTickets = allTickets.filter(() => {
+                        // Placeholder - declined needs message data
+                        return false
                       })
                       return declinedTickets.length > 0 ? (
-                        declinedTickets.slice(0, 4).map((ticket) => (
+                        declinedTickets.slice(0, 6).map((ticket) => (
                           <Link
                             key={ticket.id}
                             href={`/tickets?id=${ticket.id}`}
