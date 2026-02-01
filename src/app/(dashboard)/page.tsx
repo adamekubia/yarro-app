@@ -697,7 +697,7 @@ export default function DashboardPage() {
                     <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <XCircle className={`h-4 w-4 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                        <h3 className="text-sm font-semibold text-card-foreground">Declined</h3>
+                        <h3 className="text-sm font-semibold text-card-foreground">Landlord Declined</h3>
                       </div>
                       <span className={`text-lg font-bold ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>{stats?.landlordDeclined || 0}</span>
                     </div>
