@@ -107,13 +107,16 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         </p>
       </div>
 
-      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
+      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} highlightEmptySelections />
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="contractors_template.csv"
       />
+      <p className="text-xs text-muted-foreground">
+        <strong>Tip:</strong> Use exact category names in your CSV (e.g. &quot;Plumber&quot;, &quot;Electrician&quot;). Non-matching categories will need manual selection.
+      </p>
 
       {/* Property Assignment */}
       {namedContractors.length > 0 && properties.length > 0 && (

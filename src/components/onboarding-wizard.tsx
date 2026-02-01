@@ -187,7 +187,22 @@ export function OnboardingWizard() {
 
         setState((prev) => ({ ...prev, step: 'landlords' }))
       } else if (state.step === 'landlords') {
-        // Landlords are just stored in state, nothing to insert
+        // Validate landlords - if they have a name, they must have a phone
+        const landlordsWithData = state.landlords.filter((l) => l.name.trim())
+        const landlordsWithoutPhone = landlordsWithData.filter((l) => !l.phone.trim())
+        if (landlordsWithoutPhone.length > 0) {
+          setError(`${landlordsWithoutPhone.length} ${landlordsWithoutPhone.length === 1 ? 'landlord needs' : 'landlords need'} a phone number`)
+          setSaving(false)
+          return
+        }
+        // Validate phone format for landlords
+        for (const landlord of landlordsWithData) {
+          if (!isValidUKPhone(landlord.phone)) {
+            setError(`Landlord "${landlord.name}": Enter a valid UK phone number`)
+            setSaving(false)
+            return
+          }
+        }
         setState((prev) => ({ ...prev, step: 'properties' }))
       } else if (state.step === 'properties') {
         if (!propertyManager) return
@@ -333,9 +348,41 @@ export function OnboardingWizard() {
           }
         }
 
+        // Fetch fresh property IDs to verify they exist (handles stale state)
+        const { data: freshProps } = await supabase
+          .from('c1_properties')
+          .select('id')
+          .eq('property_manager_id', propertyManager.id)
+        const validPropertyIds = new Set((freshProps || []).map((p) => p.id))
+
+        // Verify all property IDs exist
+        for (const tenant of validTenants) {
+          if (!validPropertyIds.has(tenant.propertyId)) {
+            setError(`Property selection is stale. Please refresh the page and re-select properties.`)
+            setSaving(false)
+            return
+          }
+        }
+
+        // Check for existing tenants to avoid duplicates (by phone + property)
+        const { data: existingTenants } = await supabase
+          .from('c1_tenants')
+          .select('phone, property_id')
+          .eq('property_manager_id', propertyManager.id)
+        const existingKeys = new Set(
+          (existingTenants || []).map((t) => `${normalizePhone(t.phone)}|${t.property_id}`)
+        )
+
         let insertedCount = 0
+        let skippedCount = 0
 
         for (const tenant of validTenants) {
+          const tenantKey = `${normalizePhone(tenant.phone)}|${tenant.propertyId}`
+          if (existingKeys.has(tenantKey)) {
+            skippedCount++
+            continue
+          }
+
           const record: Record<string, unknown> = {
             full_name: tenant.full_name,
             phone: tenant.phone,
@@ -359,9 +406,15 @@ export function OnboardingWizard() {
             return
           }
           insertedCount++
+          existingKeys.add(tenantKey) // Prevent duplicates within same batch
         }
 
-        if (insertedCount > 0) toast.success(`${insertedCount} tenants added`)
+        if (insertedCount > 0 || skippedCount > 0) {
+          const parts = []
+          if (insertedCount > 0) parts.push(`${insertedCount} added`)
+          if (skippedCount > 0) parts.push(`${skippedCount} already existed`)
+          toast.success(`Tenants: ${parts.join(', ')}`)
+        }
 
         setState((prev) => ({
           ...prev,
@@ -370,6 +423,27 @@ export function OnboardingWizard() {
         }))
       } else if (state.step === 'contractors') {
         if (!propertyManager) return
+
+        // Check for contractors with name but missing category
+        const contractorsWithoutCategory = state.contractors.filter(
+          (c) => c.contractor_name.trim() && !c.category
+        )
+        if (contractorsWithoutCategory.length > 0) {
+          setError(`${contractorsWithoutCategory.length} ${contractorsWithoutCategory.length === 1 ? 'contractor needs' : 'contractors need'} a category selected (highlighted in amber)`)
+          setSaving(false)
+          return
+        }
+
+        // Check for contractors with name but missing phone
+        const contractorsWithoutPhone = state.contractors.filter(
+          (c) => c.contractor_name.trim() && !c.contractor_phone.trim()
+        )
+        if (contractorsWithoutPhone.length > 0) {
+          setError(`${contractorsWithoutPhone.length} ${contractorsWithoutPhone.length === 1 ? 'contractor needs' : 'contractors need'} a phone number`)
+          setSaving(false)
+          return
+        }
+
         // Insert contractors
         const validContractors = state.contractors.filter(
           (c) => c.contractor_name.trim() && c.category && c.contractor_phone.trim()
@@ -393,9 +467,25 @@ export function OnboardingWizard() {
           }
         }
 
+        // Check for existing contractors to avoid duplicates (by phone)
+        const { data: existingContractors } = await supabase
+          .from('c1_contractors')
+          .select('contractor_phone')
+          .eq('property_manager_id', propertyManager.id)
+        const existingPhones = new Set(
+          (existingContractors || []).map((c) => normalizePhone(c.contractor_phone))
+        )
+
         let insertedCount = 0
+        let skippedCount = 0
 
         for (const contractor of validContractors) {
+          const normalizedPhone = normalizePhone(contractor.contractor_phone)
+          if (existingPhones.has(normalizedPhone)) {
+            skippedCount++
+            continue
+          }
+
           const record: Record<string, unknown> = {
             contractor_name: contractor.contractor_name,
             category: contractor.category,
@@ -420,9 +510,15 @@ export function OnboardingWizard() {
             return
           }
           insertedCount++
+          existingPhones.add(normalizedPhone) // Prevent duplicates within same batch
         }
 
-        if (insertedCount > 0) toast.success(`${insertedCount} contractors added`)
+        if (insertedCount > 0 || skippedCount > 0) {
+          const parts = []
+          if (insertedCount > 0) parts.push(`${insertedCount} added`)
+          if (skippedCount > 0) parts.push(`${skippedCount} already existed`)
+          toast.success(`Contractors: ${parts.join(', ')}`)
+        }
         toast.success('Onboarding complete!')
 
         setState((prev) => ({
