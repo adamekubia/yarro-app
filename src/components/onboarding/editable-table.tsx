@@ -10,13 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { Plus, Trash2 } from 'lucide-react'
 
 export interface ColumnDef {
   key: string
   label: string
   required?: boolean
-  type?: 'text' | 'select' | 'number'
+  type?: 'text' | 'select' | 'combobox' | 'number'
   options?: { value: string; label: string }[]
   placeholder?: string
   width?: string
@@ -107,7 +108,17 @@ export function EditableTable({ columns, rows, onChange, minRows = 1 }: Editable
               <tr key={rowIdx} className="border-b last:border-b-0">
                 {columns.map((col, colIdx) => (
                   <td key={col.key} className="px-2 py-1.5">
-                    {col.type === 'select' && col.options ? (
+                    {col.type === 'combobox' && col.options ? (
+                      <Combobox
+                        options={col.options}
+                        value={row[col.key] || ''}
+                        onValueChange={(v) => updateCell(rowIdx, col.key, v)}
+                        placeholder={col.placeholder || 'Search...'}
+                        searchPlaceholder="Type to search..."
+                        emptyText="No matches"
+                        className="h-8 text-sm border-0 shadow-none bg-transparent"
+                      />
+                    ) : col.type === 'select' && col.options ? (
                       <Select
                         value={row[col.key] || ''}
                         onValueChange={(v) => updateCell(rowIdx, col.key, v)}

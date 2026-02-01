@@ -31,7 +31,7 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
   const columns: ColumnDef[] = [
     { key: 'address', label: 'Address', required: true, placeholder: '14 Meadow Lane, Manchester, M14 5RL', width: '30%' },
     ...(landlordOptions.length > 0
-      ? [{ key: 'landlordTempId', label: 'Landlord', type: 'select' as const, options: landlordOptions }]
+      ? [{ key: 'landlordTempId', label: 'Landlord', type: 'combobox' as const, options: landlordOptions, placeholder: 'Search landlord...' }]
       : []),
     { key: 'auto_approve_limit', label: 'Auto-Approve (£)', required: true, type: 'number' as const, placeholder: '0' },
     { key: 'access_instructions', label: 'Access', placeholder: 'Key safe by front door, code 1234' },
@@ -98,6 +98,9 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
         onParsed={handleCsvParsed}
         templateFilename="properties_template.csv"
       />
+      <p className="text-xs text-muted-foreground">
+        <strong>Tip:</strong> Use exact landlord names from Step 1 in your CSV for auto-matching. Non-matching names will leave the landlord field empty for you to select manually.
+      </p>
     </div>
   )
 }
