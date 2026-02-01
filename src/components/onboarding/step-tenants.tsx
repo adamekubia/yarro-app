@@ -37,7 +37,7 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
     { key: 'phone', label: 'Phone', required: true, placeholder: '07700 900400' },
     { key: 'email', label: 'Email', placeholder: 'emma.t@example.com' },
     { key: 'role_tag', label: 'Role', type: 'select', options: roleOptions },
-    { key: 'propertyId', label: 'Property', required: true, type: 'select', options: propertyOptions },
+    { key: 'propertyId', label: 'Property', required: true, type: 'combobox' as const, options: propertyOptions, placeholder: 'Search property...' },
   ]
 
   const rows = tenants.map((t) => ({
@@ -91,13 +91,16 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
         </p>
       </div>
 
-      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
+      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} highlightEmptySelections />
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="tenants_template.csv"
       />
+      <p className="text-xs text-muted-foreground">
+        <strong>Tip:</strong> Use property addresses from the previous step in your CSV. Partial matches work (e.g. &quot;14 Meadow&quot; matches &quot;14 Meadow Lane, Manchester, M14 5RL&quot;).
+      </p>
     </div>
   )
 }

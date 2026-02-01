@@ -302,8 +302,18 @@ export function OnboardingWizard() {
         }))
       } else if (state.step === 'tenants') {
         if (!propertyManager) return
-        // Insert tenants
-        const validTenants = state.tenants.filter((t) => t.full_name.trim() && t.phone.trim())
+        // Insert tenants - require name, phone, AND property
+        const validTenants = state.tenants.filter((t) => t.full_name.trim() && t.phone.trim() && t.propertyId)
+
+        // Check for tenants with name/phone but missing property
+        const tenantsWithoutProperty = state.tenants.filter(
+          (t) => t.full_name.trim() && t.phone.trim() && !t.propertyId
+        )
+        if (tenantsWithoutProperty.length > 0) {
+          setError(`${tenantsWithoutProperty.length} ${tenantsWithoutProperty.length === 1 ? 'tenant needs' : 'tenants need'} a property selected (highlighted in amber)`)
+          setSaving(false)
+          return
+        }
 
         // Validate before inserting
         for (const tenant of validTenants) {
