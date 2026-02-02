@@ -109,6 +109,7 @@ export default function MessagesPage() {
         *,
         c1_tickets(issue_description, job_stage, property_manager_id, c1_properties(address))
       `)
+      .or('archived.is.null,archived.eq.false')
       .gte('updated_at', dateRange.from.toISOString())
       .lte('updated_at', dateRange.to.toISOString())
       .order('updated_at', { ascending: false })
