@@ -133,6 +133,7 @@ export function TicketForm({
   const [newContractor, setNewContractor] = useState({ contractor_name: '', contractor_phone: '', category: '' })
   const [savingNew, setSavingNew] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
+  const [fileInputKey, setFileInputKey] = useState(0) // Force input reset
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -251,7 +252,8 @@ export function TicketForm({
           .upload(filename, file)
 
         if (uploadError) {
-          toast.error(`Failed to upload ${file.name}`)
+          const errorMsg = uploadError.message || 'Unknown error'
+          toast.error(`Failed to upload ${file.name}: ${errorMsg}`)
           console.error('Upload error:', uploadError)
           continue
         }
@@ -278,8 +280,8 @@ export function TicketForm({
       toast.error('Failed to upload images')
     } finally {
       setUploadingImages(false)
-      // Reset file input
-      e.target.value = ''
+      // Force file input to reset by changing key
+      setFileInputKey(prev => prev + 1)
     }
   }
 
@@ -666,6 +668,7 @@ export function TicketForm({
                   <ImagePlus className="h-5 w-5 text-muted-foreground" />
                 )}
                 <input
+                  key={fileInputKey}
                   type="file"
                   accept="image/*"
                   multiple
