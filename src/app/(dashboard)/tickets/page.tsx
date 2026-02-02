@@ -201,6 +201,7 @@ export default function TicketsPage() {
     contractor_ids: string[]
     availability: string
     access: string
+    images?: string[]
   }) => {
     if (handoffTicketId) {
       // Complete handoff ticket via RPC - creates messages and triggers dispatcher
@@ -234,7 +235,7 @@ export default function TicketsPage() {
         p_contractor_ids: data.contractor_ids,
         p_availability: data.availability || null,
         p_access: data.access || null,
-        p_images: [],
+        p_images: data.images || [],
       })
 
       if (error) {

@@ -23,9 +23,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Combobox } from '@/components/ui/combobox'
+import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
-import { Loader2, CheckCircle2, AlertTriangle, Plus } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X } from 'lucide-react'
 
 interface Property {
   id: string
@@ -54,6 +55,7 @@ interface TicketFormData {
   contractor_ids: string[]       // Array, required, ORDERED
   availability: string           // Optional
   access: string                 // Optional
+  images: string[]               // Array of image URLs
 }
 
 interface PrefillData extends Partial<TicketFormData> {
@@ -112,6 +114,7 @@ export function TicketForm({
     contractor_ids: initialContractorIds,
     availability: mergedPrefill?.availability || '',
     access: mergedPrefill?.access || '',
+    images: [],
   })
 
   const [properties, setProperties] = useState<Property[]>([])
@@ -129,6 +132,7 @@ export function TicketForm({
   const [newTenant, setNewTenant] = useState({ full_name: '', phone: '', email: '' })
   const [newContractor, setNewContractor] = useState({ contractor_name: '', contractor_phone: '', category: '' })
   const [savingNew, setSavingNew] = useState(false)
+  const [uploadingImages, setUploadingImages] = useState(false)
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -215,6 +219,76 @@ export function TicketForm({
     setFormData((prev) => ({ ...prev, [field]: value }))
     setError(null)
   }, [])
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingImages(true)
+    const uploadedUrls: string[] = []
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not an image`)
+          continue
+        }
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} is too large (max 5MB)`)
+          continue
+        }
+
+        // Generate unique filename
+        const ext = file.name.split('.').pop() || 'jpg'
+        const filename = `manual/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-images')
+          .upload(filename, file)
+
+        if (uploadError) {
+          toast.error(`Failed to upload ${file.name}`)
+          console.error('Upload error:', uploadError)
+          continue
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('ticket-images')
+          .getPublicUrl(filename)
+
+        if (urlData?.publicUrl) {
+          uploadedUrls.push(urlData.publicUrl)
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...uploadedUrls]
+        }))
+        toast.success(`${uploadedUrls.length} image(s) uploaded`)
+      }
+    } catch (err) {
+      console.error('Image upload error:', err)
+      toast.error('Failed to upload images')
+    } finally {
+      setUploadingImages(false)
+      // Reset file input
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
+  }
 
   // Add new tenant handler
   const handleAddTenant = async () => {
@@ -562,117 +636,81 @@ export function TicketForm({
               rows={4}
             />
           </div>
+
+          {/* Image Upload */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Photos</label>
+            <div className="flex flex-wrap gap-2">
+              {/* Uploaded images */}
+              {formData.images.map((url, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Upload ${idx + 1}`}
+                    className="w-16 h-16 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {/* Upload button */}
+              <label className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+                {uploadingImages ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  disabled={uploadingImages}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Add photos of the issue (max 5MB each)
+            </p>
+          </div>
         </div>
 
         {/* Right column - Contractors */}
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">
-                Contractors <span className="text-destructive">*</span>
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-primary"
-                onClick={() => setAddContractorOpen(true)}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add New
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Click to select. First contractor contacted immediately, others after 6h if no response.
-            </p>
-          </div>
-
-          {filteredContractors.length === 0 ? (
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-center">
-              <p className="text-sm text-amber-700">
-                No contractors available. Add contractors in the Contractors section.
-              </p>
-            </div>
-          ) : (
-            <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-              {filteredContractors.map((c) => {
-                const isSelected = formData.contractor_ids.includes(c.id)
-                const orderIndex = formData.contractor_ids.indexOf(c.id)
+            <label className="text-sm font-medium">
+              Contractors <span className="text-destructive">*</span>
+            </label>
+            <MultiCombobox
+              options={filteredContractors.map((c) => {
                 const isCategoryMatch = formData.category && c.category === formData.category
                 const isPropertyAssigned = isAssignedToProperty(c)
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      if (isSelected) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          contractor_ids: prev.contractor_ids.filter((id) => id !== c.id),
-                        }))
-                      } else {
-                        setFormData((prev) => ({
-                          ...prev,
-                          contractor_ids: [...prev.contractor_ids, c.id],
-                        }))
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors ${
-                      isSelected ? 'bg-primary/5' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {isSelected ? (
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                          {orderIndex + 1}
-                        </span>
-                      ) : (
-                        <span className="w-6 h-6 rounded-full border-2 border-muted-foreground/30" />
-                      )}
-                      <div className="flex flex-col items-start">
-                        <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>
-                          {c.contractor_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{c.category}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!isPropertyAssigned && formData.property_id && (
-                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          Other
-                        </span>
-                      )}
-                      {isCategoryMatch && (
-                        <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">
-                          Match
-                        </span>
-                      )}
-                      {isSelected && orderIndex === 0 && (
-                        <span className="text-xs text-primary font-medium">First</span>
-                      )}
-                    </div>
-                  </button>
-                )
+                return {
+                  value: c.id,
+                  label: c.contractor_name,
+                  description: c.category,
+                  badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Other' : undefined),
+                  badgeVariant: isCategoryMatch ? 'success' as const : 'default' as const,
+                }
               })}
-            </div>
-          )}
-
-          {/* Selected summary */}
-          {formData.contractor_ids.length > 0 && (
-            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-green-800">
-                    {formData.contractor_ids.length} contractor{formData.contractor_ids.length > 1 ? 's' : ''} selected
-                  </p>
-                  <p className="text-xs text-green-700 mt-0.5">
-                    {contractors.find((c) => c.id === formData.contractor_ids[0])?.contractor_name} will be contacted first
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+              values={formData.contractor_ids}
+              onValuesChange={(values) => updateField('contractor_ids', values)}
+              placeholder="Search contractors..."
+              searchPlaceholder="Type to search..."
+              emptyText="No contractors found"
+              onAddNew={() => setAddContractorOpen(true)}
+              addNewLabel="Add new contractor"
+            />
+            <p className="text-xs text-muted-foreground">
+              First selected = contacted immediately, others after 6h if no response.
+            </p>
+          </div>
 
           {/* Category mismatch warning */}
           {formData.category && formData.contractor_ids.length > 0 && (() => {
@@ -765,7 +803,7 @@ export function TicketForm({
               Add a new tenant to the selected property.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 px-1">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Full Name <span className="text-destructive">*</span>
@@ -819,7 +857,7 @@ export function TicketForm({
               Add a new contractor to your network.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 px-1">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Name <span className="text-destructive">*</span>
