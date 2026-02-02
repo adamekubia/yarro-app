@@ -854,7 +854,7 @@ export function TicketForm({
           <DialogHeader>
             <DialogTitle>Add New Contractor</DialogTitle>
             <DialogDescription>
-              Add a new contractor to your network.
+              This contractor will be assigned to the selected property only. You can edit their properties later in the Contractors section.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 px-1">
