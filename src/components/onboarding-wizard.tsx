@@ -434,6 +434,7 @@ export function OnboardingWizard() {
             role_tag: tenant.role_tag || 'tenant',
             property_id: tenant.propertyId || null,
             property_manager_id: propertyManager.id,
+            verified_by: 'import',
             _import_batch_id: state.batchId,
             _imported_at: new Date().toISOString(),
           }
