@@ -395,6 +395,8 @@ export type Database = {
           _audit_log: Json | null
           access: string | null
           access_granted: boolean | null
+          archived: boolean | null
+          archived_at: string | null
           availability: string | null
           category: string | null
           confirmation_date: string | null
@@ -424,6 +426,8 @@ export type Database = {
           _audit_log?: Json | null
           access?: string | null
           access_granted?: boolean | null
+          archived?: boolean | null
+          archived_at?: string | null
           availability?: string | null
           category?: string | null
           confirmation_date?: string | null
@@ -453,6 +457,8 @@ export type Database = {
           _audit_log?: Json | null
           access?: string | null
           access_granted?: boolean | null
+          archived?: boolean | null
+          archived_at?: string | null
           availability?: string | null
           category?: string | null
           confirmation_date?: string | null

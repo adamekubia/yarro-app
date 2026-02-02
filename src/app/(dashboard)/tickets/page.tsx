@@ -26,7 +26,8 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2, AlertTriangle, Archive } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 
 interface Ticket {
   id: string
@@ -48,6 +49,7 @@ interface Ticket {
   tenant_id: string | null
   contractor_id: string | null
   conversation_id: string | null
+  archived: boolean | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -93,7 +95,8 @@ export default function TicketsPage() {
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all')
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -101,7 +104,7 @@ export default function TicketsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchTickets()
-  }, [propertyManager, dateRange])
+  }, [propertyManager, dateRange, showArchived])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
@@ -115,7 +118,7 @@ export default function TicketsPage() {
   }, [selectedId, tickets])
 
   const fetchTickets = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from('c1_tickets')
       .select(`
         id,
@@ -137,6 +140,7 @@ export default function TicketsPage() {
         tenant_id,
         contractor_id,
         conversation_id,
+        archived,
         c1_properties(address),
         c1_tenants(full_name),
         c1_contractors(contractor_name)
@@ -145,6 +149,13 @@ export default function TicketsPage() {
       .gte('date_logged', dateRange.from.toISOString())
       .lte('date_logged', dateRange.to.toISOString())
       .order('date_logged', { ascending: false })
+
+    // Filter out archived unless showing archived
+    if (!showArchived) {
+      query = query.or('archived.is.null,archived.eq.false')
+    }
+
+    const { data } = await query
 
     if (data) {
       const mapped = data.map((t) => ({
@@ -250,31 +261,21 @@ export default function TicketsPage() {
     fetchTickets()
   }
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!selectedTicketBasic) return
 
-    // Delete associated messages first (if any)
-    await supabase
-      .from('c1_messages')
-      .delete()
-      .eq('ticket_id', selectedTicketBasic.id)
-
-    // Delete completions (if any)
-    await supabase
-      .from('c1_completions')
-      .delete()
-      .eq('ticket_id', selectedTicketBasic.id)
-
-    // Delete the ticket
     const { error } = await supabase
       .from('c1_tickets')
-      .delete()
+      .update({
+        archived: true,
+        archived_at: new Date().toISOString(),
+      })
       .eq('id', selectedTicketBasic.id)
 
     if (error) throw error
 
-    toast.success('Ticket deleted')
-    setDeleteDialogOpen(false)
+    toast.success('Ticket archived')
+    setArchiveDialogOpen(false)
     handleCloseDrawer()
     await fetchTickets()
   }
@@ -291,6 +292,9 @@ export default function TicketsPage() {
 
   // Get row class based on status for subtle left border
   const getRowClassName = (ticket: Ticket) => {
+    if (ticket.archived) {
+      return 'border-l-2 border-l-gray-400 opacity-50'
+    }
     const isClosed = ticket.status?.toLowerCase() === 'closed'
     if (isClosed) {
       return 'border-l-2 border-l-gray-300 opacity-60'
@@ -380,23 +384,35 @@ export default function TicketsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 border-b">
-        {(['all', 'system', 'handoff', 'manual'] as TicketFilter[]).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setActiveFilter(filter)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              activeFilter === filter
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {filter === 'system' ? 'Automated' : filter}
-            <span className="ml-1.5 text-xs text-muted-foreground">
-              {filterCounts[filter]}
-            </span>
-          </button>
-        ))}
+      <div className="flex items-center justify-between border-b">
+        <div className="flex items-center gap-1">
+          {(['all', 'system', 'handoff', 'manual'] as TicketFilter[]).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+                activeFilter === filter
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {filter === 'system' ? 'Automated' : filter}
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                {filterCounts[filter]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pb-2">
+          <Switch
+            id="show-archived"
+            checked={showArchived}
+            onCheckedChange={setShowArchived}
+          />
+          <label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
+            Show archived
+          </label>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -428,8 +444,10 @@ export default function TicketsPage() {
         onClose={handleCloseDrawer}
         title="Ticket Details"
         subtitle={selectedTicket?.property_address}
-        deletable={true}
-        onDelete={() => setDeleteDialogOpen(true)}
+        deletable={!selectedTicketBasic?.archived}
+        deleteLabel="Archive"
+        deleteIcon={<Archive className="h-4 w-4" />}
+        onDelete={() => setArchiveDialogOpen(true)}
       >
         {selectedTicket && (
           <div className="space-y-4">
@@ -638,14 +656,16 @@ export default function TicketsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Archive Confirmation Dialog */}
       <ConfirmDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Delete Ticket"
-        description="Are you sure you want to delete this ticket? This will also remove any associated messages and completion records. This action cannot be undone."
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        title="Archive Ticket"
+        description="This ticket will be moved to the archive. You can view archived tickets using the 'Show archived' toggle. Archived tickets are excluded from automation."
         itemName={selectedTicketBasic?.issue_description?.slice(0, 50) || undefined}
-        onConfirm={handleDelete}
+        onConfirm={handleArchive}
+        confirmLabel="Archive"
+        confirmingLabel="Archiving..."
       />
     </div>
   )

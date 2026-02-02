@@ -20,6 +20,8 @@ type ConfirmDeleteDialogProps = {
   description: string
   itemName?: string
   onConfirm: () => Promise<void>
+  confirmLabel?: string
+  confirmingLabel?: string
 }
 
 export function ConfirmDeleteDialog({
@@ -29,6 +31,8 @@ export function ConfirmDeleteDialog({
   description,
   itemName,
   onConfirm,
+  confirmLabel = 'Delete',
+  confirmingLabel = 'Deleting...',
 }: ConfirmDeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -95,10 +99,10 @@ export function ConfirmDeleteDialog({
             {isDeleting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Deleting...
+                {confirmingLabel}
               </>
             ) : (
-              'Delete'
+              confirmLabel
             )}
           </Button>
         </DialogFooter>

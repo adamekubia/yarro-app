@@ -29,6 +29,7 @@ type DetailDrawerProps = {
   deletable?: boolean
   onDelete?: () => void
   deleteLabel?: string
+  deleteIcon?: ReactNode
 }
 
 const widthClasses = {
@@ -53,6 +54,7 @@ export function DetailDrawer({
   deletable = false,
   onDelete,
   deleteLabel = 'Delete',
+  deleteIcon,
 }: DetailDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -78,8 +80,9 @@ export function DetailDrawer({
                   className="h-8 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   onClick={onDelete}
                 >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
-                  {deleteLabel}
+                  {deleteIcon || <Trash2 className="h-4 w-4 mr-1.5" />}
+                  {deleteIcon && <span className="ml-1.5">{deleteLabel}</span>}
+                  {!deleteIcon && deleteLabel}
                 </Button>
               )}
               {editable && !isEditing && (
