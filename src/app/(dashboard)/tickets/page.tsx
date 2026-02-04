@@ -381,6 +381,7 @@ export default function TicketsPage() {
             className="h-7 text-xs"
             onClick={(e) => {
               e.stopPropagation()
+              setSelectedTicketBasic(ticket)
               setHandoffTicketId(ticket.id)
               setCreateDrawerOpen(true)
             }}
