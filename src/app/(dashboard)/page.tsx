@@ -864,6 +864,25 @@ export default function DashboardPage() {
                           // Return last substantial tenant message as issue description
                           return tenantMessages.slice(-3).join(' ').substring(0, 500) || ''
                         })(),
+                        images: (() => {
+                          // Extract images from conversation log (AI responses contain imageURLs)
+                          const log = selectedHandoff.log
+                          if (!log || !Array.isArray(log)) return []
+                          const allImages: string[] = []
+                          ;(log as Array<{ imageURLs?: string; images?: string[] }>).forEach(entry => {
+                            // AI stores comma-separated URLs in imageURLs field
+                            if (entry.imageURLs && entry.imageURLs !== 'unprovided') {
+                              const urls = entry.imageURLs.split(',').map(u => u.trim()).filter(Boolean)
+                              allImages.push(...urls)
+                            }
+                            // Also check for images array
+                            if (entry.images && Array.isArray(entry.images)) {
+                              allImages.push(...entry.images)
+                            }
+                          })
+                          // Deduplicate
+                          return [...new Set(allImages)]
+                        })(),
                         conversation_id: selectedHandoff.id,
                       }}
                       onSuccess={() => {

@@ -64,8 +64,10 @@ export default function LoginPage() {
       return
     }
 
-    // Auth successful — wait for PMProvider to load the PM before navigating
-    // This prevents the race condition where dashboard mounts before PM is fetched
+    // Auth successful — wait for PM context to detect the auth state change
+    // This delay prevents race condition where useEffect runs before pmLoading updates
+    await new Promise(resolve => setTimeout(resolve, 500))
+
     setAuthSuccess(true)
   }
 
