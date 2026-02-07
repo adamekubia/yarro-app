@@ -98,7 +98,7 @@ export default function LandlordGuidePage() {
                     <WhatsAppPreview
                       label="Example approval request"
                       messages={[
-                        { from: 'yarro', text: 'New quote for 14 Elm Street\n\nPlumbing — Leaking tap\nContractor: Joe\'s Plumbing\nTotal: £180\n\nReply APPROVE or DECLINE.' },
+                        { from: 'yarro', text: 'Quote requires your approval\n\nProperty: 14 Elm Street\nIssue: Leaking pipe under the sink\nContractor: Joe\'s Plumbing\nTotal cost: £180\n\nPlease confirm within 24 hours.', actions: ['Approve', 'Decline'] },
                         { from: 'user', text: 'Approve' },
                         { from: 'yarro', text: 'Approved. The contractor will schedule the visit shortly.' },
                       ]}

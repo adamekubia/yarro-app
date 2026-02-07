@@ -138,7 +138,7 @@ export default function GuidePage() {
                     <WhatsAppPreview
                       label="Example quote notification"
                       messages={[
-                        { from: 'yarro', text: 'Quote received for 14 Elm Street\n\nIssue: Leaking kitchen tap\nContractor: Joe\'s Plumbing\nQuoted amount: £150\n\nTap below to approve or decline.' },
+                        { from: 'yarro', text: 'Quote received for 14 Elm Street\n\nIssue: Leaking kitchen tap\nContractor: Joe\'s Plumbing\nQuoted amount: £150\n\nTap below to approve or decline.', actions: ['Approve', 'Decline'] },
                       ]}
                     />
                   </div>

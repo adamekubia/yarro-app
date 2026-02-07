@@ -3,6 +3,7 @@
 interface ChatMessage {
   from: 'user' | 'yarro'
   text: string
+  actions?: string[]
 }
 
 export function WhatsAppPreview({
@@ -14,9 +15,9 @@ export function WhatsAppPreview({
 }) {
   return (
     <div className="rounded-xl overflow-hidden border border-border">
-      {/* Header bar */}
-      <div className="bg-[#075e54] dark:bg-[#1f2c34] px-3 py-2 flex items-center gap-2">
-        <div className="h-6 w-6 rounded-full bg-[#25D366] flex items-center justify-center">
+      {/* Header bar — Yarro blue */}
+      <div className="bg-[#0059FF] dark:bg-[#003bb5] px-3 py-2 flex items-center gap-2">
+        <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center">
           <span className="text-white text-[10px] font-bold">Y</span>
         </div>
         <span className="text-white text-xs font-medium">Yarro</span>
@@ -34,14 +35,28 @@ export function WhatsAppPreview({
             key={i}
             className={`flex ${msg.from === 'yarro' ? 'justify-start' : 'justify-end'}`}
           >
-            <div
-              className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed whitespace-pre-line ${
-                msg.from === 'yarro'
-                  ? 'bg-white dark:bg-[#1f2c34] text-gray-900 dark:text-gray-100'
-                  : 'bg-[#dcf8c6] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100'
-              }`}
-            >
-              {msg.text}
+            <div className="max-w-[85%]">
+              <div
+                className={`rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed whitespace-pre-line ${
+                  msg.from === 'yarro'
+                    ? 'bg-white dark:bg-[#1f2c34] text-gray-900 dark:text-gray-100'
+                    : 'bg-[#dbeafe] dark:bg-[#1e3a5f] text-gray-900 dark:text-gray-100'
+                } ${msg.actions ? 'rounded-b-none' : ''}`}
+              >
+                {msg.text}
+              </div>
+              {msg.actions && (
+                <div className="bg-white dark:bg-[#1f2c34] rounded-b-lg border-t border-gray-200 dark:border-gray-700 flex divide-x divide-gray-200 dark:divide-gray-700">
+                  {msg.actions.map((action, j) => (
+                    <div
+                      key={j}
+                      className="flex-1 text-center py-1.5 text-[11px] font-medium text-[#0059FF] dark:text-blue-400"
+                    >
+                      {action}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
