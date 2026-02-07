@@ -2,6 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
+import { WhatsAppPreview } from '@/components/whatsapp-preview'
 import { MessageSquare, ClipboardList, Bell } from 'lucide-react'
 
 const TENANT_GUIDE_TEXT = `HOW TO REPORT MAINTENANCE ISSUES
@@ -105,8 +106,27 @@ export default function TenantGuidePage() {
                   </div>
                 </div>
 
-                {/* Right column - tips */}
+                {/* Right column - preview + tips */}
                 <div className="flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      What it looks like
+                    </h4>
+                    <WhatsAppPreview
+                      label="Example conversation"
+                      messages={[
+                        { from: 'user', text: 'Hi, I have a leaking tap in my kitchen' },
+                        { from: 'yarro', text: 'Hi! I can help with that. What\'s the address of the property?' },
+                        { from: 'user', text: '14 Elm Street, Bristol' },
+                        { from: 'yarro', text: 'Thanks! Can you describe the issue in a bit more detail?' },
+                        { from: 'user', text: 'The kitchen tap drips constantly, getting worse over the past week' },
+                        { from: 'yarro', text: 'Got it. Can you send a photo of the issue?' },
+                        { from: 'user', text: '[Photo]' },
+                        { from: 'yarro', text: 'Thanks! I\'ve logged your ticket. You\'ll hear from us once a contractor is assigned.' },
+                      ]}
+                    />
+                  </div>
+
                   <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

@@ -2,6 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
+import { WhatsAppPreview } from '@/components/whatsapp-preview'
 import { Bell, ThumbsUp } from 'lucide-react'
 
 const LANDLORD_GUIDE_TEXT = `HOW YARRO WORKS FOR LANDLORDS
@@ -88,8 +89,22 @@ export default function LandlordGuidePage() {
 
                 </div>
 
-                {/* Right column - info box */}
+                {/* Right column - preview + info box */}
                 <div className="flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      What it looks like
+                    </h4>
+                    <WhatsAppPreview
+                      label="Example approval request"
+                      messages={[
+                        { from: 'yarro', text: 'New quote for 14 Elm Street\n\nPlumbing — Leaking tap\nContractor: Joe\'s Plumbing\nTotal: £180\n\nReply APPROVE or DECLINE.' },
+                        { from: 'user', text: 'Approve' },
+                        { from: 'yarro', text: 'Approved. The contractor will schedule the visit shortly.' },
+                      ]}
+                    />
+                  </div>
+
                   <div className="bg-amber-500/10 rounded-xl p-5 border border-amber-500/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Auto-Approve Limits</h4>
                     <p className="text-sm text-muted-foreground">

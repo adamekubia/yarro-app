@@ -2,6 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
+import { WhatsAppPreview } from '@/components/whatsapp-preview'
 import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield } from 'lucide-react'
 
 const PM_GUIDE_TEXT = `HOW TO USE YARRO AS A PROPERTY MANAGER
@@ -128,8 +129,20 @@ export default function GuidePage() {
                   </div>
                 </div>
 
-                {/* Right column - Tips + Compliance */}
+                {/* Right column - Preview + Tips + Compliance */}
                 <div className="flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      What you&apos;ll receive
+                    </h4>
+                    <WhatsAppPreview
+                      label="Example quote notification"
+                      messages={[
+                        { from: 'yarro', text: 'Quote received for 14 Elm Street\n\nIssue: Leaking kitchen tap\nContractor: Joe\'s Plumbing\nQuoted amount: £150\n\nTap below to approve or decline.' },
+                      ]}
+                    />
+                  </div>
+
                   {/* Tips */}
                   <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>

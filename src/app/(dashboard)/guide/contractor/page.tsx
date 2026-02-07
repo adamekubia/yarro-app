@@ -2,6 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
+import { WhatsAppPreview } from '@/components/whatsapp-preview'
 import { MessageSquare, PoundSterling, Calendar, CheckCircle } from 'lucide-react'
 
 const CONTRACTOR_GUIDE_TEXT = `HOW YARRO WORKS FOR CONTRACTORS
@@ -124,13 +125,28 @@ export default function ContractorGuidePage() {
                   </div>
                 </div>
 
-                {/* Right column - tips */}
+                {/* Right column - preview + tips */}
                 <div className="flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      What it looks like
+                    </h4>
+                    <WhatsAppPreview
+                      label="Example job flow"
+                      messages={[
+                        { from: 'yarro', text: 'New job from ABC Properties\n\nProperty: 14 Elm Street\nIssue: Leaking kitchen tap\nPhotos: app.yarro.co.uk/i/...\n\nReply with your quote.' },
+                        { from: 'user', text: '£150' },
+                        { from: 'yarro', text: 'Your quote has been approved!\n\nSchedule your visit:\napp.yarro.co.uk/book/...\n\nTenant available Mon-Wed mornings.' },
+                        { from: 'yarro', text: 'Reminder: Job at 14 Elm Street today.\n\nTap Complete when finished.' },
+                      ]}
+                    />
+                  </div>
+
                   <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Respond to quotes within 6 hours</li>
-                      <li>Contact the property manager if you can't complete a job</li>
+                      <li>Contact the property manager if you can&apos;t complete a job</li>
                     </ul>
                   </div>
                 </div>
