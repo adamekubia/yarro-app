@@ -373,13 +373,12 @@ export default function DashboardPage() {
       <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="animate-pulse space-y-3">
           <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-[88px] bg-muted rounded-xl" />
-          <div className="h-[52px] bg-muted rounded-xl" />
+          <div className="h-[168px] bg-muted rounded-xl" />
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-[140px] bg-muted rounded-xl" />
-            <div className="h-[140px] bg-muted rounded-xl" />
+            <div className="h-[200px] bg-muted rounded-xl" />
+            <div className="h-[200px] bg-muted rounded-xl" />
           </div>
-          <div className="flex-1 bg-muted rounded-xl min-h-[200px]" />
+          <div className="flex-1 bg-muted rounded-xl min-h-[160px]" />
         </div>
       </div>
     )
@@ -439,63 +438,77 @@ export default function DashboardPage() {
               />
             </div>
           ) : (
-          /* Dashboard — Vertical Flow */
+          /* Dashboard — Vertical Flow v3 */
           <div className="flex-1 min-h-0 flex flex-col gap-3">
-            {/* Ticket Status — big segmented bar with numbers inside */}
+            {/* Ticket Overview — unified panel, always same height */}
             <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-card-foreground">Ticket Status</h3>
+                  <h3 className="text-sm font-semibold text-card-foreground">Ticket Overview</h3>
                 </div>
-                <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
+                  <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                    View all →
+                  </Link>
+                </div>
               </div>
-              {stats && stats.totalTickets > 0 ? (
-                <>
-                  <div className="h-10 rounded-lg overflow-hidden flex">
-                    <div
-                      className="h-full bg-blue-500 flex items-center justify-center transition-all duration-500"
-                      style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%`, minWidth: stats.openTickets > 0 ? '60px' : '0' }}
-                    >
-                      <span className="text-xs font-bold text-white">{stats.openTickets} Open</span>
-                    </div>
-                    <div
-                      className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
-                      style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%`, minWidth: stats.closedTickets > 0 ? '60px' : '0' }}
-                    >
-                      <span className="text-xs font-bold text-white">{stats.closedTickets} Closed</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {getPercentage(stats.closedTickets, stats.totalTickets)}% completion rate
-                    </span>
-                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
-                      View all →
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <div className="h-10 bg-muted rounded-lg flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">No tickets yet</span>
-                </div>
-              )}
-            </div>
 
-            {/* By Category — horizontal stacked bar */}
-            {categoryChartData.length > 0 && (
-              <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
-                <h3 className="text-sm font-semibold text-card-foreground mb-3">By Category</h3>
-                <div className="h-6 rounded-lg overflow-hidden flex">
-                  {categoryChartData.map((item) => (
+              {/* Status bar */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
+                  {stats && stats.totalTickets > 0 && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {getPercentage(stats.closedTickets, stats.totalTickets)}% complete
+                    </span>
+                  )}
+                </div>
+                <div className="h-3 rounded-full overflow-hidden flex bg-muted">
+                  {stats && stats.totalTickets > 0 ? (
+                    <>
+                      <div
+                        className="h-full bg-blue-500 rounded-l-full transition-all duration-500 ease-out"
+                        style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
+                      />
+                      <div
+                        className="h-full bg-emerald-500 rounded-r-full transition-all duration-500 ease-out"
+                        style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
+                      />
+                    </>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-4 mt-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-xs text-muted-foreground">Open</span>
+                    <span className="text-xs font-semibold text-card-foreground">{stats?.openTickets || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-muted-foreground">Closed</span>
+                    <span className="text-xs font-semibold text-card-foreground">{stats?.closedTickets || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border mb-4" />
+
+              {/* Category bar */}
+              <div>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</span>
+                <div className="h-3 rounded-full overflow-hidden flex bg-muted mt-1.5">
+                  {categoryChartData.map((item, i) => (
                     <Tooltip key={item.fullName}>
                       <TooltipTrigger asChild>
                         <div
-                          className="h-full transition-all duration-500"
+                          className="h-full transition-all duration-500 ease-out first:rounded-l-full last:rounded-r-full"
                           style={{
                             width: `${getPercentage(item.value, stats?.totalTickets || 0)}%`,
                             backgroundColor: item.color,
-                            minWidth: '2px',
+                            minWidth: item.value > 0 ? '4px' : '0',
                           }}
                         />
                       </TooltipTrigger>
@@ -505,28 +518,35 @@ export default function DashboardPage() {
                     </Tooltip>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                  {categoryChartData.map((item) => (
-                    <div key={item.fullName} className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs text-muted-foreground">{item.name}</span>
-                      <span className="text-xs font-semibold text-card-foreground">{item.value}</span>
-                    </div>
-                  ))}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                  {categoryChartData.length > 0 ? (
+                    categoryChartData.map((item) => (
+                      <div key={item.fullName} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-xs text-muted-foreground">{item.name}</span>
+                        <span className="text-xs font-semibold text-card-foreground">{item.value}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No categories yet</span>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Needs Attention + Pipeline — two columns */}
+            {/* Requires Action + In Progress — two columns */}
             <div className="grid grid-cols-2 gap-3 flex-shrink-0">
-              {/* Needs Attention — true user actions */}
+              {/* Requires Action */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
+                const declinedCount = stats?.landlordDeclined || 0
+                const managerCount = stats?.awaitingManager || 0
+
                 return (
                   <div className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-card-foreground">Needs Attention</h3>
+                      <h3 className="text-sm font-semibold text-card-foreground">Requires Action</h3>
                       <Link href="/tickets?create=true">
                         <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                           <Plus className="h-3 w-3 mr-1" />
@@ -534,46 +554,70 @@ export default function DashboardPage() {
                         </Button>
                       </Link>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left ${
-                              totalHandoffs > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'bg-muted/50'
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
+                              totalHandoffs > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'hover:bg-muted/50'
                             }`}
                           >
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-red-500/20' : 'bg-muted'}`}>
-                              <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
+                              <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-card-foreground">Handoff Review</p>
+                              <p className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Handoff Review</p>
                               <p className="text-xs text-muted-foreground">AI needs your help</p>
                             </div>
-                            <span className={`text-lg font-bold ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            <span className={`text-lg font-bold tabular-nums ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`}>
                               {totalHandoffs}
                             </span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
                       </Tooltip>
+
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            onClick={() => (stats?.awaitingManager || 0) > 0 ? showAwaitingTickets('manager') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left ${
-                              (stats?.awaitingManager || 0) > 0 ? 'bg-blue-400/10 hover:bg-blue-400/15' : 'bg-muted/50'
+                            onClick={() => declinedCount > 0 ? showAwaitingTickets('declined') : undefined}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
+                              declinedCount > 0 ? 'bg-orange-500/10 hover:bg-orange-500/15' : 'hover:bg-muted/50'
                             }`}
                           >
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${(stats?.awaitingManager || 0) > 0 ? 'bg-blue-400/20' : 'bg-muted'}`}>
-                              <UserCheck className={`h-4 w-4 ${(stats?.awaitingManager || 0) > 0 ? 'text-blue-400' : 'text-muted-foreground'}`} />
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${declinedCount > 0 ? 'bg-orange-500/15' : 'bg-muted'}`}>
+                              <XCircle className={`h-4 w-4 ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/50'}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-card-foreground">Manager Approval</p>
-                              <p className="text-xs text-muted-foreground">Needs your decision</p>
+                              <p className={`text-sm font-medium ${declinedCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Landlord Declined</p>
+                              <p className="text-xs text-muted-foreground">Needs follow-up</p>
                             </div>
-                            <span className={`text-lg font-bold ${(stats?.awaitingManager || 0) > 0 ? 'text-blue-400' : 'text-muted-foreground'}`}>
-                              {stats?.awaitingManager || 0}
+                            <span className={`text-lg font-bold tabular-nums ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/40'}`}>
+                              {declinedCount}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => managerCount > 0 ? showAwaitingTickets('manager') : undefined}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
+                              managerCount > 0 ? 'bg-blue-500/10 hover:bg-blue-500/15' : 'hover:bg-muted/50'
+                            }`}
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${managerCount > 0 ? 'bg-blue-500/15' : 'bg-muted'}`}>
+                              <UserCheck className={`h-4 w-4 ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/50'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${managerCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Manager Approval</p>
+                              <p className="text-xs text-muted-foreground">Check WhatsApp & approve</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/40'}`}>
+                              {managerCount}
                             </span>
                           </button>
                         </TooltipTrigger>
@@ -584,25 +628,31 @@ export default function DashboardPage() {
                 )
               })()}
 
-              {/* Pipeline Status — informational, not actionable */}
+              {/* In Progress */}
               <div className="bg-card rounded-xl border border-border p-4">
-                <h3 className="text-sm font-semibold text-card-foreground mb-3">Pipeline</h3>
-                <div className="grid grid-cols-2 gap-2">
+                <h3 className="text-sm font-semibold text-card-foreground mb-3">In Progress</h3>
+                <div className="space-y-1.5">
                   {[
-                    { key: 'contractor' as const, label: 'Contractor', count: stats?.awaitingContractor || 0, icon: Clock, iconColor: 'text-amber-500' },
-                    { key: 'landlord' as const, label: 'Landlord', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconColor: 'text-violet-500' },
-                    { key: 'scheduled' as const, label: 'Scheduled', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconColor: 'text-cyan-500' },
-                    { key: 'declined' as const, label: 'Declined', count: stats?.landlordDeclined || 0, icon: XCircle, iconColor: 'text-orange-500' },
+                    { key: 'contractor' as const, label: 'Awaiting Contractor', desc: 'Waiting for quote or availability', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
+                    { key: 'landlord' as const, label: 'Awaiting Landlord', desc: 'Waiting for price approval', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500' },
+                    { key: 'scheduled' as const, label: 'Scheduled Jobs', desc: 'Confirmed date with contractor', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconBg: 'bg-cyan-500/10', iconColor: 'text-cyan-500' },
                   ].map((item) => (
                     <Tooltip key={item.key}>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                          className="flex flex-col items-center gap-1 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                          className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                         >
-                          <item.icon className={`h-4 w-4 ${item.iconColor}`} />
-                          <span className="text-lg font-bold text-card-foreground">{item.count}</span>
-                          <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
+                            <item.icon className={`h-4 w-4 ${item.iconColor}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
+                            <p className="text-xs text-muted-foreground">{item.desc}</p>
+                          </div>
+                          <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground/40'}`}>
+                            {item.count}
+                          </span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -635,7 +685,7 @@ export default function DashboardPage() {
                     <Link
                       key={ticket.id}
                       href={`/tickets?id=${ticket.id}`}
-                      className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-all duration-200"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-card-foreground truncate">
