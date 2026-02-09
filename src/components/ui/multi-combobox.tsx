@@ -119,7 +119,8 @@ export function MultiCombobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList className="max-h-[300px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto">
+          <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             {onAddNew && (
               <CommandGroup>
@@ -178,6 +179,7 @@ export function MultiCombobox({
               })}
             </CommandGroup>
           </CommandList>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>
