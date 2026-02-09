@@ -141,8 +141,8 @@ export function DetailDrawer({
           </div>
         </div>
 
-        {/* Content - flex-1 allows children to manage their own scroll */}
-        <div className="flex-1 overflow-hidden p-6">{children}</div>
+        {/* Content - scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </SheetContent>
     </Sheet>
   )

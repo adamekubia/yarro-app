@@ -698,15 +698,15 @@ export default function TicketsPage() {
                   </div>
                 )}
                 {selectedTicketBasic?.scheduled_date && (
-                  <div className="p-2 bg-teal-50 rounded-lg col-span-2">
-                    <p className="text-xs text-teal-600">Scheduled Date</p>
-                    <p className="text-sm font-medium text-teal-700">{formatDate(selectedTicketBasic.scheduled_date)}</p>
+                  <div className="p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg col-span-2">
+                    <p className="text-xs text-teal-600 dark:text-teal-400">Scheduled Date</p>
+                    <p className="text-sm font-medium text-teal-700 dark:text-teal-300">{formatDate(selectedTicketBasic.scheduled_date)}</p>
                   </div>
                 )}
                 {selectedTicket.ticket_status.toLowerCase() === 'closed' && selectedTicketBasic?.final_amount && (
-                  <div className="p-2 bg-green-50 rounded-lg col-span-2">
-                    <p className="text-xs text-green-600">Final Amount</p>
-                    <p className="font-mono text-sm font-bold text-green-700">{formatCurrency(selectedTicketBasic.final_amount)}</p>
+                  <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg col-span-2">
+                    <p className="text-xs text-green-600 dark:text-green-400">Final Amount</p>
+                    <p className="font-mono text-sm font-bold text-green-700 dark:text-green-300">{formatCurrency(selectedTicketBasic.final_amount)}</p>
                   </div>
                 )}
               </div>
