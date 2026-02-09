@@ -119,8 +119,16 @@ export function MultiCombobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <div className="max-h-[300px] overflow-y-auto">
-          <CommandList>
+          <div
+            className="max-h-[300px] overflow-y-auto overscroll-contain"
+            onWheel={(e) => {
+              const el = e.currentTarget
+              if (el.scrollHeight > el.clientHeight) {
+                e.stopPropagation()
+              }
+            }}
+          >
+          <CommandList className="max-h-none overflow-y-visible">
             <CommandEmpty>{emptyText}</CommandEmpty>
             {onAddNew && (
               <CommandGroup>
