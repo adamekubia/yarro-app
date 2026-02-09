@@ -22,9 +22,6 @@ import {
   Building2,
   Users,
   Wrench,
-  MessageSquare,
-  CheckCircle2,
-  Mail,
   LogOut,
   ChevronDown,
   User,
@@ -52,9 +49,6 @@ const coreNavItems = [
 // Activity navigation - system generated
 const activityNavItems = [
   { href: '/tickets', label: 'Tickets', icon: Ticket },
-  { href: '/conversations', label: 'Conversations', icon: MessageSquare },
-  { href: '/messages', label: 'Messages', icon: Mail },
-  { href: '/completions', label: 'Completions', icon: CheckCircle2 },
 ]
 
 const dataManagementItems = [

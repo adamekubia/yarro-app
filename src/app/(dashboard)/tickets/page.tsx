@@ -8,11 +8,6 @@ import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
-import {
-  DetailDrawer,
-  DetailSection,
-  DetailDivider,
-} from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import {
   Dialog,
@@ -26,11 +21,12 @@ import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
-import Link from 'next/link'
-import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2, AlertTriangle, Archive } from 'lucide-react'
+import { Plus, Ticket, CheckCircle2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
+import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 
-interface Ticket {
+interface TicketRow {
   id: string
   issue_description: string | null
   status: string
@@ -58,40 +54,14 @@ interface Ticket {
 
 type TicketFilter = 'all' | 'system' | 'handoff' | 'manual'
 
-interface TicketDetail {
-  ticket_id: string
-  issue_description: string
-  ticket_status: string
-  job_stage: string
-  category: string
-  priority: string
-  date_logged: string
-  property_address: string
-  property_id: string
-  tenant_name: string
-  tenant_phone: string
-  tenant_email: string
-  landlord_name: string
-  landlord_phone: string
-  manager_name: string
-  availability: string
-  access: string
-  handoff: boolean
-  auto_approve_limit: number
-}
-
 export default function TicketsPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [tickets, setTickets] = useState<Ticket[]>([])
-  const [selectedTicket, setSelectedTicket] = useState<TicketDetail | null>(null)
-  const [selectedTicketBasic, setSelectedTicketBasic] = useState<Ticket | null>(null)
-  const [hasMessage, setHasMessage] = useState(false)
-  const [hasCompletion, setHasCompletion] = useState(false)
-  const [previouslyApprovedContractor, setPreviouslyApprovedContractor] = useState<string | null>(null)
+  const [tickets, setTickets] = useState<TicketRow[]>([])
+  const [selectedTicketBasic, setSelectedTicketBasic] = useState<TicketRow | null>(null)
   const [loading, setLoading] = useState(true)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all')
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
@@ -125,13 +95,11 @@ export default function TicketsPage() {
         if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
           setHandoffTicketId(basicTicket.id)
           setCreateDrawerOpen(true)
-          // Clear the action param from URL
           router.replace(`/tickets?id=${selectedId}`)
           return
         }
       }
-      fetchTicketDetail(selectedId)
-      setDrawerOpen(true)
+      setModalOpen(true)
     }
   }, [selectedId, tickets, action])
 
@@ -169,7 +137,6 @@ export default function TicketsPage() {
       .lte('date_logged', dateRange.to.toISOString())
       .order('date_logged', { ascending: false })
 
-    // Filter out archived unless showing archived
     if (!showArchived) {
       query = query.or('archived.is.null,archived.eq.false')
     }
@@ -188,47 +155,21 @@ export default function TicketsPage() {
     setLoading(false)
   }
 
-  const fetchTicketDetail = async (ticketId: string) => {
-    const [ticketRes, messageRes, completionRes] = await Promise.all([
-      supabase.rpc('c1_ticket_context', { ticket_uuid: ticketId }),
-      supabase.from('c1_messages').select('ticket_id, contractors').eq('ticket_id', ticketId).single(),
-      supabase.from('c1_completions').select('id').eq('ticket_id', ticketId).single(),
-    ])
-
-    if (ticketRes.data && ticketRes.data.length > 0) {
-      setSelectedTicket(ticketRes.data[0])
-    }
-    setHasMessage(!!messageRes.data)
-    setHasCompletion(!!completionRes.data)
-
-    // Check for previously approved contractor (double-quote warning)
-    if (messageRes.data?.contractors) {
-      const contractors = messageRes.data.contractors as Array<{ name?: string; manager_decision?: string }>
-      const approved = contractors.find((c) => c.manager_decision === 'approved')
-      setPreviouslyApprovedContractor(approved?.name || null)
-    } else {
-      setPreviouslyApprovedContractor(null)
-    }
-  }
-
-  const handleRowClick = (ticket: Ticket) => {
+  const handleRowClick = (ticket: TicketRow) => {
     router.push(`/tickets?id=${ticket.id}`)
   }
 
-  const handleCloseDrawer = () => {
-    setDrawerOpen(false)
+  const handleCloseModal = () => {
+    setModalOpen(false)
     router.push('/tickets')
-    setSelectedTicket(null)
     setSelectedTicketBasic(null)
   }
 
   const handleCloseCreateDrawer = () => {
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
-    // Clean up URL so clicking the same ticket row works again
     if (selectedId) {
       router.push('/tickets')
-      setSelectedTicket(null)
       setSelectedTicketBasic(null)
     }
   }
@@ -245,7 +186,6 @@ export default function TicketsPage() {
     images?: string[]
   }) => {
     if (handoffTicketId) {
-      // Complete handoff ticket via RPC - creates messages and triggers dispatcher
       const { error } = await supabase.rpc('c1_complete_handoff_ticket', {
         p_ticket_id: handoffTicketId,
         p_property_id: data.property_id,
@@ -264,8 +204,6 @@ export default function TicketsPage() {
 
       toast.success('Handoff completed - contractor notified')
     } else {
-      // Create new manual ticket via RPC
-      // This creates the ticket, c1_messages row, and triggers the dispatcher
       const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
         p_property_manager_id: propertyManager!.id,
         p_property_id: data.property_id,
@@ -283,7 +221,6 @@ export default function TicketsPage() {
         throw new Error(error.message)
       }
 
-      // Notify landlord about the new manual ticket
       try {
         await fetch('https://yarro.app.n8n.cloud/webhook/manual-ll-ticket', {
           method: 'POST',
@@ -292,7 +229,6 @@ export default function TicketsPage() {
         })
       } catch (webhookErr) {
         console.error('Landlord notification webhook failed:', webhookErr)
-        // Don't fail the whole operation if webhook fails
       }
 
       toast.success('Ticket created - contractor notified')
@@ -300,10 +236,8 @@ export default function TicketsPage() {
 
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
-    // Clean up URL after ticket creation/completion
     if (selectedId) {
       router.push('/tickets')
-      setSelectedTicket(null)
       setSelectedTicketBasic(null)
     }
     fetchTickets()
@@ -314,7 +248,6 @@ export default function TicketsPage() {
 
     const archivedAt = new Date().toISOString()
 
-    // Archive the ticket
     const { error: ticketError } = await supabase
       .from('c1_tickets')
       .update({ archived: true, archived_at: archivedAt })
@@ -322,13 +255,11 @@ export default function TicketsPage() {
 
     if (ticketError) throw ticketError
 
-    // Archive related messages
     await supabase
       .from('c1_messages')
       .update({ archived: true, archived_at: archivedAt })
       .eq('ticket_id', selectedTicketBasic.id)
 
-    // Archive related conversation (if exists)
     if (selectedTicketBasic.conversation_id) {
       await supabase
         .from('c1_conversations')
@@ -338,22 +269,11 @@ export default function TicketsPage() {
 
     toast.success('Ticket archived')
     setArchiveDialogOpen(false)
-    handleCloseDrawer()
+    handleCloseModal()
     await fetchTickets()
   }
 
-  const formatDate = (date: string | null) => {
-    if (!date) return '-'
-    return format(new Date(date), 'dd MMM yyyy')
-  }
-
-  const formatCurrency = (amount: number | null) => {
-    if (!amount) return '-'
-    return `£${amount.toFixed(2)}`
-  }
-
-  // Get row class based on status for subtle left border
-  const getRowClassName = (ticket: Ticket) => {
+  const getRowClassName = (ticket: TicketRow) => {
     if (ticket.archived) {
       return 'border-l-2 border-l-gray-400 opacity-50'
     }
@@ -367,7 +287,7 @@ export default function TicketsPage() {
     return 'border-l-2 border-l-blue-500'
   }
 
-  const columns: Column<Ticket>[] = [
+  const columns: Column<TicketRow>[] = [
     {
       key: 'date_logged',
       header: 'Date',
@@ -437,7 +357,6 @@ export default function TicketsPage() {
     if (activeFilter === 'all') return true
     if (activeFilter === 'handoff') return t.handoff === true
     if (activeFilter === 'manual') return t.is_manual === true
-    // System = automated WhatsApp tickets (not handoff, not manual)
     if (activeFilter === 'system') return !t.handoff && !t.is_manual
     return true
   })
@@ -500,6 +419,19 @@ export default function TicketsPage() {
         </div>
       </div>
 
+      {/* Handoff Alert Banner */}
+      <HandoffAlertBanner
+        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open')}
+        onReview={(ticketId) => {
+          const ticket = tickets.find(t => t.id === ticketId)
+          if (ticket) {
+            setSelectedTicketBasic(ticket)
+            setHandoffTicketId(ticketId)
+            setCreateDrawerOpen(true)
+          }
+        }}
+      />
+
       {/* Data Table */}
       <div className="flex-1 min-h-0">
         <DataTable
@@ -526,198 +458,24 @@ export default function TicketsPage() {
         />
       </div>
 
-      {/* Detail Drawer */}
-      <DetailDrawer
-        open={drawerOpen}
-        onClose={handleCloseDrawer}
-        title="Ticket Details"
-        subtitle={selectedTicket?.property_address}
-        deletable={!selectedTicketBasic?.archived}
-        deleteLabel="Archive"
-        deleteIcon={<Archive className="h-4 w-4" />}
-        onDelete={() => setArchiveDialogOpen(true)}
-      >
-        {selectedTicket && (
-          <div className="space-y-4">
-            {/* Status badges - compact */}
-            <div className="flex flex-wrap gap-2">
-              {selectedTicket.job_stage && (
-                <StatusBadge status={selectedTicket.job_stage} size="md" />
-              )}
-              {selectedTicket.priority && (
-                <StatusBadge status={selectedTicket.priority} size="md" />
-              )}
-              {selectedTicket.handoff && (
-                <StatusBadge status="handoff" size="md" />
-              )}
-            </div>
-
-            {/* Double-quote warning */}
-            {previouslyApprovedContractor && selectedTicketBasic?.contractor_id && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-800 dark:text-amber-300">Previous contractor already approved</p>
-                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                      <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved for this ticket.
-                      Make sure to cancel the previous arrangement before proceeding with a new contractor.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Handoff completion button */}
-            {selectedTicket.handoff && selectedTicketBasic?.status === 'open' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setHandoffTicketId(selectedTicketBasic.id)
-                  setCreateDrawerOpen(true)
-                  setDrawerOpen(false)
-                }}
-              >
-                Review Ticket Details
-              </Button>
-            )}
-
-            {/* Related Links - compact 3-column grid */}
-            <DetailSection title="Related">
-              <div className="grid grid-cols-3 gap-1.5">
-                {/* Property */}
-                <Link
-                  href={`/properties?id=${selectedTicket.property_id}`}
-                  className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                  onClick={handleCloseDrawer}
-                >
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Property</span>
-                </Link>
-                {/* Tenant */}
-                {selectedTicketBasic?.tenant_id && (
-                  <Link
-                    href={`/tenants?id=${selectedTicketBasic.tenant_id}`}
-                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    onClick={handleCloseDrawer}
-                  >
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Tenant</span>
-                  </Link>
-                )}
-                {/* Conversation */}
-                {selectedTicketBasic?.conversation_id && (
-                  <Link
-                    href={`/conversations?id=${selectedTicketBasic.conversation_id}`}
-                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    onClick={handleCloseDrawer}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Conversation</span>
-                  </Link>
-                )}
-                {/* Messages */}
-                {hasMessage && (
-                  <Link
-                    href={`/messages?id=${selectedTicketBasic?.id}`}
-                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    onClick={handleCloseDrawer}
-                  >
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Messages</span>
-                  </Link>
-                )}
-                {/* Contractor */}
-                {selectedTicketBasic?.contractor_id && (
-                  <Link
-                    href={`/contractors?id=${selectedTicketBasic.contractor_id}`}
-                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    onClick={handleCloseDrawer}
-                  >
-                    <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Contractor</span>
-                  </Link>
-                )}
-                {/* Completion */}
-                {hasCompletion && (
-                  <Link
-                    href={`/completions?id=${selectedTicketBasic?.id}`}
-                    className="flex items-center gap-1.5 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    onClick={handleCloseDrawer}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Completion</span>
-                  </Link>
-                )}
-              </div>
-            </DetailSection>
-
-            <DetailDivider />
-
-            {/* Issue - compact */}
-            <DetailSection title="Issue">
-              <p className="text-xs leading-relaxed">
-                {selectedTicket.issue_description || 'No description provided'}
-              </p>
-            </DetailSection>
-
-            <DetailDivider />
-
-            {/* Details - compact grid */}
-            <DetailSection title="Details">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-2 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-xs font-medium">{selectedTicket.category || '-'}</p>
-                </div>
-                <div className="p-2 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Date Logged</p>
-                  <p className="text-xs font-medium">{formatDate(selectedTicket.date_logged)}</p>
-                </div>
-                <div className="p-2 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Availability</p>
-                  <p className="text-xs font-medium">{selectedTicket.availability || '-'}</p>
-                </div>
-                <div className="p-2 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Access</p>
-                  <p className="text-xs font-medium">{selectedTicket.access || '-'}</p>
-                </div>
-
-                {/* Dynamic fields that appear as ticket progresses */}
-                {selectedTicketBasic?.contractor_name && (
-                  <div className="p-2 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Contractor</p>
-                    <p className="text-xs font-medium">{selectedTicketBasic.contractor_name}</p>
-                  </div>
-                )}
-                {selectedTicketBasic?.contractor_quote && (
-                  <div className="p-2 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Quote</p>
-                    <p className="text-xs font-medium font-mono">{formatCurrency(selectedTicketBasic.contractor_quote)}</p>
-                  </div>
-                )}
-                {selectedTicketBasic?.scheduled_date && (
-                  <div className="p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg col-span-2">
-                    <p className="text-xs text-teal-600 dark:text-teal-400">Scheduled Date</p>
-                    <p className="text-sm font-medium text-teal-700 dark:text-teal-300">{formatDate(selectedTicketBasic.scheduled_date)}</p>
-                  </div>
-                )}
-                {selectedTicket.ticket_status.toLowerCase() === 'closed' && selectedTicketBasic?.final_amount && (
-                  <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg col-span-2">
-                    <p className="text-xs text-green-600 dark:text-green-400">Final Amount</p>
-                    <p className="font-mono text-sm font-bold text-green-700 dark:text-green-300">{formatCurrency(selectedTicketBasic.final_amount)}</p>
-                  </div>
-                )}
-              </div>
-            </DetailSection>
-          </div>
-        )}
-      </DetailDrawer>
+      {/* Ticket Detail Modal (replaces old DetailDrawer) */}
+      <TicketDetailModal
+        ticketId={selectedId}
+        open={modalOpen}
+        onClose={handleCloseModal}
+        onArchive={() => setArchiveDialogOpen(true)}
+        onReview={() => {
+          if (selectedTicketBasic) {
+            setHandoffTicketId(selectedTicketBasic.id)
+            setCreateDrawerOpen(true)
+            setModalOpen(false)
+          }
+        }}
+      />
 
       {/* Create / Complete Ticket Modal */}
       <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>{handoffTicketId ? 'Complete Ticket' : 'New Ticket'}</DialogTitle>
             <DialogDescription>
