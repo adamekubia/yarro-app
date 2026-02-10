@@ -55,7 +55,7 @@ export function TicketDetailModal({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent size="xl" className="h-[80vh]" hideCloseButton={false}>
         {/* Header — tightened padding */}
-        <DialogHeader className="pb-0">
+        <DialogHeader>
           {loading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -65,7 +65,7 @@ export function TicketDetailModal({
             <DialogTitle className="text-destructive">Error loading ticket</DialogTitle>
           ) : context ? (
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="min-w-0 flex-1 space-y-1">
                 {/* Status badges */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {displayStage && <StatusBadge status={displayStage} size="md" />}
@@ -158,12 +158,12 @@ export function TicketDetailModal({
                 </TabsList>
 
                 {/* All tab content scrolls within fixed container */}
-                <TabsContent value="overview" className="mt-3 flex-1 min-h-0 overflow-y-auto">
+                <TabsContent value="overview" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                   <TicketOverviewTab context={context} basic={basic} />
                 </TabsContent>
 
                 {showConversationTab && (
-                  <TabsContent value="conversation" className="mt-3 flex-1 min-h-0 overflow-hidden">
+                  <TabsContent value="conversation" className="mt-4 flex-1 min-h-0 overflow-hidden">
                     {conversation ? (
                       <TicketConversationTab conversation={conversation} />
                     ) : (
@@ -179,13 +179,13 @@ export function TicketDetailModal({
                 )}
 
                 {hasDispatch && messages && (
-                  <TabsContent value="dispatch" className="mt-3 flex-1 min-h-0 overflow-y-auto">
+                  <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketDispatchTab messages={messages} />
                   </TabsContent>
                 )}
 
                 {hasCompletion && completion && (
-                  <TabsContent value="completion" className="mt-3 flex-1 min-h-0 overflow-y-auto">
+                  <TabsContent value="completion" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketCompletionTab completion={completion} />
                   </TabsContent>
                 )}

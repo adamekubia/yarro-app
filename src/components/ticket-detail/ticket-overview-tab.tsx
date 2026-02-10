@@ -67,6 +67,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           <DetailRow label="Access" value={context.access} />
           <DetailRow label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight={!!basic.scheduled_date} />
           <DetailRow label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono />
+          <DetailRow label="Your Markup" value={basic.contractor_quote && basic.final_amount ? formatCurrency(basic.final_amount - basic.contractor_quote) : null} mono />
           <DetailRow label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight={!!basic.final_amount} />
         </div>
       </div>

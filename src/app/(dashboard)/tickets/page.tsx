@@ -347,6 +347,16 @@ export default function TicketsPage() {
       ) : '-',
     },
     {
+      key: 'type',
+      header: 'Type',
+      sortable: true,
+      render: (ticket) => {
+        const type = ticket.handoff ? 'Handoff' : ticket.is_manual ? 'Manual' : 'Auto'
+        return <span className="text-xs text-muted-foreground">{type}</span>
+      },
+      getValue: (ticket) => ticket.handoff ? 'Handoff' : ticket.is_manual ? 'Manual' : 'Auto',
+    },
+    {
       key: 'display_stage',
       header: 'Stage',
       sortable: true,
@@ -401,8 +411,8 @@ export default function TicketsPage() {
         <div className="flex items-center gap-3">
           <DateFilter value={dateRange} onChange={setDateRange} />
           <InteractiveHoverButton
-            text="New Ticket"
-            className="w-32 text-sm h-10"
+            text="Create"
+            className="w-24 text-xs h-7 p-1"
             onClick={() => setCreateDrawerOpen(true)}
           />
         </div>

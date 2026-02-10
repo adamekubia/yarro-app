@@ -376,11 +376,12 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
 
       const fetchConversation = async () => {
         if (conversationId) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('c1_conversations')
             .select('id, phone, status, stage, caller_name, caller_role, handoff, created_at, last_updated, log')
             .eq('id', conversationId)
-            .single()
+            .maybeSingle()
+          if (error) console.error('Conversation fetch error:', error)
           setConversation(data || null)
         } else {
           setConversation(null)
