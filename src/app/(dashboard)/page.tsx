@@ -130,6 +130,7 @@ export default function DashboardPage() {
   const [selectedHandoff, setSelectedHandoff] = useState<HandoffConversation | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
+  const [notCompletedIds, setNotCompletedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -195,7 +196,8 @@ export default function DashboardPage() {
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
-    const notCompletedIds = new Set((notCompletedRes.data || []).map(r => r.id))
+    const ncIds = new Set((notCompletedRes.data || []).map(r => r.id))
+    setNotCompletedIds(ncIds)
 
     // Filter conversations that don't have tickets yet
     const ticketConvoIds = new Set(tickets?.map(t => t.conversation_id).filter(Boolean) || [])
@@ -266,7 +268,7 @@ export default function DashboardPage() {
 
       const jobNotCompleted = tickets.filter((t) => {
         if (!isOpen(t)) return false
-        return notCompletedIds.has(t.id)
+        return ncIds.has(t.id)
       }).length
 
       setStats({
@@ -355,8 +357,7 @@ export default function DashboardPage() {
     } else if (type === 'declined') {
       filtered = []
     } else if (type === 'notCompleted') {
-      // Need to re-filter using job_completions — for now link to tickets page
-      filtered = []
+      filtered = allTickets.filter((t) => isOpen(t) && notCompletedIds.has(t.id))
     }
 
     setAwaitingTickets(filtered)

@@ -128,7 +128,7 @@ export function TicketDetailModal({
                 </div>
               )}
 
-              <Tabs defaultValue="overview" className="flex-1 min-h-0 flex flex-col">
+              <Tabs defaultValue="overview" className="flex-1 min-h-0 flex flex-col mt-3">
                 <TabsList className="w-full justify-start flex-shrink-0 bg-transparent rounded-none border-b h-auto p-0 gap-0">
                   <TabsTrigger value="overview" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                     <LayoutDashboard className="h-3.5 w-3.5" />
