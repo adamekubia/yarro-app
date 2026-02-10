@@ -447,12 +447,18 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   )
   const hasCompletion = !!completion
 
-  // Check for previously approved contractor
+  // Check for previously approved contractor — only relevant during awaiting_manager with multiple quotes
   const previouslyApprovedContractor = messages?.contractors
     ? (() => {
+        const msgStage = (messages.stage || '').toLowerCase()
+        if (msgStage !== 'awaiting_manager') return null
         const contractors = getContractors(messages.contractors)
         const approved = contractors.find(c => c.manager_decision === 'approved')
-        return approved?.name || null
+        if (!approved) return null
+        // Only warn if multiple contractors have sent quotes
+        const quotedCount = contractors.filter(c => c.replied_at || c.quote_amount).length
+        if (quotedCount < 2) return null
+        return approved.name
       })()
     : null
 

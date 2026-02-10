@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { CollapsibleSection } from '@/components/collapsible-section'
-import { CheckCircle, XCircle, Image, Wrench, Calendar } from 'lucide-react'
+import { CheckCircle, XCircle, Wrench, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import type { CompletionData } from '@/hooks/use-ticket-detail'
@@ -79,17 +79,22 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
         </div>
       )}
 
-      {/* Photos + Timeline row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Photos */}
+      {/* Received date */}
+      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Photos</h4>
-          {mediaUrls.length === 0 ? (
-            <div className="flex items-center gap-1.5 p-3 bg-muted/30 rounded-lg text-muted-foreground">
-              <Image className="h-3.5 w-3.5" />
-              <p className="text-sm">No photos</p>
-            </div>
-          ) : mediaUrls.length > 4 ? (
+          <p className="text-xs text-muted-foreground">Received</p>
+          <p className="text-sm font-medium">{format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')}</p>
+        </div>
+      </div>
+
+      {/* Photos */}
+      {mediaUrls.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">
+            Photos ({mediaUrls.length})
+          </h4>
+          {mediaUrls.length > 6 ? (
             <CollapsibleSection
               title="Photos"
               count={mediaUrls.length}
@@ -114,7 +119,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
               </div>
             </CollapsibleSection>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {mediaUrls.map((url, index) => (
                 <a
                   key={index}
@@ -133,28 +138,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
             </div>
           )}
         </div>
-
-        {/* Timeline */}
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Timeline</h4>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Received</p>
-                <p className="text-sm font-medium">{format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Created</p>
-                <p className="text-sm font-medium">{format(new Date(completion.created_at), 'dd MMM yyyy, HH:mm')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
