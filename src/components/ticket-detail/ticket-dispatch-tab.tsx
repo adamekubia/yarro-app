@@ -55,13 +55,13 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
     <div className="space-y-4">
       {/* Multi-contractor warning banner */}
       {contactedCount > 1 && approvedCount === 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border">
+          <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-amber-700 dark:text-amber-300">
+            <p className="font-medium">
               {contactedCount} contractors contacted
             </p>
-            <p className="text-amber-600/80 dark:text-amber-400/80 text-xs mt-0.5">
+            <p className="text-muted-foreground text-xs mt-0.5">
               {quotedCount > 0
                 ? `${quotedCount} quote${quotedCount > 1 ? 's' : ''} received. Approve only one to proceed.`
                 : 'Awaiting quotes. Only one can be approved.'}

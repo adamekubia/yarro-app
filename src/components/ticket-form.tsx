@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -893,16 +894,12 @@ export function TicketForm({
         <Button variant="outline" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            finalSubmitLabel
-          )}
-        </Button>
+        <InteractiveHoverButton
+          text={submitting ? 'Creating...' : finalSubmitLabel}
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-40 text-sm h-10"
+        />
       </div>
 
       {/* Add Tenant Dialog */}
@@ -951,10 +948,12 @@ export function TicketForm({
             <Button variant="outline" onClick={() => setAddTenantOpen(false)} disabled={savingNew}>
               Cancel
             </Button>
-            <Button onClick={handleAddTenant} disabled={savingNew}>
-              {savingNew ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Add Tenant
-            </Button>
+            <InteractiveHoverButton
+              text={savingNew ? 'Adding...' : 'Add Tenant'}
+              onClick={handleAddTenant}
+              disabled={savingNew}
+              className="w-32 text-sm h-9"
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1016,10 +1015,12 @@ export function TicketForm({
             <Button variant="outline" onClick={() => setAddContractorOpen(false)} disabled={savingNew}>
               Cancel
             </Button>
-            <Button onClick={handleAddContractor} disabled={savingNew}>
-              {savingNew ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Add Contractor
-            </Button>
+            <InteractiveHoverButton
+              text={savingNew ? 'Adding...' : 'Add Contractor'}
+              onClick={handleAddContractor}
+              disabled={savingNew}
+              className="w-36 text-sm h-9"
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

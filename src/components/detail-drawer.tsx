@@ -8,6 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { X, Pencil, Save, Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -107,24 +108,12 @@ export function DetailDrawer({
                   >
                     Cancel
                   </Button>
-                  <Button
-                    size="sm"
-                    className="h-8 px-3"
+                  <InteractiveHoverButton
+                    text={isSaving ? 'Saving...' : 'Save'}
                     onClick={onSave}
                     disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                        Saving
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-1.5" />
-                        Save
-                      </>
-                    )}
-                  </Button>
+                    className="w-24 text-sm h-8"
+                  />
                 </>
               )}
               {!isEditing && (

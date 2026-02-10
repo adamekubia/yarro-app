@@ -15,6 +15,7 @@ import {
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, Plus, X } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X } from 'lucide-react'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -548,10 +549,7 @@ export default function ContractorsPage() {
             Manage your contractor network
           </p>
         </div>
-        <Button onClick={handleAddClick} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Contractor
-        </Button>
+        <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
       </div>
 
       {/* Data Table */}

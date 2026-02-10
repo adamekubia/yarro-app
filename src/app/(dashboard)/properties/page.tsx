@@ -16,10 +16,11 @@ import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
-import { Building2, User, Phone, Mail, Wrench, Ticket, Plus } from 'lucide-react'
+import { Building2, User, Phone, Mail, Wrench, Ticket } from 'lucide-react'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -502,10 +503,7 @@ export default function PropertiesPage() {
             Manage your property portfolio
           </p>
         </div>
-        <Button onClick={handleAddClick} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Property
-        </Button>
+        <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
       </div>
 
       {/* Data Table */}

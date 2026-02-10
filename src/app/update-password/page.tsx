@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
-import { Loader2, CheckCircle } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('')
@@ -139,20 +139,12 @@ export default function UpdatePasswordPage() {
                 </div>
               )}
 
-              <Button
+              <InteractiveHoverButton
                 type="submit"
-                className="w-full h-11 font-medium"
+                text={loading ? 'Setting up...' : 'Set password'}
                 disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Setting up...
-                  </>
-                ) : (
-                  'Set password'
-                )}
-              </Button>
+                className="w-full h-11 font-medium"
+              />
             </form>
           </>
         )}

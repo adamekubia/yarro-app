@@ -310,6 +310,7 @@ interface UseTicketDetailResult {
   hasDispatch: boolean
   hasCompletion: boolean
   previouslyApprovedContractor: string | null
+  displayStage: string | null
 }
 
 export function useTicketDetail(ticketId: string | null): UseTicketDetailResult {
@@ -402,8 +403,10 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             *,
             c1_contractors(contractor_name)
           `)
-          .eq('id', id)
-          .single()
+          .eq('ticket_id', id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
         if (data) {
           setCompletion({
             ...data,
@@ -453,6 +456,22 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       })()
     : null
 
+  // Derive display stage using dashboard logic (message stage is more descriptive)
+  const displayStage = (() => {
+    if (!basic) return null
+    const isClosed = basic.status?.toLowerCase() === 'closed'
+    if (isClosed) return 'closed'
+    if (basic.handoff) return 'handoff'
+    const msgStage = (messages?.stage || '').toLowerCase()
+    if (msgStage === 'awaiting_manager') return 'Awaiting Manager'
+    if (msgStage === 'awaiting_landlord') return 'Awaiting Landlord'
+    if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
+    const jobStage = (basic.job_stage || '').toLowerCase()
+    if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
+    if (hasCompletion) return 'Completed'
+    return basic.job_stage || null
+  })()
+
   return {
     context,
     basic,
@@ -466,5 +485,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     hasDispatch,
     hasCompletion,
     previouslyApprovedContractor,
+    displayStage,
   }
 }

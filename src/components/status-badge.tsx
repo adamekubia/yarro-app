@@ -36,6 +36,12 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   medium: { bg: 'bg-yellow-500/10 dark:bg-yellow-400/15', text: 'text-yellow-700 dark:text-yellow-400' },
   low: { bg: 'bg-gray-500/10 dark:bg-gray-400/15', text: 'text-gray-600 dark:text-gray-400' },
 
+  // Display stages (derived from dashboard logic)
+  'awaiting contractor': { bg: 'bg-amber-500/10 dark:bg-amber-400/15', text: 'text-amber-700 dark:text-amber-400' },
+  'awaiting manager': { bg: 'bg-blue-500/10 dark:bg-blue-400/15', text: 'text-blue-700 dark:text-blue-400' },
+  'awaiting landlord': { bg: 'bg-violet-500/10 dark:bg-violet-400/15', text: 'text-violet-700 dark:text-violet-400' },
+  sent: { bg: 'bg-yellow-500/10 dark:bg-yellow-400/15', text: 'text-yellow-700 dark:text-yellow-400' },
+
   // Conversation stages
   greeting: { bg: 'bg-blue-500/10 dark:bg-blue-400/15', text: 'text-blue-700 dark:text-blue-400' },
   address_collection: { bg: 'bg-cyan-500/10 dark:bg-cyan-400/15', text: 'text-cyan-700 dark:text-cyan-400' },

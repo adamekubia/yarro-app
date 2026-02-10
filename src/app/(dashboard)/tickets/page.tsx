@@ -20,6 +20,7 @@ import {
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
 import { Plus, Ticket, CheckCircle2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
@@ -47,6 +48,8 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  message_stage?: string | null
+  display_stage?: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -130,7 +133,8 @@ export default function TicketsPage() {
         images,
         c1_properties(address),
         c1_tenants(full_name),
-        c1_contractors(contractor_name)
+        c1_contractors(contractor_name),
+        c1_messages(stage)
       `)
       .eq('property_manager_id', propertyManager!.id)
       .gte('date_logged', dateRange.from.toISOString())
@@ -144,12 +148,37 @@ export default function TicketsPage() {
     const { data } = await query
 
     if (data) {
-      const mapped = data.map((t) => ({
-        ...t,
-        address: (t.c1_properties as unknown as { address: string } | null)?.address,
-        tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
-        contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-      }))
+      type MsgData = { stage: string } | { stage: string }[] | null
+      const getMsgStage = (msgs: MsgData): string | null => {
+        if (!msgs) return null
+        if (Array.isArray(msgs)) return msgs[0]?.stage || null
+        return msgs.stage || null
+      }
+
+      const deriveDisplayStage = (t: { status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
+        const isClosed = t.status?.toLowerCase() === 'closed'
+        if (isClosed) return 'closed'
+        if (t.handoff) return 'handoff'
+        const ms = (msgStage || '').toLowerCase()
+        if (ms === 'awaiting_manager') return 'Awaiting Manager'
+        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
+        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
+        const js = (t.job_stage || '').toLowerCase()
+        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
+        return t.job_stage || null
+      }
+
+      const mapped = data.map((t) => {
+        const msgStage = getMsgStage(t.c1_messages as MsgData)
+        return {
+          ...t,
+          address: (t.c1_properties as unknown as { address: string } | null)?.address,
+          tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
+          contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
+          message_stage: msgStage,
+          display_stage: deriveDisplayStage(t, msgStage),
+        }
+      })
       setTickets(mapped)
     }
     setLoading(false)
@@ -274,17 +303,9 @@ export default function TicketsPage() {
   }
 
   const getRowClassName = (ticket: TicketRow) => {
-    if (ticket.archived) {
-      return 'border-l-2 border-l-gray-400 opacity-50'
-    }
-    const isClosed = ticket.status?.toLowerCase() === 'closed'
-    if (isClosed) {
-      return 'border-l-2 border-l-gray-300 opacity-60'
-    }
-    if (ticket.handoff) {
-      return 'border-l-2 border-l-amber-500'
-    }
-    return 'border-l-2 border-l-blue-500'
+    if (ticket.archived) return 'opacity-50'
+    if (ticket.status?.toLowerCase() === 'closed') return 'opacity-60'
+    return ''
   }
 
   const columns: Column<TicketRow>[] = [
@@ -317,10 +338,10 @@ export default function TicketsPage() {
       render: (ticket) => ticket.category || '-',
     },
     {
-      key: 'job_stage',
+      key: 'display_stage',
       header: 'Stage',
       sortable: true,
-      render: (ticket) => ticket.job_stage ? <StatusBadge status={ticket.job_stage} /> : '-',
+      render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} /> : '-',
     },
     {
       key: 'priority',
@@ -331,23 +352,19 @@ export default function TicketsPage() {
     {
       key: 'actions',
       header: '',
-      width: '80px',
+      width: '110px',
       render: (ticket) => (
         ticket.handoff && ticket.status === 'open' ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
+          <InteractiveHoverButton
+            text="Review"
+            className="w-24 text-xs h-7"
             onClick={(e) => {
               e.stopPropagation()
               setSelectedTicketBasic(ticket)
               setHandoffTicketId(ticket.id)
               setCreateDrawerOpen(true)
             }}
-          >
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            Review
-          </Button>
+          />
         ) : null
       ),
     },
@@ -380,10 +397,11 @@ export default function TicketsPage() {
         </div>
         <div className="flex items-center gap-3">
           <DateFilter value={dateRange} onChange={setDateRange} />
-          <Button onClick={() => setCreateDrawerOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Ticket
-          </Button>
+          <InteractiveHoverButton
+            text="New Ticket"
+            className="w-32 text-sm h-10"
+            onClick={() => setCreateDrawerOpen(true)}
+          />
         </div>
       </div>
 

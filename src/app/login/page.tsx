@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
-import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -191,20 +191,12 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <Button
+                <InteractiveHoverButton
                   type="submit"
-                  className="w-full h-11 font-medium"
+                  text={loading ? 'Signing in...' : 'Sign in'}
                   disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign in'
-                  )}
-                </Button>
+                  className="w-full h-11 font-medium"
+                />
               </form>
             </>
           ) : (
@@ -250,20 +242,12 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  <Button
+                  <InteractiveHoverButton
                     type="submit"
-                    className="w-full h-11 font-medium"
+                    text={loading ? 'Sending...' : 'Send reset link'}
                     disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      'Send reset link'
-                    )}
-                  </Button>
+                    className="w-full h-11 font-medium"
+                  />
                 </form>
               )}
             </>

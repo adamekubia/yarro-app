@@ -4,11 +4,11 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogBody,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
 import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
@@ -44,13 +44,14 @@ export function TicketDetailModal({
     hasDispatch,
     hasCompletion,
     previouslyApprovedContractor,
+    displayStage,
   } = useTicketDetail(open ? ticketId : null)
 
   const isHandoff = context?.handoff && basic?.status === 'open'
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent size="xl" hideCloseButton={false}>
+      <DialogContent size="xl" className="h-[80vh]" hideCloseButton={false}>
         {/* Header */}
         <DialogHeader>
           {loading ? (
@@ -63,11 +64,10 @@ export function TicketDetailModal({
           ) : context ? (
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                {/* Status badges */}
+                {/* Status badges — use displayStage for accurate workflow state */}
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                  {context.job_stage && <StatusBadge status={context.job_stage} size="md" />}
+                  {displayStage && <StatusBadge status={displayStage} size="md" />}
                   {context.priority && <StatusBadge status={context.priority} size="md" />}
-                  {context.handoff && <StatusBadge status="handoff" size="md" />}
                 </div>
                 {/* Address as title */}
                 <DialogTitle className="truncate">
@@ -82,10 +82,11 @@ export function TicketDetailModal({
               {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isHandoff && onReview && (
-                  <Button variant="default" size="sm" onClick={onReview}>
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                    Review
-                  </Button>
+                  <InteractiveHoverButton
+                    text="Review"
+                    className="w-28 text-xs h-9"
+                    onClick={onReview}
+                  />
                 )}
                 {onArchive && !basic?.archived && (
                   <Button variant="ghost" size="sm" onClick={onArchive}>
@@ -100,26 +101,26 @@ export function TicketDetailModal({
           )}
         </DialogHeader>
 
-        {/* Body */}
-        <DialogBody>
+        {/* Body — fixed height, internal scroll per tab */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col px-6 pb-6">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center flex-1">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
-            <div className="text-center py-12">
+            <div className="text-center flex-1 flex items-center justify-center">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           ) : context && basic ? (
             <>
               {/* Double-quote warning */}
               {previouslyApprovedContractor && basic.contractor_id && (
-                <div className="p-3 mb-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="p-3 mb-4 bg-muted/50 rounded-lg border flex-shrink-0">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="font-medium text-amber-800 dark:text-amber-300">Previous contractor already approved</p>
-                      <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                      <p className="font-medium">Previous contractor already approved</p>
+                      <p className="text-xs text-muted-foreground mt-1">
                         <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved.
                         Cancel the previous arrangement before proceeding with a new contractor.
                       </p>
@@ -128,8 +129,8 @@ export function TicketDetailModal({
                 </div>
               )}
 
-              <Tabs defaultValue="overview" className="h-full">
-                <TabsList className="w-full justify-start">
+              <Tabs defaultValue="overview" className="flex-1 min-h-0 flex flex-col">
+                <TabsList className="w-full justify-start flex-shrink-0">
                   <TabsTrigger value="overview" className="gap-1.5">
                     <LayoutDashboard className="h-3.5 w-3.5" />
                     Overview
@@ -154,35 +155,36 @@ export function TicketDetailModal({
                   )}
                 </TabsList>
 
-                <TabsContent value="overview" className="mt-4">
+                {/* All tab content scrolls within fixed container */}
+                <TabsContent value="overview" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                   <TicketOverviewTab context={context} basic={basic} />
                 </TabsContent>
 
                 {hasConversation && conversation && (
-                  <TabsContent value="conversation" className="mt-4 h-[400px]">
+                  <TabsContent value="conversation" className="mt-4 flex-1 min-h-0 overflow-hidden">
                     <TicketConversationTab conversation={conversation} />
                   </TabsContent>
                 )}
 
                 {hasDispatch && messages && (
-                  <TabsContent value="dispatch" className="mt-4">
+                  <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketDispatchTab messages={messages} />
                   </TabsContent>
                 )}
 
                 {hasCompletion && completion && (
-                  <TabsContent value="completion" className="mt-4">
+                  <TabsContent value="completion" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketCompletionTab completion={completion} />
                   </TabsContent>
                 )}
               </Tabs>
             </>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center flex-1 flex items-center justify-center text-muted-foreground">
               <p className="text-sm">No ticket selected</p>
             </div>
           )}
-        </DialogBody>
+        </div>
       </DialogContent>
     </Dialog>
   )

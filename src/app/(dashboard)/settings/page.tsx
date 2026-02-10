@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
-import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { User, Mail, Building2, Lock } from 'lucide-react'
@@ -94,9 +94,12 @@ export default function SettingsPage() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="h-9"
           />
-          <Button type="submit" size="sm" disabled={saving || !newPassword}>
-            {saving ? 'Updating...' : 'Update Password'}
-          </Button>
+          <InteractiveHoverButton
+            type="submit"
+            text={saving ? 'Updating...' : 'Update Password'}
+            disabled={saving || !newPassword}
+            className="w-40 text-sm h-9"
+          />
         </form>
       </div>
     </div>

@@ -40,6 +40,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import {
   Tooltip,
   TooltipContent,
@@ -547,10 +548,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-card-foreground">Requires Action</h3>
                       <Link href="/tickets?create=true">
-                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-                          <Plus className="h-3 w-3 mr-1" />
-                          Create
-                        </Button>
+                        <InteractiveHoverButton text="Create" className="w-24 text-xs h-7 p-1" />
                       </Link>
                     </div>
                     <div className="space-y-1.5">
@@ -750,10 +748,7 @@ export default function DashboardPage() {
                           href={`/tickets?id=${ticket.id}&action=complete`}
                           onClick={() => setAwaitingType(null)}
                         >
-                          <Button variant="outline" size="sm" className="h-7 text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Review
-                          </Button>
+                          <InteractiveHoverButton text="Review" className="w-24 text-xs h-7 p-1" />
                         </Link>
                       )}
                     </div>

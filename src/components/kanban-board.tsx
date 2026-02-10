@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { format, differenceInDays } from 'date-fns'
 import { StatusBadge } from '@/components/status-badge'
-import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import {
   Clock,
   Hourglass,
@@ -155,18 +155,14 @@ export function KanbanBoard({ tickets, onTicketClick, onHandoffReview }: KanbanB
                   onClick={() => onTicketClick?.(ticket.id)}
                   variant="handoff"
                   action={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
+                    <InteractiveHoverButton
+                      text="Review"
+                      className="w-20 text-xs h-6 p-1"
                       onClick={(e) => {
                         e.stopPropagation()
                         onHandoffReview?.(ticket.id)
                       }}
-                    >
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Review
-                    </Button>
+                    />
                   }
                 />
               ))}

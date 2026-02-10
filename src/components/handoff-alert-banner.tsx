@@ -18,10 +18,10 @@ export function HandoffAlertBanner({ tickets, onReview }: HandoffAlertBannerProp
   if (tickets.length === 0) return null
 
   return (
-    <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+    <div className="mb-6 rounded-xl border bg-muted/30 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+        <AlertTriangle className="h-4 w-4 text-foreground/70" />
+        <p className="text-sm font-medium">
           {tickets.length} ticket{tickets.length > 1 ? 's' : ''} need{tickets.length === 1 ? 's' : ''} your review
         </p>
       </div>
@@ -29,7 +29,7 @@ export function HandoffAlertBanner({ tickets, onReview }: HandoffAlertBannerProp
         {tickets.map((ticket) => (
           <div
             key={ticket.id}
-            className="flex items-center gap-3 bg-background rounded-lg border border-amber-500/20 px-4 py-2.5 shadow-sm"
+            className="flex items-center gap-3 bg-background rounded-lg border px-4 py-2.5 shadow-sm"
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate max-w-[200px]">

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { ProgressBar } from './onboarding/progress-bar'
 import { StepPMDetails, PMDetailsEntry } from './onboarding/step-pm-details'
 import { StepLandlords, LandlordPersona } from './onboarding/step-landlords'
@@ -660,24 +661,12 @@ export function OnboardingWizard() {
                   Skip
                 </Button>
               )}
-              <Button size="sm" onClick={handleNext} disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : state.step === 'contractors' ? (
-                  <>
-                    Complete
-                    <CheckCircle className="h-4 w-4 ml-1" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </>
-                )}
-              </Button>
+              <InteractiveHoverButton
+                text={saving ? 'Saving...' : state.step === 'contractors' ? 'Complete' : 'Next'}
+                onClick={handleNext}
+                disabled={saving}
+                className="w-28 text-sm h-8"
+              />
             </div>
           </div>
         )}
@@ -751,7 +740,7 @@ export function OnboardingWizard() {
             <p className="text-xs text-muted-foreground">Batch ID: {state.batchId}</p>
             <div className="flex justify-center gap-3 pt-4">
               <Button variant="outline" onClick={resetWizard}>Import More</Button>
-              <Button onClick={() => window.location.href = '/'}>Go to Dashboard</Button>
+              <InteractiveHoverButton text="Go to Dashboard" onClick={() => window.location.href = '/'} className="w-40 text-sm h-10" />
             </div>
           </div>
         )}
