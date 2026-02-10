@@ -64,39 +64,34 @@ export function TicketDetailModal({
           ) : error ? (
             <DialogTitle className="text-destructive">Error loading ticket</DialogTitle>
           ) : context ? (
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1 space-y-2">
-                {/* Status badges */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {displayStage && <StatusBadge status={displayStage} size="md" />}
-                  {context.priority && <StatusBadge status={context.priority} size="md" />}
-                </div>
-                {/* Address as title */}
+            <div className="space-y-1">
+              {/* Row 1: Address + badges + actions */}
+              <div className="flex items-center justify-between gap-3">
                 <DialogTitle className="truncate">
                   {context.property_address || 'Unknown Property'}
                 </DialogTitle>
-                {/* Issue as subtitle */}
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {context.issue_description || 'No description'}
-                </p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {displayStage && <StatusBadge status={displayStage} size="md" />}
+                  {context.priority && <StatusBadge status={context.priority} size="md" />}
+                  {isHandoff && onReview && (
+                    <InteractiveHoverButton
+                      text="Review"
+                      className="w-28 text-xs h-9"
+                      onClick={onReview}
+                    />
+                  )}
+                  {onArchive && !basic?.archived && (
+                    <Button variant="ghost" size="sm" onClick={onArchive}>
+                      <Archive className="h-3.5 w-3.5 mr-1" />
+                      Archive
+                    </Button>
+                  )}
+                </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {isHandoff && onReview && (
-                  <InteractiveHoverButton
-                    text="Review"
-                    className="w-28 text-xs h-9"
-                    onClick={onReview}
-                  />
-                )}
-                {onArchive && !basic?.archived && (
-                  <Button variant="ghost" size="sm" onClick={onArchive}>
-                    <Archive className="h-3.5 w-3.5 mr-1" />
-                    Archive
-                  </Button>
-                )}
-              </div>
+              {/* Row 2: Issue subtitle */}
+              <p className="text-sm text-muted-foreground line-clamp-1">
+                {context.issue_description || 'No description'}
+              </p>
             </div>
           ) : (
             <DialogTitle>Ticket</DialogTitle>
