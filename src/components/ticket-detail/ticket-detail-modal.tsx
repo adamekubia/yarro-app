@@ -65,14 +65,14 @@ export function TicketDetailModal({
             <DialogTitle className="text-destructive">Error loading ticket</DialogTitle>
           ) : context ? (
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1 space-y-1">
+              <div className="min-w-0 flex-1 space-y-2">
                 {/* Status badges */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {displayStage && <StatusBadge status={displayStage} size="md" />}
                   {context.priority && <StatusBadge status={context.priority} size="md" />}
                 </div>
                 {/* Address as title */}
-                <DialogTitle className="truncate !mt-0.5">
+                <DialogTitle className="truncate">
                   {context.property_address || 'Unknown Property'}
                 </DialogTitle>
                 {/* Issue as subtitle */}

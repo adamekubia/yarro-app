@@ -92,7 +92,6 @@ export interface ConversationData {
   caller_name: string | null
   caller_role: string | null
   handoff: boolean | null
-  created_at: string
   last_updated: string
   log: Json
 }
@@ -378,7 +377,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         if (conversationId) {
           const { data, error } = await supabase
             .from('c1_conversations')
-            .select('id, phone, status, stage, caller_name, caller_role, handoff, created_at, last_updated, log')
+            .select('id, phone, status, stage, caller_name, caller_role, handoff, last_updated, log')
             .eq('id', conversationId)
             .maybeSingle()
           if (error) console.error('Conversation fetch error:', error)
@@ -389,25 +388,25 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       }
 
       const fetchMessages = async () => {
-        const { data } = await supabase
+        const { data, error: msgError } = await supabase
           .from('c1_messages')
           .select('*')
           .eq('ticket_id', id)
-          .single()
+          .maybeSingle()
+        if (msgError) console.error('Messages fetch error:', msgError)
         setMessages(data || null)
       }
 
       const fetchCompletion = async () => {
-        const { data } = await supabase
+        const { data, error: compError } = await supabase
           .from('c1_job_completions')
           .select(`
             *,
             c1_contractors(contractor_name)
           `)
-          .eq('ticket_id', id)
-          .order('created_at', { ascending: false })
-          .limit(1)
+          .eq('id', id)
           .maybeSingle()
+        if (compError) console.error('Completion fetch error:', compError)
         if (data) {
           setCompletion({
             ...data,

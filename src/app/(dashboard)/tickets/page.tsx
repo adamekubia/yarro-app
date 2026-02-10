@@ -55,7 +55,7 @@ interface TicketRow {
   contractor_name?: string
 }
 
-type TicketFilter = 'all' | 'system' | 'handoff' | 'manual'
+type TicketFilter = 'all' | 'system' | 'manual'
 
 export default function TicketsPage() {
   const { propertyManager } = usePM()
@@ -383,19 +383,22 @@ export default function TicketsPage() {
     },
   ]
 
+  // Open handoffs only show in the banner, not in the table
+  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open'
+
   const filteredTickets = tickets.filter((t) => {
+    if (isOpenHandoff(t)) return false // always excluded from table — banner handles these
     if (activeFilter === 'all') return true
-    if (activeFilter === 'handoff') return t.handoff === true
     if (activeFilter === 'manual') return t.is_manual === true
     if (activeFilter === 'system') return !t.handoff && !t.is_manual
     return true
   })
 
+  const nonHandoff = tickets.filter((t) => !isOpenHandoff(t))
   const filterCounts = {
-    all: tickets.length,
-    system: tickets.filter((t) => !t.handoff && !t.is_manual).length,
-    handoff: tickets.filter((t) => t.handoff === true).length,
-    manual: tickets.filter((t) => t.is_manual === true).length,
+    all: nonHandoff.length,
+    system: nonHandoff.filter((t) => !t.handoff && !t.is_manual).length,
+    manual: nonHandoff.filter((t) => t.is_manual === true).length,
   }
 
   return (
@@ -412,7 +415,7 @@ export default function TicketsPage() {
           <DateFilter value={dateRange} onChange={setDateRange} />
           <InteractiveHoverButton
             text="Create"
-            className="w-24 text-xs h-7 p-1"
+            className="w-24 text-xs h-7"
             onClick={() => setCreateDrawerOpen(true)}
           />
         </div>
@@ -421,7 +424,7 @@ export default function TicketsPage() {
       {/* Filter Tabs */}
       <div className="flex-shrink-0 flex items-center justify-between border-b mb-6">
         <div className="flex items-center gap-1">
-          {(['all', 'system', 'handoff', 'manual'] as TicketFilter[]).map((filter) => (
+          {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}

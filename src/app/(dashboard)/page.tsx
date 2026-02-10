@@ -451,7 +451,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
                   <Link href="/tickets?create=true">
-                    <InteractiveHoverButton text="Create" className="w-24 text-xs h-7 p-1" />
+                    <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
                   </Link>
                   <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
                     View all →
