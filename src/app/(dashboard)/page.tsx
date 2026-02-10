@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   LayoutGrid,
   Columns3,
+  Send,
+  CircleX,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -59,6 +61,8 @@ interface DashboardStats {
   awaitingLandlord: number
   landlordDeclined: number
   scheduledJobs: number
+  awaitingBooking: number
+  jobNotCompleted: number
 }
 
 interface HandoffConversation {
@@ -100,6 +104,8 @@ const ACTION_DESCRIPTIONS = {
   landlord: 'Tickets waiting for landlord approval on the quoted price',
   scheduled: 'Jobs that have been scheduled with a contractor and have a confirmed date',
   declined: 'Tickets where the landlord declined the quoted price — these need follow-up',
+  booking: 'Booking confirmation has been sent to the tenant — waiting for them to confirm a slot',
+  notCompleted: 'Contractor marked the job as not completed — needs follow-up action',
 }
 
 type ViewMode = 'stats' | 'board'
@@ -136,7 +142,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets with message stage (source of truth for workflow state)
-    const [ticketsRes, convosRes] = await Promise.all([
+    const [ticketsRes, convosRes, notCompletedRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -177,11 +183,17 @@ export default function DashboardPage() {
         .eq('property_manager_id', propertyManager.id)
         .eq('handoff', true)
         .eq('status', 'open')
-        .order('last_updated', { ascending: false })
+        .order('last_updated', { ascending: false }),
+      // Fetch not-completed job IDs
+      supabase
+        .from('c1_job_completions')
+        .select('id')
+        .eq('completed', false),
     ])
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
+    const notCompletedIds = new Set((notCompletedRes.data || []).map(r => r.id))
 
     // Filter conversations that don't have tickets yet
     const ticketConvoIds = new Set(tickets?.map(t => t.conversation_id).filter(Boolean) || [])
@@ -244,6 +256,17 @@ export default function DashboardPage() {
 
       const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t)).length
 
+      const awaitingBooking = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const stage = (t.job_stage || '').toLowerCase()
+        return stage === 'sent'
+      }).length
+
+      const jobNotCompleted = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        return notCompletedIds.has(t.id)
+      }).length
+
       setStats({
         totalTickets: total,
         openTickets: open,
@@ -255,6 +278,8 @@ export default function DashboardPage() {
         awaitingLandlord,
         landlordDeclined,
         scheduledJobs,
+        awaitingBooking,
+        jobNotCompleted,
       })
 
       const mappedTickets = tickets.map((t) => {
@@ -311,6 +336,12 @@ export default function DashboardPage() {
         const msgStage = (t.message_stage || '').toLowerCase()
         return msgStage === 'awaiting_landlord'
       })
+    } else if (type === 'booking') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const jobStage = (t.job_stage || '').toLowerCase()
+        return jobStage === 'sent'
+      })
     } else if (type === 'scheduled') {
       filtered = allTickets.filter((t) => {
         if (!isOpen(t)) return false
@@ -320,6 +351,9 @@ export default function DashboardPage() {
     } else if (type === 'handoff') {
       filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
     } else if (type === 'declined') {
+      filtered = []
+    } else if (type === 'notCompleted') {
+      // Need to re-filter using job_completions — for now link to tickets page
       filtered = []
     }
 
@@ -365,6 +399,8 @@ export default function DashboardPage() {
       case 'landlord': return 'Awaiting Landlord'
       case 'scheduled': return 'Scheduled Jobs'
       case 'declined': return 'Landlord Declined'
+      case 'booking': return 'Awaiting Booking'
+      case 'notCompleted': return 'Job Not Completed'
       default: return ''
     }
   }
@@ -545,6 +581,7 @@ export default function DashboardPage() {
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
                 const declinedCount = stats?.landlordDeclined || 0
                 const managerCount = stats?.awaitingManager || 0
+                const notCompletedCount = stats?.jobNotCompleted || 0
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-4">
@@ -620,6 +657,29 @@ export default function DashboardPage() {
                         </TooltipTrigger>
                         <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
                       </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => notCompletedCount > 0 ? showAwaitingTickets('notCompleted') : undefined}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
+                              notCompletedCount > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'hover:bg-muted/50'
+                            }`}
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${notCompletedCount > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
+                              <CircleX className={`h-4 w-4 ${notCompletedCount > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${notCompletedCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Job Not Completed</p>
+                              <p className="text-xs text-muted-foreground">Needs follow-up</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${notCompletedCount > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`}>
+                              {notCompletedCount}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.notCompleted}</p></TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 )
@@ -631,8 +691,9 @@ export default function DashboardPage() {
                 <div className="space-y-1.5">
                   {[
                     { key: 'contractor' as const, label: 'Awaiting Contractor', desc: 'Waiting for quote or availability', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
-                    { key: 'landlord' as const, label: 'Awaiting Landlord', desc: 'Waiting for price approval', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500' },
+                    { key: 'booking' as const, label: 'Awaiting Booking', desc: 'Booking sent, waiting for confirmation', count: stats?.awaitingBooking || 0, icon: Send, iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
                     { key: 'scheduled' as const, label: 'Scheduled Jobs', desc: 'Confirmed date with contractor', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconBg: 'bg-cyan-500/10', iconColor: 'text-cyan-500' },
+                    { key: 'landlord' as const, label: 'Awaiting Landlord', desc: 'Waiting for price approval', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500' },
                   ].map((item) => (
                     <Tooltip key={item.key}>
                       <TooltipTrigger asChild>

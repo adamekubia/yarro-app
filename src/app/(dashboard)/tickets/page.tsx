@@ -167,7 +167,7 @@ export default function TicketsPage() {
         if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
         const js = (t.job_stage || '').toLowerCase()
         if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
-        if (js === 'sent') return 'Booking Sent'
+        if (js === 'sent') return 'Awaiting Booking'
         return t.job_stage || null
       }
 

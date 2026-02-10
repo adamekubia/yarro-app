@@ -474,7 +474,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
     const jobStage = (basic.job_stage || '').toLowerCase()
     if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
-    if (jobStage === 'sent') return 'Booking Sent'
+    if (jobStage === 'sent') return 'Awaiting Booking'
     if (hasCompletion) return 'Completed'
     return basic.job_stage || null
   })()
