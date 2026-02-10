@@ -165,6 +165,7 @@ export default function TicketsPage() {
         if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
         const js = (t.job_stage || '').toLowerCase()
         if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
+        if (js === 'sent') return 'Booking Sent'
         return t.job_stage || null
       }
 
@@ -338,16 +339,18 @@ export default function TicketsPage() {
       render: (ticket) => ticket.category || '-',
     },
     {
+      key: 'priority',
+      header: 'Priority',
+      sortable: true,
+      render: (ticket) => ticket.priority ? (
+        <span className="text-xs text-muted-foreground font-medium capitalize">{ticket.priority}</span>
+      ) : '-',
+    },
+    {
       key: 'display_stage',
       header: 'Stage',
       sortable: true,
       render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} /> : '-',
-    },
-    {
-      key: 'priority',
-      header: 'Priority',
-      sortable: true,
-      render: (ticket) => ticket.priority ? <StatusBadge status={ticket.priority} /> : '-',
     },
     {
       key: 'actions',

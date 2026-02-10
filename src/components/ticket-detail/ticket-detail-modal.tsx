@@ -48,12 +48,14 @@ export function TicketDetailModal({
   } = useTicketDetail(open ? ticketId : null)
 
   const isHandoff = context?.handoff && basic?.status === 'open'
+  // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
+  const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent size="xl" className="h-[80vh]" hideCloseButton={false}>
-        {/* Header */}
-        <DialogHeader>
+        {/* Header — tightened padding */}
+        <DialogHeader className="pb-0">
           {loading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -63,18 +65,18 @@ export function TicketDetailModal({
             <DialogTitle className="text-destructive">Error loading ticket</DialogTitle>
           ) : context ? (
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                {/* Status badges — use displayStage for accurate workflow state */}
-                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                {/* Status badges */}
+                <div className="flex flex-wrap items-center gap-1.5">
                   {displayStage && <StatusBadge status={displayStage} size="md" />}
                   {context.priority && <StatusBadge status={context.priority} size="md" />}
                 </div>
                 {/* Address as title */}
-                <DialogTitle className="truncate">
+                <DialogTitle className="truncate !mt-0.5">
                   {context.property_address || 'Unknown Property'}
                 </DialogTitle>
                 {/* Issue as subtitle */}
-                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                <p className="text-sm text-muted-foreground line-clamp-1">
                   {context.issue_description || 'No description'}
                 </p>
               </div>
@@ -115,7 +117,7 @@ export function TicketDetailModal({
             <>
               {/* Double-quote warning */}
               {previouslyApprovedContractor && basic.contractor_id && (
-                <div className="p-3 mb-4 bg-muted/50 rounded-lg border flex-shrink-0">
+                <div className="p-3 mb-3 bg-muted/50 rounded-lg border flex-shrink-0">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
@@ -135,7 +137,7 @@ export function TicketDetailModal({
                     <LayoutDashboard className="h-3.5 w-3.5" />
                     Overview
                   </TabsTrigger>
-                  {hasConversation && (
+                  {showConversationTab && (
                     <TabsTrigger value="conversation" className="gap-1.5">
                       <MessageSquare className="h-3.5 w-3.5" />
                       Conversation
@@ -156,24 +158,34 @@ export function TicketDetailModal({
                 </TabsList>
 
                 {/* All tab content scrolls within fixed container */}
-                <TabsContent value="overview" className="mt-4 flex-1 min-h-0 overflow-y-auto">
+                <TabsContent value="overview" className="mt-3 flex-1 min-h-0 overflow-y-auto">
                   <TicketOverviewTab context={context} basic={basic} />
                 </TabsContent>
 
-                {hasConversation && conversation && (
-                  <TabsContent value="conversation" className="mt-4 flex-1 min-h-0 overflow-hidden">
-                    <TicketConversationTab conversation={conversation} />
+                {showConversationTab && (
+                  <TabsContent value="conversation" className="mt-3 flex-1 min-h-0 overflow-hidden">
+                    {conversation ? (
+                      <TicketConversationTab conversation={conversation} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <div className="text-center">
+                          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm">No conversation linked to this ticket</p>
+                          <p className="text-xs mt-1 opacity-60">Manual tickets don&apos;t have WhatsApp conversations</p>
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
                 )}
 
                 {hasDispatch && messages && (
-                  <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
+                  <TabsContent value="dispatch" className="mt-3 flex-1 min-h-0 overflow-y-auto">
                     <TicketDispatchTab messages={messages} />
                   </TabsContent>
                 )}
 
                 {hasCompletion && completion && (
-                  <TabsContent value="completion" className="mt-4 flex-1 min-h-0 overflow-y-auto">
+                  <TabsContent value="completion" className="mt-3 flex-1 min-h-0 overflow-y-auto">
                     <TicketCompletionTab completion={completion} />
                   </TabsContent>
                 )}

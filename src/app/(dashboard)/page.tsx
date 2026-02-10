@@ -450,6 +450,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
+                  <Link href="/tickets?create=true">
+                    <InteractiveHoverButton text="Create" className="w-24 text-xs h-7 p-1" />
+                  </Link>
                   <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
                     View all →
                   </Link>
@@ -547,9 +550,6 @@ export default function DashboardPage() {
                   <div className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-card-foreground">Requires Action</h3>
-                      <Link href="/tickets?create=true">
-                        <InteractiveHoverButton text="Create" className="w-24 text-xs h-7 p-1" />
-                      </Link>
                     </div>
                     <div className="space-y-1.5">
                       <Tooltip>
