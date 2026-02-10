@@ -151,6 +151,15 @@ export interface CompletionData {
   contractor_name?: string
 }
 
+export interface LedgerEntry {
+  id: string
+  ticket_id: string
+  event_type: string
+  actor_role: string
+  data: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface LogEntry {
   role?: string
   direction?: 'in' | 'out'
@@ -302,6 +311,7 @@ interface UseTicketDetailResult {
   conversation: ConversationData | null
   messages: MessageData | null
   completion: CompletionData | null
+  ledger: LedgerEntry[]
   loading: boolean
   error: string | null
   refetch: () => void
@@ -318,6 +328,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [conversation, setConversation] = useState<ConversationData | null>(null)
   const [messages, setMessages] = useState<MessageData | null>(null)
   const [completion, setCompletion] = useState<CompletionData | null>(null)
+  const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -329,6 +340,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setConversation(null)
     setMessages(null)
     setCompletion(null)
+    setLedger([])
     setError(null)
   }, [])
 
@@ -418,7 +430,17 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         }
       }
 
-      await Promise.all([fetchConversation(), fetchMessages(), fetchCompletion()])
+      const fetchLedger = async () => {
+        const { data, error: ledgerError } = await supabase
+          .from('c1_ledger')
+          .select('*')
+          .eq('ticket_id', id)
+          .order('created_at', { ascending: true })
+        if (ledgerError) console.error('Ledger fetch error:', ledgerError)
+        setLedger((data as LedgerEntry[]) || [])
+      }
+
+      await Promise.all([fetchConversation(), fetchMessages(), fetchCompletion(), fetchLedger()])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ticket details')
     } finally {
@@ -472,6 +494,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     if (msgStage === 'awaiting_manager') return 'Awaiting Manager'
     if (msgStage === 'awaiting_landlord') return 'Awaiting Landlord'
     if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
+    if (hasCompletion && completion && !completion.completed) return 'Not Completed'
     const jobStage = (basic.job_stage || '').toLowerCase()
     if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
     if (jobStage === 'sent') return 'Awaiting Booking'
@@ -485,6 +508,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     conversation,
     messages,
     completion,
+    ledger,
     loading,
     error,
     refetch,

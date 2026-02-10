@@ -87,12 +87,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{context.tenant_name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {context.tenant_phone && <span>{context.tenant_phone}</span>}
-                  {context.tenant_role_tag && (
-                    <span className="px-1.5 py-0 rounded bg-muted text-[10px]">{context.tenant_role_tag}</span>
-                  )}
-                </div>
+                <p className="text-xs text-muted-foreground">View tenant</p>
               </div>
             </Link>
           )}
@@ -129,18 +124,18 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
 
           {/* Landlord */}
           {context.landlord_name && (
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <Link
+              href={`/properties?id=${context.property_id}`}
+              className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+            >
               <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
                 <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{context.landlord_name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {context.landlord_phone && <span>{context.landlord_phone}</span>}
-                  {context.landlord_email && <span className="truncate">{context.landlord_email}</span>}
-                </div>
+                <p className="text-xs text-muted-foreground">View landlord</p>
               </div>
-            </div>
+            </Link>
           )}
         </div>
       </div>

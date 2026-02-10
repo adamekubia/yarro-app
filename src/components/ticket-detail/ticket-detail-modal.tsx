@@ -10,12 +10,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
+import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Activity } from 'lucide-react'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
 import { TicketDispatchTab } from './ticket-dispatch-tab'
 import { TicketCompletionTab } from './ticket-completion-tab'
+import { TicketActivityTab } from './ticket-activity-tab'
 
 interface TicketDetailModalProps {
   ticketId: string | null
@@ -38,6 +39,7 @@ export function TicketDetailModal({
     conversation,
     messages,
     completion,
+    ledger,
     loading,
     error,
     hasConversation,
@@ -127,27 +129,33 @@ export function TicketDetailModal({
               )}
 
               <Tabs defaultValue="overview" className="flex-1 min-h-0 flex flex-col">
-                <TabsList className="w-full justify-start flex-shrink-0">
-                  <TabsTrigger value="overview" className="gap-1.5">
+                <TabsList className="w-full justify-start flex-shrink-0 bg-transparent rounded-none border-b h-auto p-0 gap-0">
+                  <TabsTrigger value="overview" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                     <LayoutDashboard className="h-3.5 w-3.5" />
                     Overview
                   </TabsTrigger>
                   {showConversationTab && (
-                    <TabsTrigger value="conversation" className="gap-1.5">
+                    <TabsTrigger value="conversation" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                       <MessageSquare className="h-3.5 w-3.5" />
                       Conversation
                     </TabsTrigger>
                   )}
                   {hasDispatch && (
-                    <TabsTrigger value="dispatch" className="gap-1.5">
+                    <TabsTrigger value="dispatch" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                       <Wrench className="h-3.5 w-3.5" />
                       Dispatch
                     </TabsTrigger>
                   )}
                   {hasCompletion && (
-                    <TabsTrigger value="completion" className="gap-1.5">
+                    <TabsTrigger value="completion" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Completion
+                    </TabsTrigger>
+                  )}
+                  {ledger.length > 0 && (
+                    <TabsTrigger value="activity" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
+                      <Activity className="h-3.5 w-3.5" />
+                      Activity
                     </TabsTrigger>
                   )}
                 </TabsList>
@@ -182,6 +190,12 @@ export function TicketDetailModal({
                 {hasCompletion && completion && (
                   <TabsContent value="completion" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketCompletionTab completion={completion} />
+                  </TabsContent>
+                )}
+
+                {ledger.length > 0 && (
+                  <TabsContent value="activity" className="mt-4 flex-1 min-h-0 overflow-y-auto">
+                    <TicketActivityTab ledger={ledger} />
                   </TabsContent>
                 )}
               </Tabs>

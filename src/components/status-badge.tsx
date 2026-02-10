@@ -43,6 +43,7 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   sent: { bg: 'bg-yellow-500/10 dark:bg-yellow-400/15', text: 'text-yellow-700 dark:text-yellow-400' },
   'booking sent': { bg: 'bg-cyan-500/10 dark:bg-cyan-400/15', text: 'text-cyan-700 dark:text-cyan-400' },
   'awaiting booking': { bg: 'bg-indigo-500/10 dark:bg-indigo-400/15', text: 'text-indigo-700 dark:text-indigo-400' },
+  'not completed': { bg: 'bg-red-500/10 dark:bg-red-400/15', text: 'text-red-700 dark:text-red-400' },
 
   // Conversation stages
   greeting: { bg: 'bg-blue-500/10 dark:bg-blue-400/15', text: 'text-blue-700 dark:text-blue-400' },

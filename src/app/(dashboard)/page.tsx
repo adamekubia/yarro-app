@@ -23,6 +23,7 @@ import {
   Columns3,
   Send,
   CircleX,
+  MessageSquare,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -128,6 +129,7 @@ export default function DashboardPage() {
   const [handoffConversations, setHandoffConversations] = useState<HandoffConversation[]>([])
   const [selectedHandoff, setSelectedHandoff] = useState<HandoffConversation | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
+  const [showHandoffConvo, setShowHandoffConvo] = useState(false)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -825,6 +827,7 @@ export default function DashboardPage() {
           if (!open) {
             setCreateTicketOpen(false)
             setSelectedHandoff(null)
+            setShowHandoffConvo(false)
           }
         }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -843,40 +846,54 @@ export default function DashboardPage() {
             </DialogHeader>
 
             {selectedHandoff && (
-              <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4 mt-4">
-                {/* Left: Conversation Context */}
-                <div className="flex flex-col min-h-0 border rounded-lg">
-                  <div className="px-4 py-3 border-b bg-muted/30 flex-shrink-0">
-                    <h4 className="font-medium text-sm">Conversation History</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {selectedHandoff.caller_name || 'Unknown'} • {selectedHandoff.phone}
-                    </p>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3">
-                    <ChatHistory
-                      messages={(() => {
-                        const log = selectedHandoff.log
-                        if (!log || !Array.isArray(log)) return []
-                        return (log as Array<{ direction?: string; text?: string; content?: string; message?: string; timestamp?: string; label?: string }>)
-                          .filter(entry => !entry.label && (entry.text || entry.content || entry.message))
-                          .map(entry => ({
-                            role: entry.direction === 'in' ? 'tenant' : entry.direction === 'out' ? 'assistant' : 'system',
-                            text: entry.text || entry.content || entry.message || '',
-                            timestamp: entry.timestamp,
-                          }))
-                      })()}
-                    />
-                  </div>
-                  {/* Handoff reason hint */}
-                  <div className="px-4 py-2 border-t bg-amber-50 dark:bg-amber-950/20 flex-shrink-0">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      <strong>Handoff reason:</strong> {selectedHandoff.stage === 'handoff' ? 'AI determined this needs human review' : `Stage: ${selectedHandoff.stage || 'unknown'}`}
-                    </p>
-                  </div>
-                </div>
+              <div className="flex-1 overflow-hidden flex flex-col gap-3 mt-4">
+                {/* View Conversation toggle */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="self-start gap-2 text-xs"
+                  onClick={() => setShowHandoffConvo(!showHandoffConvo)}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {showHandoffConvo ? 'Hide Conversation' : 'View Conversation'}
+                </Button>
 
-                {/* Right: Ticket Form */}
-                <div className="flex flex-col min-h-0 border rounded-lg">
+                <div className={`flex-1 overflow-hidden grid gap-4 ${showHandoffConvo ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {/* Left: Conversation Context (collapsible) */}
+                  {showHandoffConvo && (
+                    <div className="flex flex-col min-h-0 border rounded-lg">
+                      <div className="px-4 py-3 border-b bg-muted/30 flex-shrink-0">
+                        <h4 className="font-medium text-sm">Conversation History</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {selectedHandoff.caller_name || 'Unknown'} • {selectedHandoff.phone}
+                        </p>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-3">
+                        <ChatHistory
+                          messages={(() => {
+                            const log = selectedHandoff.log
+                            if (!log || !Array.isArray(log)) return []
+                            return (log as Array<{ direction?: string; text?: string; content?: string; message?: string; timestamp?: string; label?: string }>)
+                              .filter(entry => !entry.label && (entry.text || entry.content || entry.message))
+                              .map(entry => ({
+                                role: entry.direction === 'in' ? 'tenant' : entry.direction === 'out' ? 'assistant' : 'system',
+                                text: entry.text || entry.content || entry.message || '',
+                                timestamp: entry.timestamp,
+                              }))
+                          })()}
+                        />
+                      </div>
+                      {/* Handoff reason hint */}
+                      <div className="px-4 py-2 border-t bg-amber-50 dark:bg-amber-950/20 flex-shrink-0">
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          <strong>Handoff reason:</strong> {selectedHandoff.stage === 'handoff' ? 'AI determined this needs human review' : `Stage: ${selectedHandoff.stage || 'unknown'}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right: Ticket Form */}
+                  <div className="flex flex-col min-h-0 border rounded-lg">
                   <div className="px-4 py-3 border-b bg-muted/30 flex-shrink-0">
                     <h4 className="font-medium text-sm">Ticket Details</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -934,6 +951,7 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
+              </div>
               </div>
             )}
           </DialogContent>

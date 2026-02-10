@@ -147,7 +147,12 @@ export default function TicketsPage() {
       query = query.or('archived.is.null,archived.eq.false')
     }
 
-    const { data } = await query
+    // Also fetch not-completed job IDs for display stage
+    const [{ data }, { data: notCompletedData }] = await Promise.all([
+      query,
+      supabase.from('c1_job_completions').select('id').eq('completed', false),
+    ])
+    const notCompletedIds = new Set((notCompletedData || []).map(r => r.id))
 
     if (data) {
       type MsgData = { stage: string } | { stage: string }[] | null
@@ -157,7 +162,7 @@ export default function TicketsPage() {
         return msgs.stage || null
       }
 
-      const deriveDisplayStage = (t: { status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
+      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
         const isClosed = t.status?.toLowerCase() === 'closed'
         if (isClosed) return 'closed'
         if (t.handoff) return 'handoff'
@@ -165,6 +170,7 @@ export default function TicketsPage() {
         if (ms === 'awaiting_manager') return 'Awaiting Manager'
         if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
         if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
+        if (notCompletedIds.has(t.id)) return 'Not Completed'
         const js = (t.job_stage || '').toLowerCase()
         if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
         if (js === 'sent') return 'Awaiting Booking'
