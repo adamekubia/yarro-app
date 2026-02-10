@@ -42,6 +42,7 @@ interface TicketRow {
   access: string | null
   handoff: boolean | null
   is_manual: boolean | null
+  was_handoff: boolean | null
   verified_by: string | null
   property_id: string | null
   tenant_id: string | null
@@ -124,6 +125,7 @@ export default function TicketsPage() {
         access,
         handoff,
         is_manual,
+        was_handoff,
         verified_by,
         property_id,
         tenant_id,
@@ -351,10 +353,10 @@ export default function TicketsPage() {
       header: 'Type',
       sortable: true,
       render: (ticket) => {
-        const type = ticket.handoff ? 'Handoff' : ticket.is_manual ? 'Manual' : 'Auto'
+        const type = ticket.was_handoff ? 'Reviewed' : ticket.is_manual ? 'Manual' : 'Auto'
         return <span className="text-xs text-muted-foreground">{type}</span>
       },
-      getValue: (ticket) => ticket.handoff ? 'Handoff' : ticket.is_manual ? 'Manual' : 'Auto',
+      getValue: (ticket) => ticket.was_handoff ? 'Reviewed' : ticket.is_manual ? 'Manual' : 'Auto',
     },
     {
       key: 'display_stage',
