@@ -79,6 +79,7 @@ interface TicketFormProps {
   onSubmit?: (data: TicketFormData) => Promise<void>  // External handler
   onSuccess?: () => void         // Simple callback when form handles creation
   onCancel: () => void
+  onDismiss?: () => void         // Archive/dismiss handoff without completing
   submitLabel?: string
   isHandoff?: boolean            // Visual styling for handoff tickets
 }
@@ -99,6 +100,7 @@ export function TicketForm({
   onSubmit,
   onSuccess,
   onCancel,
+  onDismiss,
   submitLabel = 'Create Ticket',
   isHandoff = false,
 }: TicketFormProps) {
@@ -894,6 +896,15 @@ export function TicketForm({
         <Button variant="outline" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>
+        {isHandoff && onDismiss && (
+          <InteractiveHoverButton
+            text="Dismiss"
+            variant="secondary"
+            onClick={onDismiss}
+            disabled={submitting}
+            className="w-32 text-sm h-10"
+          />
+        )}
         <InteractiveHoverButton
           text={submitting ? 'Creating...' : finalSubmitLabel}
           onClick={handleSubmit}

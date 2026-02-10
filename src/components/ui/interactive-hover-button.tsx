@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils"
 interface InteractiveHoverButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   text?: string
+  variant?: "default" | "secondary"
 }
 
 const InteractiveHoverButton = React.forwardRef<
   HTMLButtonElement,
   InteractiveHoverButtonProps
->(({ text = "Button", className, ...props }, ref) => {
+>(({ text = "Button", variant = "default", className, ...props }, ref) => {
   return (
     <button
       ref={ref}
@@ -29,7 +30,10 @@ const InteractiveHoverButton = React.forwardRef<
         <span>{text}</span>
         <ArrowRight />
       </div>
-      <div className="absolute left-[20%] top-[40%] h-2 w-2 scale-[1] rounded-lg bg-yarro opacity-0 transition-all duration-300 group-hover:left-[0%] group-hover:top-[0%] group-hover:h-full group-hover:w-full group-hover:scale-[1.8] group-hover:bg-yarro group-hover:opacity-100"></div>
+      <div className={cn(
+        "absolute left-[20%] top-[40%] h-2 w-2 scale-[1] rounded-lg opacity-0 transition-all duration-300 group-hover:left-[0%] group-hover:top-[0%] group-hover:h-full group-hover:w-full group-hover:scale-[1.8] group-hover:opacity-100",
+        variant === "secondary" ? "bg-zinc-500" : "bg-yarro",
+      )}></div>
     </button>
   )
 })

@@ -305,6 +305,38 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
+  const handleDismissHandoff = async () => {
+    if (!handoffTicketId || !selectedTicketBasic) return
+
+    const archivedAt = new Date().toISOString()
+
+    const { error: ticketError } = await supabase
+      .from('c1_tickets')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('id', handoffTicketId)
+
+    if (ticketError) {
+      toast.error('Failed to dismiss ticket')
+      return
+    }
+
+    await supabase
+      .from('c1_messages')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('ticket_id', handoffTicketId)
+
+    if (selectedTicketBasic.conversation_id) {
+      await supabase
+        .from('c1_conversations')
+        .update({ archived: true, archived_at: archivedAt })
+        .eq('id', selectedTicketBasic.conversation_id)
+    }
+
+    toast.success('Handoff dismissed and archived')
+    handleCloseCreateDrawer()
+    await fetchTickets()
+  }
+
   const getRowClassName = (ticket: TicketRow) => {
     if (ticket.archived) return 'opacity-50'
     if (ticket.status?.toLowerCase() === 'closed') return 'opacity-60'
@@ -535,6 +567,7 @@ export default function TicketsPage() {
               isHandoff={!!handoffTicketId}
               onSubmit={handleCreateTicket}
               onCancel={handleCloseCreateDrawer}
+              onDismiss={handoffTicketId ? handleDismissHandoff : undefined}
               submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
             />
           </DialogBody>
