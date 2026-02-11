@@ -73,7 +73,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
       {/* Contractors */}
       {contractors.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Contractors</h4>
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Contractors</p>
           <div className="space-y-2">
             {contractors.map((contractor, index) => {
               const status = getContractorStatus(contractor)
@@ -139,7 +139,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
 
         return (
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Manager</h4>
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Manager</p>
             <div className="border rounded-lg overflow-hidden">
               <button
                 onClick={() => setOpenManager(!openManager)}
@@ -197,7 +197,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
 
         return (
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Landlord</h4>
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Landlord</p>
             <div className="border rounded-lg overflow-hidden">
               <button
                 onClick={() => setOpenLandlord(!openLandlord)}

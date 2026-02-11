@@ -596,9 +596,7 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
-                              totalHandoffs > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'hover:bg-muted/50'
-                            }`}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                           >
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
                               <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
@@ -619,9 +617,7 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => declinedCount > 0 ? showAwaitingTickets('declined') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
-                              declinedCount > 0 ? 'bg-orange-500/10 hover:bg-orange-500/15' : 'hover:bg-muted/50'
-                            }`}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                           >
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${declinedCount > 0 ? 'bg-orange-500/15' : 'bg-muted'}`}>
                               <XCircle className={`h-4 w-4 ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/50'}`} />
@@ -642,9 +638,7 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => managerCount > 0 ? showAwaitingTickets('manager') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
-                              managerCount > 0 ? 'bg-blue-500/10 hover:bg-blue-500/15' : 'hover:bg-muted/50'
-                            }`}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                           >
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${managerCount > 0 ? 'bg-blue-500/15' : 'bg-muted'}`}>
                               <UserCheck className={`h-4 w-4 ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/50'}`} />
@@ -665,9 +659,7 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => notCompletedCount > 0 ? showAwaitingTickets('notCompleted') : undefined}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 text-left ${
-                              notCompletedCount > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'hover:bg-muted/50'
-                            }`}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                           >
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${notCompletedCount > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
                               <CircleX className={`h-4 w-4 ${notCompletedCount > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />

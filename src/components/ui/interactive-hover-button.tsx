@@ -18,12 +18,12 @@ const InteractiveHoverButton = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "group relative w-32 cursor-pointer overflow-hidden rounded-full border bg-background p-2 text-center font-semibold",
+        "group relative w-32 cursor-pointer overflow-hidden rounded-full border bg-background p-2 font-semibold",
         className,
       )}
       {...props}
     >
-      <span className="inline-block translate-x-0 transition-all duration-300 group-hover:translate-x-12 group-hover:opacity-0">
+      <span className="inline-flex w-full items-center justify-center translate-x-0 transition-all duration-300 group-hover:translate-x-12 group-hover:opacity-0">
         {text}
       </span>
       <div className="absolute top-0 z-10 flex h-full w-full translate-x-12 items-center justify-center gap-2 text-white opacity-0 transition-all duration-300 group-hover:-translate-x-1 group-hover:opacity-100">

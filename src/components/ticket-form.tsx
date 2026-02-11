@@ -645,7 +645,7 @@ export function TicketForm({
       )}
 
       {/* Two column grid for main fields */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 items-start">
         {/* Left column */}
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -702,7 +702,7 @@ export function TicketForm({
             })()}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[1.5fr_1fr] gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Category <span className="text-destructive">*</span>

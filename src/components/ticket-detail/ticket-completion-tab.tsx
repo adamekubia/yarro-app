@@ -60,7 +60,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
       {/* Notes */}
       {(completion.notes || completion.completion_text) && (
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes</h4>
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Notes</p>
           <div className="p-3 bg-muted/50 rounded-lg">
             <p className="text-sm whitespace-pre-wrap">
               {completion.notes || completion.completion_text}
@@ -72,7 +72,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
       {/* Reason (if not completed) */}
       {!completion.completed && completion.reason && (
         <div>
-          <h4 className="text-sm font-medium text-destructive/70 mb-2">Reason</h4>
+          <p className="text-[11px] font-medium text-destructive/70 uppercase tracking-wider mb-2">Reason</p>
           <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
             <p className="text-sm text-destructive">{completion.reason}</p>
           </div>
@@ -91,9 +91,9 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
       {/* Photos */}
       {mediaUrls.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
             Photos ({mediaUrls.length})
-          </h4>
+          </p>
           {mediaUrls.length > 6 ? (
             <CollapsibleSection
               title="Photos"

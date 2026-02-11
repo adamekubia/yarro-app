@@ -28,10 +28,10 @@ function DetailRow({ label, value, mono, highlight }: {
   const isEmpty = !value
 
   return (
-    <div className="flex items-start justify-between gap-4 px-3 py-2">
-      <span className="text-xs text-muted-foreground shrink-0 pt-0.5">{label}</span>
+    <div className="flex items-center justify-between gap-4 px-3 py-2.5">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <span className={cn(
-        'text-xs text-right',
+        'text-xs text-right truncate max-w-[60%]',
         isEmpty && 'text-muted-foreground/40 italic',
         !isEmpty && 'font-medium',
         mono && !isEmpty && 'font-mono',
@@ -49,8 +49,8 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
   return (
     <div className="space-y-5">
       {/* Issue Description */}
-      <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-1">Issue</h4>
+      <div className="p-3 bg-muted/30 rounded-lg">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Issue</p>
         <p className="text-sm leading-relaxed">
           {context.issue_description || 'No description provided'}
         </p>
@@ -58,7 +58,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
 
       {/* Details — flat rows, always visible */}
       <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-1.5">Details</h4>
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Details</p>
         <div className="border rounded-lg divide-y">
           <DetailRow label="Category" value={context.category} />
           <DetailRow label="Date Logged" value={formatDate(context.date_logged)} />
@@ -74,7 +74,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
 
       {/* People — clickable cards */}
       <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-1.5">People</h4>
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">People</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* Tenant */}
           {context.tenant_name && (
@@ -143,9 +143,9 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
       {/* Photos */}
       {images.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-1.5">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
             Photos ({images.length})
-          </h4>
+          </p>
           <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
             {images.map((url, index) => (
               <a
