@@ -162,7 +162,7 @@ export function TicketDetailModal({
 
                 {/* All tab content scrolls within fixed container */}
                 <TabsContent value="overview" className="mt-4 flex-1 min-h-0 overflow-y-auto">
-                  <TicketOverviewTab context={context} basic={basic} />
+                  <TicketOverviewTab context={context} basic={basic} messages={messages} />
                 </TabsContent>
 
                 {showConversationTab && (

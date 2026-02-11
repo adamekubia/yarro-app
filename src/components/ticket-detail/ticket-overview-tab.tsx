@@ -4,12 +4,13 @@ import { format } from 'date-fns'
 import { Building2, Users, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import type { TicketContext, TicketBasic } from '@/hooks/use-ticket-detail'
-import { formatCurrency } from '@/hooks/use-ticket-detail'
+import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
+import { formatCurrency, getContractors } from '@/hooks/use-ticket-detail'
 
 interface TicketOverviewTabProps {
   context: TicketContext
   basic: TicketBasic
+  messages?: MessageData | null
 }
 
 function formatDate(date: string | null) {
@@ -43,8 +44,22 @@ function DetailRow({ label, value, mono, highlight }: {
   )
 }
 
-export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
+export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTabProps) {
   const images = basic.images || []
+
+  // Extract contractor notes from messages (approved contractor > contractor_id match > first with notes)
+  const contractorNotes = (() => {
+    if (!messages?.contractors) return null
+    const contractors = getContractors(messages.contractors)
+    const approved = contractors.find(c => c.manager_decision === 'approved')
+    if (approved?.quote_notes) return approved.quote_notes
+    if (basic.contractor_id) {
+      const matched = contractors.find(c => c.id === basic.contractor_id)
+      if (matched?.quote_notes) return matched.quote_notes
+    }
+    const withNotes = contractors.find(c => c.quote_notes)
+    return withNotes?.quote_notes || null
+  })()
 
   return (
     <div className="space-y-5">
@@ -67,6 +82,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           <DetailRow label="Access" value={context.access} />
           <DetailRow label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight={!!basic.scheduled_date} />
           <DetailRow label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono />
+          {contractorNotes && <DetailRow label="Quote Notes" value={contractorNotes} />}
           <DetailRow label="Your Markup" value={basic.contractor_quote && basic.final_amount ? formatCurrency(basic.final_amount - basic.contractor_quote) : null} mono />
           <DetailRow label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight={!!basic.final_amount} />
         </div>

@@ -95,16 +95,23 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        status === 'approved' ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
-                        status === 'replied' ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
-                        status === 'sent' ? 'bg-yellow-500/10 dark:bg-yellow-400/15 text-yellow-700 dark:text-yellow-400' :
-                        'bg-gray-500/10 dark:bg-gray-400/15 text-gray-600 dark:text-gray-400'
-                      }`}>
-                        {status === 'approved' ? `Approved ${formatAmount(contractor.quote_amount) || ''}`.trim() :
-                         status === 'replied' ? `${formatAmount(contractor.quote_amount) || 'Quoted'}` :
-                         status === 'sent' ? 'Sent' : 'Pending'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {contractor.quote_notes && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground max-w-[120px] truncate" title={contractor.quote_notes}>
+                            {contractor.quote_notes}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          status === 'approved' ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
+                          status === 'replied' ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
+                          status === 'sent' ? 'bg-yellow-500/10 dark:bg-yellow-400/15 text-yellow-700 dark:text-yellow-400' :
+                          'bg-gray-500/10 dark:bg-gray-400/15 text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {status === 'approved' ? `Approved ${formatAmount(contractor.quote_amount) || ''}`.trim() :
+                           status === 'replied' ? `${formatAmount(contractor.quote_amount) || 'Quoted'}` :
+                           status === 'sent' ? 'Sent' : 'Pending'}
+                        </span>
+                      </div>
                       {isOpen ? (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (

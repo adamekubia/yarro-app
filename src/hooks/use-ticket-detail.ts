@@ -106,6 +106,7 @@ export interface ContractorEntry {
   replied_at?: string
   reply_text?: string
   quote_amount?: string
+  quote_notes?: string
   manager_decision?: string
   category?: string
 }
