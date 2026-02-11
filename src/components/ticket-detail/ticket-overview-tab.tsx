@@ -17,7 +17,7 @@ function formatDate(date: string | null) {
   return format(new Date(date), 'dd MMM yyyy')
 }
 
-/** Single row in the detail table — always rendered, shows TBD when null */
+/** Single row — clean card style matching Activity tab */
 function DetailRow({ label, value, mono, highlight }: {
   label: string
   value: string | null | undefined
@@ -28,11 +28,11 @@ function DetailRow({ label, value, mono, highlight }: {
   const isEmpty = !value
 
   return (
-    <div className="flex items-center justify-between gap-4 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-3 py-2 bg-muted/30 rounded-lg">
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <span className={cn(
-        'text-xs text-right truncate max-w-[60%]',
-        isEmpty && 'text-muted-foreground/40 italic',
+        'text-sm text-right truncate max-w-[60%]',
+        isEmpty && 'text-muted-foreground/40 italic text-xs',
         !isEmpty && 'font-medium',
         mono && !isEmpty && 'font-mono',
         highlight && !isEmpty && 'text-emerald-600 dark:text-emerald-400 font-semibold',
@@ -59,7 +59,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
       {/* Details — flat rows, always visible */}
       <div>
         <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Details</p>
-        <div className="border rounded-lg divide-y">
+        <div className="space-y-1">
           <DetailRow label="Category" value={context.category} />
           <DetailRow label="Date Logged" value={formatDate(context.date_logged)} />
           <DetailRow label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />

@@ -644,259 +644,254 @@ export function TicketForm({
         </div>
       )}
 
-      {/* Two column grid for main fields */}
+      {/* Two column grid — CSS Grid with row-span for Issue Description */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 items-start">
-        {/* Left column */}
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Property <span className="text-destructive">*</span>
-            </label>
-            <Combobox
-              options={properties.map((p) => ({ value: p.id, label: p.address }))}
-              value={formData.property_id}
-              onValueChange={(v) => updateField('property_id', v)}
-              placeholder="Search properties..."
-              searchPlaceholder="Type to search..."
-              emptyText="No properties found"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Tenant <span className="text-destructive">*</span>
-            </label>
-            <Combobox
-              options={filteredTenants.map((t) => ({ value: t.id, label: t.full_name }))}
-              value={formData.tenant_id}
-              onValueChange={(v) => updateField('tenant_id', v)}
-              placeholder={formData.property_id ? 'Search tenants...' : 'Select property first'}
-              searchPlaceholder="Type to search..."
-              emptyText="No tenants found"
-              disabled={!formData.property_id}
-              onAddNew={formData.property_id ? () => setAddTenantOpen(true) : undefined}
-              addNewLabel="Add new tenant"
-            />
-            {formData.property_id && filteredTenants.length === 0 && (
-              <p className="text-xs text-amber-600">No tenants at this property. Click to add one.</p>
-            )}
-            {isHandoff && formData.tenant_id && (() => {
-              const tenant = tenants.find(t => t.id === formData.tenant_id)
-              if (!tenant) return null
-              return (
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {tenant.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {tenant.phone}
-                    </span>
-                  )}
-                  {tenant.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {tenant.email}
-                    </span>
-                  )}
-                </div>
-              )
-            })()}
-          </div>
-
-          <div className="grid grid-cols-[1.5fr_1fr] gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">
-                Category <span className="text-destructive">*</span>
-              </label>
-              <Select
-                value={formData.category}
-                onValueChange={(v) => updateField('category', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Category..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">
-                Priority <span className="text-destructive">*</span>
-              </label>
-              <Select
-                value={formData.priority}
-                onValueChange={(v) => updateField('priority', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Issue Description <span className="text-destructive">*</span>
-            </label>
-            <Textarea
-              value={formData.issue_description}
-              onChange={(e) => updateField('issue_description', e.target.value)}
-              placeholder="Describe the maintenance issue..."
-              rows={4}
-            />
-          </div>
-
-          {/* Image Upload */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Photos</label>
-            <div className="flex flex-wrap gap-2">
-              {/* Uploaded images */}
-              {formData.images.map((url, idx) => (
-                <div key={idx} className="relative group">
-                  <img
-                    src={url}
-                    alt={`Upload ${idx + 1}`}
-                    className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
-                    onClick={() => window.open(url, '_blank')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              {/* Upload button */}
-              <label className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-                {uploadingImages ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                )}
-                <input
-                  key={fileInputKey}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  disabled={uploadingImages}
-                  className="sr-only"
-                />
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Add photos of the issue (max 5MB each)
-            </p>
-          </div>
+        {/* Row 1 left: Property */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Property <span className="text-destructive">*</span>
+          </label>
+          <Combobox
+            options={properties.map((p) => ({ value: p.id, label: p.address }))}
+            value={formData.property_id}
+            onValueChange={(v) => updateField('property_id', v)}
+            placeholder="Search properties..."
+            searchPlaceholder="Type to search..."
+            emptyText="No properties found"
+          />
         </div>
 
-        {/* Right column - Contractors */}
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Contractors <span className="text-destructive">*</span>
-            </label>
-            <MultiCombobox
-              options={filteredContractors.map((c) => {
-                const isCategoryMatch = formData.category && c.category === formData.category
-                const isPropertyAssigned = isAssignedToProperty(c)
-                return {
-                  value: c.id,
-                  label: c.contractor_name,
-                  description: c.category,
-                  badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Not assigned' : undefined),
-                  badgeVariant: isCategoryMatch ? 'success' as const : (!isPropertyAssigned && formData.property_id ? 'warning' as const : 'default' as const),
-                }
-              })}
-              values={formData.contractor_ids}
-              onValuesChange={(values) => updateField('contractor_ids', values)}
-              placeholder="Search contractors..."
-              searchPlaceholder="Type to search..."
-              emptyText="No contractors found"
-              onAddNew={() => setAddContractorOpen(true)}
-              addNewLabel="Add new contractor"
-            />
-            <p className="text-xs text-muted-foreground">
-              First selected = contacted immediately, others after 6h if no response.
-            </p>
-          </div>
+        {/* Row 1-2 right: Issue Description (tall, spans 2 rows) */}
+        <div className="space-y-1.5 row-span-2">
+          <label className="text-sm font-medium">
+            Issue Description <span className="text-destructive">*</span>
+          </label>
+          <Textarea
+            value={formData.issue_description}
+            onChange={(e) => updateField('issue_description', e.target.value)}
+            placeholder="Describe the maintenance issue..."
+            className="min-h-[120px] h-full"
+            rows={5}
+          />
+        </div>
 
-          {/* Category mismatch warning */}
-          {formData.category && formData.contractor_ids.length > 0 && (() => {
-            const mismatchedContractors = formData.contractor_ids
-              .map(id => contractors.find(c => c.id === id))
-              .filter(c => c && c.category !== formData.category) as Contractor[]
-            if (mismatchedContractors.length === 0) return null
+        {/* Row 2 left: Tenant */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Tenant <span className="text-destructive">*</span>
+          </label>
+          <Combobox
+            options={filteredTenants.map((t) => ({ value: t.id, label: t.full_name }))}
+            value={formData.tenant_id}
+            onValueChange={(v) => updateField('tenant_id', v)}
+            placeholder={formData.property_id ? 'Search tenants...' : 'Select property first'}
+            searchPlaceholder="Type to search..."
+            emptyText="No tenants found"
+            disabled={!formData.property_id}
+            onAddNew={formData.property_id ? () => setAddTenantOpen(true) : undefined}
+            addNewLabel="Add new tenant"
+          />
+          {formData.property_id && filteredTenants.length === 0 && (
+            <p className="text-xs text-amber-600">No tenants at this property. Click to add one.</p>
+          )}
+          {isHandoff && formData.tenant_id && (() => {
+            const tenant = tenants.find(t => t.id === formData.tenant_id)
+            if (!tenant) return null
             return (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-800 dark:text-amber-300">Category mismatch</p>
-                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                      Job category is <span className="font-medium">&quot;{formData.category}&quot;</span> but{' '}
-                      {mismatchedContractors.length === 1 ? (
-                        <>
-                          <span className="font-medium">{mismatchedContractors[0].contractor_name}</span> specialises in{' '}
-                          <span className="font-medium">&quot;{mismatchedContractors[0].category}&quot;</span>
-                        </>
-                      ) : (
-                        <>
-                          {mismatchedContractors.map((c, i) => (
-                            <span key={c.id}>
-                              {i > 0 && (i === mismatchedContractors.length - 1 ? ' and ' : ', ')}
-                              <span className="font-medium">{c.contractor_name}</span> ({c.category})
-                            </span>
-                          ))}
-                          {' '}don&apos;t match
-                        </>
-                      )}.
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Check this is intentional before proceeding.
-                    </p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {tenant.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {tenant.phone}
+                  </span>
+                )}
+                {tenant.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {tenant.email}
+                  </span>
+                )}
               </div>
             )
           })()}
+        </div>
 
-          {/* Additional details */}
-          <div className="pt-2 space-y-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Additional Details (Optional)
-            </p>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Tenant Availability</label>
-              <Input
-                value={formData.availability}
-                onChange={(e) => updateField('availability', e.target.value)}
-                placeholder="e.g., Weekdays after 5pm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Access Instructions</label>
-              <Input
-                value={formData.access}
-                onChange={(e) => updateField('access', e.target.value)}
-                placeholder="e.g., Key under mat"
-              />
-            </div>
+        {/* Row 3 left: Category + Priority */}
+        <div className="grid grid-cols-[1.5fr_1fr] gap-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Category <span className="text-destructive">*</span>
+            </label>
+            <Select
+              value={formData.category}
+              onValueChange={(v) => updateField('category', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Priority <span className="text-destructive">*</span>
+            </label>
+            <Select
+              value={formData.priority}
+              onValueChange={(v) => updateField('priority', v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PRIORITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Row 3 right: Tenant Availability */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Tenant Availability</label>
+          <Input
+            value={formData.availability}
+            onChange={(e) => updateField('availability', e.target.value)}
+            placeholder="e.g., Weekdays after 5pm"
+          />
+        </div>
+
+        {/* Row 4 left: Contractors */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Contractors <span className="text-destructive">*</span>
+          </label>
+          <MultiCombobox
+            options={filteredContractors.map((c) => {
+              const isCategoryMatch = formData.category && c.category === formData.category
+              const isPropertyAssigned = isAssignedToProperty(c)
+              return {
+                value: c.id,
+                label: c.contractor_name,
+                description: c.category,
+                badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Not assigned' : undefined),
+                badgeVariant: isCategoryMatch ? 'success' as const : (!isPropertyAssigned && formData.property_id ? 'warning' as const : 'default' as const),
+              }
+            })}
+            values={formData.contractor_ids}
+            onValuesChange={(values) => updateField('contractor_ids', values)}
+            placeholder="Search contractors..."
+            searchPlaceholder="Type to search..."
+            emptyText="No contractors found"
+            onAddNew={() => setAddContractorOpen(true)}
+            addNewLabel="Add new contractor"
+          />
+          <p className="text-xs text-muted-foreground">
+            First selected = contacted immediately, others after 6h if no response.
+          </p>
+        </div>
+
+        {/* Row 4 right: Access Instructions */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Access Instructions</label>
+          <Input
+            value={formData.access}
+            onChange={(e) => updateField('access', e.target.value)}
+            placeholder="e.g., Key under mat"
+          />
+        </div>
+
+        {/* Category mismatch warning — full width */}
+        {formData.category && formData.contractor_ids.length > 0 && (() => {
+          const mismatchedContractors = formData.contractor_ids
+            .map(id => contractors.find(c => c.id === id))
+            .filter(c => c && c.category !== formData.category) as Contractor[]
+          if (mismatchedContractors.length === 0) return null
+          return (
+            <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-300">Category mismatch</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                    Job category is <span className="font-medium">&quot;{formData.category}&quot;</span> but{' '}
+                    {mismatchedContractors.length === 1 ? (
+                      <>
+                        <span className="font-medium">{mismatchedContractors[0].contractor_name}</span> specialises in{' '}
+                        <span className="font-medium">&quot;{mismatchedContractors[0].category}&quot;</span>
+                      </>
+                    ) : (
+                      <>
+                        {mismatchedContractors.map((c, i) => (
+                          <span key={c.id}>
+                            {i > 0 && (i === mismatchedContractors.length - 1 ? ' and ' : ', ')}
+                            <span className="font-medium">{c.contractor_name}</span> ({c.category})
+                          </span>
+                        ))}
+                        {' '}don&apos;t match
+                      </>
+                    )}.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Check this is intentional before proceeding.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Photos — full width */}
+        <div className="col-span-2 space-y-1.5">
+          <label className="text-sm font-medium">Photos</label>
+          <div className="flex flex-wrap gap-2">
+            {formData.images.map((url, idx) => (
+              <div key={idx} className="relative group">
+                <img
+                  src={url}
+                  alt={`Upload ${idx + 1}`}
+                  className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
+                  onClick={() => window.open(url, '_blank')}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <label className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+              {uploadingImages ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              )}
+              <input
+                key={fileInputKey}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={uploadingImages}
+                className="sr-only"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Add photos of the issue (max 5MB each)
+          </p>
         </div>
       </div>
 

@@ -60,14 +60,14 @@ interface TicketRow {
 type TicketFilter = 'all' | 'system' | 'manual'
 
 const STAGE_OPTIONS = [
-  'Completed',
-  'Handoff',
+  'Created',
+  'Awaiting Contractor',
   'Awaiting Manager',
   'Awaiting Landlord',
-  'Awaiting Contractor',
-  'Not Completed',
-  'Scheduled',
   'Awaiting Booking',
+  'Scheduled',
+  'Not Completed',
+  'Completed',
 ] as const
 
 export default function TicketsPage() {
@@ -187,7 +187,7 @@ export default function TicketsPage() {
         const js = (t.job_stage || '').toLowerCase()
         if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
         if (js === 'sent') return 'Awaiting Booking'
-        return t.job_stage || null
+        return 'Created'
       }
 
       const mapped = data.map((t) => {

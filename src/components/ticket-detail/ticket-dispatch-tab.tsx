@@ -55,7 +55,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
     <div className="space-y-4">
       {/* Multi-contractor warning banner */}
       {contactedCount > 1 && approvedCount === 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border">
           <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium">
@@ -114,7 +114,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
                   </button>
 
                   {isOpen && (
-                    <div className="px-3 pb-3 max-h-[200px] overflow-y-auto border-t bg-muted/20">
+                    <div className="px-3 pb-3 max-h-[200px] overflow-y-auto border-t bg-muted/30">
                       <div className="pt-2">
                         <ChatHistory
                           messages={getContractorMessages([contractor])}
@@ -174,7 +174,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
               </button>
 
               {openManager && (
-                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/20">
+                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/30">
                   <div className="pt-2">
                     <ChatHistory
                       messages={getRecipientMessages(managerRecipient, 'Manager')}
@@ -232,7 +232,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
               </button>
 
               {openLandlord && (
-                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/20">
+                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/30">
                   <div className="pt-2">
                     <ChatHistory
                       messages={getRecipientMessages(landlordRecipient, 'Landlord')}

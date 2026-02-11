@@ -499,7 +499,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
     if (jobStage === 'sent') return 'Awaiting Booking'
     if (hasCompletion) return 'Completed'
-    return basic.job_stage || null
+    return 'Created'
   })()
 
   return {
