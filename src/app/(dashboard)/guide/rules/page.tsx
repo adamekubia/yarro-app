@@ -222,31 +222,31 @@ export default function RulesPage() {
               </div>
             </div>
 
-            {/* Response Timeout */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Response Timeout</span>
+            {/* Response Timeout — only for sequential */}
+            {draft.dispatch_mode === 'sequential' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Response Timeout</span>
+                </div>
+                <Select value={draft.contractor_timeout_minutes} onValueChange={handleTimeoutChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEOUT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Auto-advance to next contractor after this period.
+                </p>
               </div>
-              <Select value={draft.contractor_timeout_minutes} onValueChange={handleTimeoutChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMEOUT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {draft.dispatch_mode === 'sequential'
-                  ? 'Auto-advance to next contractor after this period.'
-                  : 'Flag for review if no responses.'}
-              </p>
-            </div>
+            )}
 
-            {/* Reminder */}
-            {canEnableReminder && (
+            {/* Reminder — only for sequential */}
+            {draft.dispatch_mode === 'sequential' && canEnableReminder && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-muted-foreground" />
