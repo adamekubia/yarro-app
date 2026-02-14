@@ -474,11 +474,14 @@ export default function TicketsPage() {
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage maintenance tickets across your properties
-          </p>
+        <div className="flex items-center gap-3">
+          <Ticket className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage maintenance tickets across your properties
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <DateFilter value={dateRange} onChange={setDateRange} />

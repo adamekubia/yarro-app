@@ -497,11 +497,14 @@ export default function PropertiesPage() {
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Properties</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your property portfolio
-          </p>
+        <div className="flex items-center gap-3">
+          <Building2 className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Properties</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your property portfolio
+            </p>
+          </div>
         </div>
         <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
       </div>

@@ -19,6 +19,7 @@ import {
   BarChart3,
   Plus,
   CheckCircle2,
+  LayoutDashboard,
   LayoutGrid,
   Columns3,
   Send,
@@ -449,11 +450,14 @@ export default function DashboardPage() {
         <div className="relative p-4 h-full flex flex-col gap-3">
           {/* Header */}
           <div className="flex items-center justify-between flex-shrink-0">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Manage and monitor all property maintenance activity
-              </p>
+            <div className="flex items-center gap-3">
+              <LayoutDashboard className="h-7 w-7 text-primary" />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Manage and monitor all property maintenance activity
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {/* View Toggle */}

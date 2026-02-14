@@ -6,7 +6,7 @@ import { usePM } from '@/contexts/pm-context'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { User, Mail, Building2, Lock } from 'lucide-react'
+import { User, Mail, Building2, Lock, Settings } from 'lucide-react'
 
 export default function SettingsPage() {
   const { propertyManager } = usePM()
@@ -41,7 +41,10 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-semibold text-foreground mb-6">Settings</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <Settings className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+      </div>
 
       {/* Account Info */}
       <div className="bg-card rounded-xl border p-6 space-y-4 mb-6">
