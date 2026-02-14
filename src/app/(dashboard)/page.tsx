@@ -662,7 +662,7 @@ export default function DashboardPage() {
                       {/* Separator */}
                       <div className="flex items-center gap-2 py-1">
                         <div className="flex-1 h-px bg-border" />
-                        <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">Needs Follow Up</span>
+                        <span className="text-[10px] font-medium text-foreground/50 uppercase tracking-wider">Needs Follow Up</span>
                         <div className="flex-1 h-px bg-border" />
                       </div>
 

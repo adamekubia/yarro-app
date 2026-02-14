@@ -12,18 +12,44 @@ interface TicketCompletionTabProps {
   completion: CompletionData
 }
 
+function DashedLine() {
+  return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
+}
+
+function DetailRow({ label, value, mono, highlight }: {
+  label: string
+  value: string | null | undefined
+  mono?: boolean
+  highlight?: boolean
+}) {
+  if (!value) return null
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-1.5">
+      <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
+      <span className={cn(
+        'text-sm text-right',
+        mono && 'font-mono',
+        highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
+      )}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
 export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
   const mediaUrls = getMediaUrls(completion.media_urls)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Status + Contractor */}
       <div className="flex items-center gap-3">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${
+        <span className={cn(
+          'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border bg-transparent',
           completion.completed
-            ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400'
-            : 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400'
-        }`}>
+            ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
+            : 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400'
+        )}>
           {completion.completed ? (
             <CheckCircle className="h-3 w-3" />
           ) : (
@@ -42,63 +68,77 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
         )}
       </div>
 
-      {/* Details — matching Overview style */}
-      <div>
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Details</p>
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
-            <span className="text-xs text-muted-foreground shrink-0">Quote</span>
-            <span className="text-sm font-medium font-mono">{formatCurrency(completion.quote_amount)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
-            <span className="text-xs text-muted-foreground shrink-0">Markup</span>
-            <span className="text-sm font-medium font-mono">{formatCurrency(completion.markup_amount)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
-            <span className="text-xs text-muted-foreground shrink-0">Total</span>
-            <span className="text-sm font-semibold font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(completion.total_amount)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
-            <span className="text-xs text-muted-foreground shrink-0">Received</span>
-            <span className="text-sm font-medium">{format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')}</span>
-          </div>
-        </div>
+      <DashedLine />
+
+      {/* Financial details */}
+      <div className="px-1 space-y-0">
+        <DetailRow label="Quote" value={formatCurrency(completion.quote_amount)} mono />
+        <DetailRow label="Markup" value={formatCurrency(completion.markup_amount)} mono />
+        <DetailRow label="Total" value={formatCurrency(completion.total_amount)} mono highlight />
+        <DetailRow label="Received" value={format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')} />
       </div>
 
       {/* Notes */}
       {(completion.notes || completion.completion_text) && (
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Notes</p>
-          <div className="p-3 border rounded-lg">
-            <p className="text-sm whitespace-pre-wrap">
-              {completion.notes || completion.completion_text}
-            </p>
+        <>
+          <DashedLine />
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">Notes</p>
+            <div className="bg-muted/30 rounded-xl p-4">
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                {completion.notes || completion.completion_text}
+              </p>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Reason (if not completed) */}
       {!completion.completed && completion.reason && (
-        <div>
-          <p className="text-[11px] font-medium text-destructive/70 uppercase tracking-wider mb-2">Reason</p>
-          <div className="p-3 border border-destructive/20 rounded-lg">
-            <p className="text-sm text-destructive">{completion.reason}</p>
+        <>
+          <DashedLine />
+          <div>
+            <p className="text-[10px] font-medium text-destructive/70 uppercase tracking-wider mb-2 px-1">Reason</p>
+            <div className="bg-red-500/5 dark:bg-red-400/10 rounded-xl p-4">
+              <p className="text-sm text-destructive leading-relaxed">{completion.reason}</p>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Photos */}
       {mediaUrls.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Photos ({mediaUrls.length})
-          </p>
-          {mediaUrls.length > 6 ? (
-            <CollapsibleSection
-              title="Photos"
-              count={mediaUrls.length}
-              defaultOpen={false}
-            >
+        <>
+          <DashedLine />
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+              Photos ({mediaUrls.length})
+            </p>
+            {mediaUrls.length > 6 ? (
+              <CollapsibleSection
+                title="Photos"
+                count={mediaUrls.length}
+                defaultOpen={false}
+              >
+                <div className="grid grid-cols-3 gap-1.5">
+                  {mediaUrls.map((url, index) => (
+                    <a
+                      key={index}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <img
+                        src={url}
+                        alt={`Photo ${index + 1}`}
+                        className="w-full h-16 object-cover rounded border group-hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            ) : (
               <div className="grid grid-cols-3 gap-1.5">
                 {mediaUrls.map((url, index) => (
                   <a
@@ -111,32 +151,14 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
                     <img
                       src={url}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-16 object-cover rounded border group-hover:opacity-80 transition-opacity"
+                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
                     />
                   </a>
                 ))}
               </div>
-            </CollapsibleSection>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5">
-              {mediaUrls.map((url, index) => (
-                <a
-                  key={index}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block group"
-                >
-                  <img
-                    src={url}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                  />
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

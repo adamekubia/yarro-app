@@ -121,7 +121,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
                   </button>
 
                   {isOpen && (
-                    <div className="px-3 pb-3 max-h-[200px] overflow-y-auto border-t bg-muted/30">
+                    <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
                       <div className="pt-2">
                         <ChatHistory
                           messages={getContractorMessages([contractor])}
@@ -181,7 +181,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
               </button>
 
               {openManager && (
-                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/30">
+                <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
                   <div className="pt-2">
                     <ChatHistory
                       messages={getRecipientMessages(managerRecipient, 'Manager')}
@@ -239,7 +239,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
               </button>
 
               {openLandlord && (
-                <div className="px-3 pb-3 max-h-[180px] overflow-y-auto border-t bg-muted/30">
+                <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
                   <div className="pt-2">
                     <ChatHistory
                       messages={getRecipientMessages(landlordRecipient, 'Landlord')}

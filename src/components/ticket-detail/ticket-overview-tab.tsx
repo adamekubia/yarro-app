@@ -1,9 +1,10 @@
 'use client'
 
 import { format } from 'date-fns'
-import { Building2, Users, Wrench } from 'lucide-react'
+import { Building2, Users, Wrench, MapPin, Crown } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { StatusBadge } from '@/components/status-badge'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import { formatCurrency, getContractors, getRecipient } from '@/hooks/use-ticket-detail'
 
@@ -18,27 +19,28 @@ function formatDate(date: string | null) {
   return format(new Date(date), 'dd MMM yyyy')
 }
 
-/** Single row — clean card style matching Activity tab */
+/** Dashed separator — receipt style */
+function DashedLine() {
+  return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
+}
+
+/** Single detail row — label left, value right, clean receipt style */
 function DetailRow({ label, value, mono, highlight }: {
   label: string
   value: string | null | undefined
   mono?: boolean
   highlight?: boolean
 }) {
-  const display = value || 'TBD'
-  const isEmpty = !value
-
+  if (!value) return null
   return (
-    <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
-      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+    <div className="flex items-baseline justify-between gap-4 py-1.5">
+      <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
       <span className={cn(
-        'text-sm text-right truncate max-w-[60%]',
-        isEmpty && 'text-muted-foreground/40 italic text-xs',
-        !isEmpty && 'font-medium',
-        mono && !isEmpty && 'font-mono',
-        highlight && !isEmpty && 'text-emerald-600 dark:text-emerald-400 font-semibold',
+        'text-sm text-right',
+        mono && 'font-mono',
+        highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
       )}>
-        {display}
+        {value}
       </span>
     </div>
   )
@@ -47,7 +49,6 @@ function DetailRow({ label, value, mono, highlight }: {
 export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTabProps) {
   const images = basic.images || []
 
-  // Extract contractor notes from messages (approved contractor > contractor_id match > first with notes)
   const contractorNotes = (() => {
     if (!messages?.contractors) return null
     const contractors = getContractors(messages.contractors)
@@ -61,130 +62,153 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
     return withNotes?.quote_notes || null
   })()
 
+  const markup = (() => {
+    if (basic.contractor_quote && basic.final_amount) return formatCurrency(basic.final_amount - basic.contractor_quote)
+    const mgr = getRecipient(messages?.manager ?? null)
+    if (basic.contractor_quote && mgr?.approval_amount) return formatCurrency(Number(mgr.approval_amount) - basic.contractor_quote)
+    return null
+  })()
+
   return (
-    <div className="space-y-5">
-      {/* Issue Description */}
-      <div className="p-3 border rounded-lg">
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Issue</p>
+    <div className="space-y-4">
+      {/* Issue Description — prominent */}
+      <div className="bg-muted/30 rounded-xl p-4">
         <p className="text-sm leading-relaxed">
           {context.issue_description || 'No description provided'}
         </p>
       </div>
 
-      {/* Details — flat rows, always visible */}
-      <div>
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Details</p>
-        <div className="space-y-1">
-          <DetailRow label="Category" value={context.category} />
-          <DetailRow label="Date Logged" value={formatDate(context.date_logged)} />
-          <DetailRow label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />
-          <DetailRow label="Availability" value={context.availability} />
-          <DetailRow label="Access" value={context.access} />
-          <DetailRow label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight={!!basic.scheduled_date} />
-          <DetailRow label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono />
-          {contractorNotes && <DetailRow label="Quote Notes" value={contractorNotes} />}
-          <DetailRow label="Your Markup" value={(() => {
-            if (basic.contractor_quote && basic.final_amount) return formatCurrency(basic.final_amount - basic.contractor_quote)
-            const mgr = getRecipient(messages?.manager ?? null)
-            if (basic.contractor_quote && mgr?.approval_amount) return formatCurrency(Number(mgr.approval_amount) - basic.contractor_quote)
-            return null
-          })()} mono />
-          <DetailRow label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight={!!basic.final_amount} />
-        </div>
+      <DashedLine />
+
+      {/* Details Grid — receipt rows */}
+      <div className="px-1 space-y-0">
+        <DetailRow label="Category" value={context.category} />
+        <DetailRow label="Priority" value={basic.priority || null} />
+        <DetailRow label="Logged" value={formatDate(context.date_logged)} />
+        <DetailRow label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />
+        <DetailRow label="Availability" value={context.availability} />
+        <DetailRow label="Access" value={context.access} />
       </div>
 
-      {/* People — clickable cards */}
-      <div>
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">People</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {/* Tenant */}
-          {context.tenant_name && (
-            <Link
-              href={basic.tenant_id ? `/tenants?id=${basic.tenant_id}` : '#'}
-              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{context.tenant_name}</p>
-                <p className="text-xs text-muted-foreground">View tenant</p>
-              </div>
-            </Link>
-          )}
+      {/* Financial section — only if we have quote data */}
+      {basic.contractor_quote && (
+        <>
+          <DashedLine />
+          <div className="px-1 space-y-0">
+            <DetailRow label="Quote" value={formatCurrency(basic.contractor_quote)} mono />
+            {contractorNotes && <DetailRow label="Notes" value={contractorNotes} />}
+            <DetailRow label="Markup" value={markup} mono />
+            <DetailRow label="Total" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight />
+          </div>
+        </>
+      )}
 
-          {/* Property */}
+      {/* Scheduled — highlighted if present */}
+      {basic.scheduled_date && (
+        <>
+          <DashedLine />
+          <div className="px-1">
+            <DetailRow label="Scheduled" value={formatDate(basic.scheduled_date)} highlight />
+          </div>
+        </>
+      )}
+
+      <DashedLine />
+
+      {/* Linked Parties — tenant, address, contractor, landlord */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Linked</p>
+
+        {/* Tenant */}
+        {context.tenant_name && (
           <Link
-            href={`/properties?id=${context.property_id}`}
-            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+            href={basic.tenant_id ? `/tenants?id=${basic.tenant_id}` : '#'}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
           >
-            <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
-              <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+              <Users className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{context.property_address}</p>
-              <p className="text-xs text-muted-foreground">View property</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate group-hover:underline">{context.tenant_name}</p>
+              <p className="text-[11px] text-muted-foreground">Tenant</p>
             </div>
           </Link>
+        )}
 
-          {/* Contractor */}
-          {basic.contractor_name && basic.contractor_id && (
-            <Link
-              href={`/contractors?id=${basic.contractor_id}`}
-              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{basic.contractor_name}</p>
-                <p className="text-xs text-muted-foreground">View contractor</p>
-              </div>
-            </Link>
-          )}
+        {/* Property / Address */}
+        <Link
+          href={`/properties?id=${context.property_id}`}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+        >
+          <div className="h-7 w-7 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+            <MapPin className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate group-hover:underline">{context.property_address}</p>
+            <p className="text-[11px] text-muted-foreground">Property</p>
+          </div>
+        </Link>
 
-          {/* Landlord */}
-          {context.landlord_name && (
-            <Link
-              href={`/properties?id=${context.property_id}`}
-              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{context.landlord_name}</p>
-                <p className="text-xs text-muted-foreground">View landlord</p>
-              </div>
-            </Link>
-          )}
-        </div>
+        {/* Contractor */}
+        {basic.contractor_name && basic.contractor_id && (
+          <Link
+            href={`/contractors?id=${basic.contractor_id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+          >
+            <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+              <Wrench className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate group-hover:underline">{basic.contractor_name}</p>
+              <p className="text-[11px] text-muted-foreground">Contractor</p>
+            </div>
+          </Link>
+        )}
+
+        {/* Landlord */}
+        {context.landlord_name && (
+          <Link
+            href={`/properties?id=${context.property_id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+          >
+            <div className="h-7 w-7 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <Crown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate group-hover:underline">{context.landlord_name}</p>
+              <p className="text-[11px] text-muted-foreground">Landlord</p>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Photos */}
       {images.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Photos ({images.length})
-          </p>
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {images.map((url, index) => (
-              <a
-                key={index}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
-                <img
-                  src={url}
-                  alt={`Photo ${index + 1}`}
-                  className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                />
-              </a>
-            ))}
+        <>
+          <DashedLine />
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+              Photos ({images.length})
+            </p>
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              {images.map((url, index) => (
+                <a
+                  key={index}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                >
+                  <img
+                    src={url}
+                    alt={`Photo ${index + 1}`}
+                    className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                  />
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
