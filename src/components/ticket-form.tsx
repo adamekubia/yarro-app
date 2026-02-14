@@ -454,6 +454,10 @@ export function TicketForm({
       setError('Please describe the issue')
       return
     }
+    if (!formData.issue_title.trim()) {
+      setError('Please enter a short phrase for the issue')
+      return
+    }
     if (!formData.category) {
       setError('Please select a category')
       return
@@ -679,12 +683,13 @@ export function TicketForm({
           />
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">
-              Short phrase
+              Short phrase <span className="text-red-500">*</span>
             </label>
             <Input
               value={formData.issue_title}
               onChange={(e) => updateField('issue_title', e.target.value)}
               placeholder='e.g. "a blocked shower"'
+              required
               className="h-8 text-sm"
             />
           </div>

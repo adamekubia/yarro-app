@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import {
@@ -11,21 +11,33 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Clock, Users, Bell, SlidersHorizontal, ShieldCheck } from 'lucide-react'
+import {
+  Clock,
+  Users,
+  Bell,
+  SlidersHorizontal,
+  ShieldCheck,
+  Wrench,
+  Home,
+  Save,
+  RotateCcw,
+  Check,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// Contractor timeout options (minutes)
+// ─── Option constants ───
+
 const TIMEOUT_OPTIONS = [
-  { value: '1', label: '1 minute (testing)' },
+  { value: '1', label: '1 min (testing)' },
   { value: '120', label: '2 hours' },
   { value: '240', label: '4 hours' },
-  { value: '360', label: '6 hours (default)' },
+  { value: '360', label: '6 hours' },
   { value: '720', label: '12 hours' },
   { value: '1440', label: '24 hours' },
 ]
 
-// Contractor reminder options (minutes) — filtered dynamically to <= half timeout
 const ALL_REMINDER_OPTIONS = [
   { value: '30', label: '30 minutes' },
   { value: '60', label: '1 hour' },
@@ -37,386 +49,526 @@ const ALL_REMINDER_OPTIONS = [
   { value: '720', label: '12 hours' },
 ]
 
-// Landlord follow-up options (hours)
 const LANDLORD_FOLLOWUP_OPTIONS = [
   { value: '6', label: '6 hours' },
   { value: '12', label: '12 hours' },
-  { value: '24', label: '24 hours (default)' },
+  { value: '24', label: '24 hours' },
   { value: '36', label: '36 hours' },
   { value: '48', label: '48 hours' },
 ]
 
-// Landlord timeout options (hours) — filtered dynamically to > followup
 const ALL_LANDLORD_TIMEOUT_OPTIONS = [
   { value: '12', label: '12 hours' },
   { value: '24', label: '24 hours' },
-  { value: '48', label: '48 hours (default)' },
+  { value: '48', label: '48 hours' },
   { value: '72', label: '3 days' },
   { value: '96', label: '4 days' },
   { value: '120', label: '5 days' },
 ]
 
-type DispatchMode = 'sequential' | 'broadcast'
+// ─── Draft settings shape ───
+
+interface DraftSettings {
+  dispatch_mode: 'sequential' | 'broadcast'
+  contractor_timeout_minutes: string
+  contractor_reminder_enabled: boolean
+  contractor_reminder_minutes: string
+  landlord_followup_hours: string
+  landlord_timeout_hours: string
+}
+
+const DEFAULTS: DraftSettings = {
+  dispatch_mode: 'sequential',
+  contractor_timeout_minutes: '360',
+  contractor_reminder_enabled: false,
+  contractor_reminder_minutes: '120',
+  landlord_followup_hours: '24',
+  landlord_timeout_hours: '48',
+}
+
+type Section = 'contractor' | 'landlord'
+
+const SECTIONS: { key: Section; label: string; icon: typeof Wrench; desc: string }[] = [
+  { key: 'contractor', label: 'Contractor Dispatch', icon: Wrench, desc: 'Timeouts, reminders & dispatch mode' },
+  { key: 'landlord', label: 'Landlord Approval', icon: Home, desc: 'Follow-ups & escalation timing' },
+]
 
 export default function RulesPage() {
   const { propertyManager, refreshPM } = usePM()
-  const [saving, setSaving] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<Section>('contractor')
+  const [saving, setSaving] = useState(false)
 
-  // Contractor settings
-  const [dispatchMode, setDispatchMode] = useState<DispatchMode>('sequential')
-  const [timeoutMinutes, setTimeoutMinutes] = useState<string>('360')
-  const [reminderEnabled, setReminderEnabled] = useState(false)
-  const [reminderMinutes, setReminderMinutes] = useState<string>('120')
-
-  // Landlord settings
-  const [landlordFollowupHours, setLandlordFollowupHours] = useState<string>('24')
-  const [landlordTimeoutHours, setLandlordTimeoutHours] = useState<string>('48')
+  // Draft = what user is editing. Saved = last known DB state.
+  const [draft, setDraft] = useState<DraftSettings>(DEFAULTS)
+  const [saved, setSaved] = useState<DraftSettings>(DEFAULTS)
 
   const supabase = createClient()
 
-  // Initialize from PM settings
+  // Load PM settings into draft + saved baseline
   useEffect(() => {
-    if (propertyManager) {
-      if (propertyManager.contractor_timeout_minutes) {
-        setTimeoutMinutes(propertyManager.contractor_timeout_minutes.toString())
-      }
-      setDispatchMode((propertyManager.dispatch_mode as DispatchMode) || 'sequential')
-      if (propertyManager.contractor_reminder_minutes) {
-        setReminderEnabled(true)
-        setReminderMinutes(propertyManager.contractor_reminder_minutes.toString())
-      } else {
-        setReminderEnabled(false)
-      }
-      if (propertyManager.landlord_followup_hours) {
-        setLandlordFollowupHours(propertyManager.landlord_followup_hours.toString())
-      }
-      if (propertyManager.landlord_timeout_hours) {
-        setLandlordTimeoutHours(propertyManager.landlord_timeout_hours.toString())
-      }
+    if (!propertyManager) return
+    const fromPM: DraftSettings = {
+      dispatch_mode: (propertyManager.dispatch_mode as 'sequential' | 'broadcast') || 'sequential',
+      contractor_timeout_minutes: (propertyManager.contractor_timeout_minutes || 360).toString(),
+      contractor_reminder_enabled: !!propertyManager.contractor_reminder_minutes,
+      contractor_reminder_minutes: (propertyManager.contractor_reminder_minutes || 120).toString(),
+      landlord_followup_hours: (propertyManager.landlord_followup_hours || 24).toString(),
+      landlord_timeout_hours: (propertyManager.landlord_timeout_hours || 48).toString(),
     }
+    setDraft(fromPM)
+    setSaved(fromPM)
   }, [propertyManager])
 
-  // Filter reminder options: must be <= half the timeout
+  // Dirty detection
+  const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
+
+  // Filtered options
   const availableReminderOptions = useMemo(() => {
-    const maxReminder = parseInt(timeoutMinutes) / 2
+    const maxReminder = parseInt(draft.contractor_timeout_minutes) / 2
     return ALL_REMINDER_OPTIONS.filter(o => parseInt(o.value) <= maxReminder)
-  }, [timeoutMinutes])
+  }, [draft.contractor_timeout_minutes])
 
-  // Filter landlord timeout options: must be > followup hours
-  const availableLandlordTimeoutOptions = useMemo(() => {
-    const minTimeout = parseInt(landlordFollowupHours)
-    return ALL_LANDLORD_TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > minTimeout)
-  }, [landlordFollowupHours])
-
-  // Can the reminder be enabled? Only if timeout long enough for at least 1 option
   const canEnableReminder = availableReminderOptions.length > 0
 
-  const updateSetting = async (field: string, value: string | number | null) => {
-    setSaving(field)
-    const { error } = await supabase
-      .from('c1_property_managers')
-      .update({ [field]: value })
-      .eq('id', propertyManager?.id)
+  const availableLandlordTimeoutOptions = useMemo(() => {
+    const minTimeout = parseInt(draft.landlord_followup_hours)
+    return ALL_LANDLORD_TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > minTimeout)
+  }, [draft.landlord_followup_hours])
 
-    if (error) {
-      toast.error('Failed to update setting')
-    } else {
-      toast.success('Setting updated')
-      refreshPM?.()
-    }
-    setSaving(null)
-  }
+  // ─── Draft updaters (local only, no DB writes) ───
 
-  const handleDispatchModeChange = (mode: DispatchMode) => {
-    setDispatchMode(mode)
-    updateSetting('dispatch_mode', mode)
-  }
+  const updateDraft = useCallback((partial: Partial<DraftSettings>) => {
+    setDraft(prev => ({ ...prev, ...partial }))
+  }, [])
 
   const handleTimeoutChange = (value: string) => {
-    setTimeoutMinutes(value)
-    updateSetting('contractor_timeout_minutes', parseInt(value))
-
-    // If reminder is enabled and exceeds new max, reset it
     const newMax = parseInt(value) / 2
-    if (reminderEnabled && parseInt(reminderMinutes) > newMax) {
+    const updates: Partial<DraftSettings> = { contractor_timeout_minutes: value }
+
+    // Auto-fix reminder if it exceeds new max
+    if (draft.contractor_reminder_enabled && parseInt(draft.contractor_reminder_minutes) > newMax) {
       const validOptions = ALL_REMINDER_OPTIONS.filter(o => parseInt(o.value) <= newMax)
       if (validOptions.length > 0) {
-        const newReminder = validOptions[validOptions.length - 1].value
-        setReminderMinutes(newReminder)
-        updateSetting('contractor_reminder_minutes', parseInt(newReminder))
+        updates.contractor_reminder_minutes = validOptions[validOptions.length - 1].value
       } else {
-        setReminderEnabled(false)
-        updateSetting('contractor_reminder_minutes', null)
+        updates.contractor_reminder_enabled = false
       }
     }
+    updateDraft(updates)
   }
 
   const handleReminderToggle = (checked: boolean) => {
-    setReminderEnabled(checked)
     if (checked) {
-      const defaultOption = availableReminderOptions.length > 0
-        ? availableReminderOptions[Math.floor(availableReminderOptions.length / 2)].value
-        : reminderMinutes
-      setReminderMinutes(defaultOption)
-      updateSetting('contractor_reminder_minutes', parseInt(defaultOption))
+      const mid = Math.floor(availableReminderOptions.length / 2)
+      const defaultVal = availableReminderOptions[mid]?.value || draft.contractor_reminder_minutes
+      updateDraft({ contractor_reminder_enabled: true, contractor_reminder_minutes: defaultVal })
     } else {
-      updateSetting('contractor_reminder_minutes', null)
+      updateDraft({ contractor_reminder_enabled: false })
     }
-  }
-
-  const handleReminderChange = (value: string) => {
-    setReminderMinutes(value)
-    updateSetting('contractor_reminder_minutes', parseInt(value))
   }
 
   const handleLandlordFollowupChange = (value: string) => {
-    setLandlordFollowupHours(value)
-    updateSetting('landlord_followup_hours', parseInt(value))
-
-    // If timeout is now <= followup, bump it to first valid option
-    if (parseInt(landlordTimeoutHours) <= parseInt(value)) {
+    const updates: Partial<DraftSettings> = { landlord_followup_hours: value }
+    // Auto-bump timeout if it's now <= followup
+    if (parseInt(draft.landlord_timeout_hours) <= parseInt(value)) {
       const validOptions = ALL_LANDLORD_TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > parseInt(value))
       if (validOptions.length > 0) {
-        const newTimeout = validOptions[0].value
-        setLandlordTimeoutHours(newTimeout)
-        updateSetting('landlord_timeout_hours', parseInt(newTimeout))
+        updates.landlord_timeout_hours = validOptions[0].value
       }
     }
+    updateDraft(updates)
   }
 
-  const handleLandlordTimeoutChange = (value: string) => {
-    setLandlordTimeoutHours(value)
-    updateSetting('landlord_timeout_hours', parseInt(value))
+  // ─── Save all ───
+
+  const handleSave = async () => {
+    if (!propertyManager) return
+    setSaving(true)
+
+    const payload: Record<string, unknown> = {
+      dispatch_mode: draft.dispatch_mode,
+      contractor_timeout_minutes: parseInt(draft.contractor_timeout_minutes),
+      contractor_reminder_minutes: draft.contractor_reminder_enabled
+        ? parseInt(draft.contractor_reminder_minutes)
+        : null,
+      landlord_followup_hours: parseInt(draft.landlord_followup_hours),
+      landlord_timeout_hours: parseInt(draft.landlord_timeout_hours),
+    }
+
+    const { error } = await supabase
+      .from('c1_property_managers')
+      .update(payload)
+      .eq('id', propertyManager.id)
+
+    if (error) {
+      toast.error('Failed to save settings')
+    } else {
+      toast.success('Settings saved')
+      setSaved({ ...draft })
+      refreshPM?.()
+    }
+    setSaving(false)
   }
+
+  const handleDiscard = () => {
+    setDraft({ ...saved })
+  }
+
+  // ─── Per-field changed indicator ───
+  const isChanged = (key: keyof DraftSettings) => draft[key] !== saved[key]
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <SlidersHorizontal className="h-5 w-5" />
-          Rules & Preferences
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Configure how Yarro handles your tickets and communications.
+    <div className="h-full flex flex-col">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <SlidersHorizontal className="h-5 w-5" />
+            Rules & Preferences
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Configure how Yarro handles your tickets and communications
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <Button variant="ghost" size="sm" onClick={handleDiscard} className="text-muted-foreground">
+              <RotateCcw className="h-4 w-4 mr-1.5" />
+              Discard
+            </Button>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || saving}
+            size="sm"
+            className={cn(
+              'min-w-[100px] transition-all',
+              isDirty ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            )}
+          >
+            {saving ? (
+              <span className="flex items-center gap-1.5">
+                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </span>
+            ) : isDirty ? (
+              <span className="flex items-center gap-1.5">
+                <Save className="h-4 w-4" />
+                Save changes
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" />
+                Saved
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Body: sidebar + detail */}
+      <div className="flex-1 min-h-0 flex">
+        {/* Sidebar */}
+        <div className="w-64 border-r bg-muted/30 p-3 flex-shrink-0">
+          <div className="space-y-1">
+            {SECTIONS.map((section) => (
+              <button
+                key={section.key}
+                onClick={() => setActiveSection(section.key)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors',
+                  activeSection === section.key
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <section.icon className="h-4 w-4 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{section.label}</p>
+                  <p className="text-xs text-muted-foreground truncate">{section.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Detail panel */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeSection === 'contractor' && (
+            <ContractorSection
+              draft={draft}
+              updateDraft={updateDraft}
+              handleTimeoutChange={handleTimeoutChange}
+              handleReminderToggle={handleReminderToggle}
+              availableReminderOptions={availableReminderOptions}
+              canEnableReminder={canEnableReminder}
+              isChanged={isChanged}
+            />
+          )}
+          {activeSection === 'landlord' && (
+            <LandlordSection
+              draft={draft}
+              updateDraft={updateDraft}
+              handleLandlordFollowupChange={handleLandlordFollowupChange}
+              availableLandlordTimeoutOptions={availableLandlordTimeoutOptions}
+              isChanged={isChanged}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Contractor Section ───
+
+function ContractorSection({
+  draft,
+  updateDraft,
+  handleTimeoutChange,
+  handleReminderToggle,
+  availableReminderOptions,
+  canEnableReminder,
+  isChanged,
+}: {
+  draft: DraftSettings
+  updateDraft: (p: Partial<DraftSettings>) => void
+  handleTimeoutChange: (v: string) => void
+  handleReminderToggle: (checked: boolean) => void
+  availableReminderOptions: { value: string; label: string }[]
+  canEnableReminder: boolean
+  isChanged: (key: keyof DraftSettings) => boolean
+}) {
+  return (
+    <div className="max-w-xl space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Wrench className="h-5 w-5" />
+          Contractor Dispatch
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Control how contractors are contacted and what happens when they don&apos;t respond.
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* ─── CONTRACTOR DISPATCH ─── */}
-        <div className="space-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contractor Dispatch</h2>
+      {/* Dispatch Mode */}
+      <SettingRow
+        icon={Users}
+        label="Dispatch Mode"
+        description="How contractors are contacted when a job is dispatched."
+        changed={isChanged('dispatch_mode')}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          {(['sequential', 'broadcast'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => updateDraft({ dispatch_mode: mode })}
+              className={cn(
+                'flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-colors',
+                draft.dispatch_mode === mode
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground/30'
+              )}
+            >
+              <span className="text-sm font-medium">
+                {mode === 'sequential' ? 'One at a time' : 'All at once'}
+              </span>
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                {mode === 'sequential'
+                  ? 'Contact sequentially. Auto-advance on timeout.'
+                  : 'Send to all. Choose the best quote.'}
+              </span>
+            </button>
+          ))}
         </div>
+      </SettingRow>
 
-        {/* Dispatch Mode */}
-        <div className="bg-card rounded-xl border p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-              <Users className="h-5 w-5 text-primary" />
+      {/* Response Timeout */}
+      <SettingRow
+        icon={Clock}
+        label="Response Timeout"
+        description={
+          draft.dispatch_mode === 'sequential'
+            ? 'Auto-advance to next contractor after this period.'
+            : 'Flag for review if no responses within this period.'
+        }
+        changed={isChanged('contractor_timeout_minutes')}
+      >
+        <Select value={draft.contractor_timeout_minutes} onValueChange={handleTimeoutChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TIMEOUT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingRow>
+
+      {/* Reminder */}
+      {canEnableReminder && (
+        <SettingRow
+          icon={Bell}
+          label="Reminder Before Timeout"
+          description="Nudge contractors who haven't responded yet."
+          changed={isChanged('contractor_reminder_enabled') || isChanged('contractor_reminder_minutes')}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Switch checked={draft.contractor_reminder_enabled} onCheckedChange={handleReminderToggle} />
+              <span className="text-sm text-muted-foreground">
+                {draft.contractor_reminder_enabled ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <h2 className="text-sm font-medium">Selection Mode</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how contractors are contacted when a new job is dispatched.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleDispatchModeChange('sequential')}
-                  disabled={saving === 'dispatch_mode'}
-                  className={cn(
-                    'flex flex-col items-start gap-1.5 rounded-lg border-2 p-4 text-left transition-colors',
-                    dispatchMode === 'sequential'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/30'
-                  )}
+            {draft.contractor_reminder_enabled && (
+              <div className="space-y-2">
+                <Select
+                  value={draft.contractor_reminder_minutes}
+                  onValueChange={(v) => updateDraft({ contractor_reminder_minutes: v })}
                 >
-                  <span className="text-sm font-medium">One at a time</span>
-                  <span className="text-xs text-muted-foreground leading-relaxed">
-                    Contact contractors sequentially. If one doesn&apos;t respond, move to the next.
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleDispatchModeChange('broadcast')}
-                  disabled={saving === 'dispatch_mode'}
-                  className={cn(
-                    'flex flex-col items-start gap-1.5 rounded-lg border-2 p-4 text-left transition-colors',
-                    dispatchMode === 'broadcast'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/30'
-                  )}
-                >
-                  <span className="text-sm font-medium">All at once</span>
-                  <span className="text-xs text-muted-foreground leading-relaxed">
-                    Send to all available contractors simultaneously. Choose the best quote.
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Contractor Response Timeout */}
-        <div className="bg-card rounded-xl border p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <h2 className="text-sm font-medium">Response Timeout</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {dispatchMode === 'sequential'
-                    ? "When a contractor doesn't respond within this time, Yarro will automatically contact the next contractor in your priority list."
-                    : "When contractors don't respond within this time, Yarro will flag the job for your review."}
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableReminderOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Reminder at{' '}
+                  {availableReminderOptions.find(o => o.value === draft.contractor_reminder_minutes)?.label || draft.contractor_reminder_minutes + ' min'}
+                  , then{' '}
+                  {draft.dispatch_mode === 'sequential' ? 'auto-advance' : 'flagged'} at{' '}
+                  {TIMEOUT_OPTIONS.find(o => o.value === draft.contractor_timeout_minutes)?.label || draft.contractor_timeout_minutes + ' min'}.
                 </p>
               </div>
-              <Select
-                value={timeoutMinutes}
-                onValueChange={handleTimeoutChange}
-                disabled={saving === 'contractor_timeout_minutes'}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select timeout" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMEOUT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
           </div>
+        </SettingRow>
+      )}
+    </div>
+  )
+}
+
+// ─── Landlord Section ───
+
+function LandlordSection({
+  draft,
+  updateDraft,
+  handleLandlordFollowupChange,
+  availableLandlordTimeoutOptions,
+  isChanged,
+}: {
+  draft: DraftSettings
+  updateDraft: (p: Partial<DraftSettings>) => void
+  handleLandlordFollowupChange: (v: string) => void
+  availableLandlordTimeoutOptions: { value: string; label: string }[]
+  isChanged: (key: keyof DraftSettings) => boolean
+}) {
+  return (
+    <div className="max-w-xl space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Home className="h-5 w-5" />
+          Landlord Approval
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Control follow-up timing when a landlord hasn&apos;t responded to an approval request.
+        </p>
+      </div>
+
+      {/* Follow-up Reminder */}
+      <SettingRow
+        icon={Bell}
+        label="Follow-up Reminder"
+        description="Send the landlord a reminder if they haven't responded."
+        changed={isChanged('landlord_followup_hours')}
+      >
+        <Select value={draft.landlord_followup_hours} onValueChange={handleLandlordFollowupChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LANDLORD_FOLLOWUP_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingRow>
+
+      {/* Escalation Timeout */}
+      <SettingRow
+        icon={ShieldCheck}
+        label="Escalate to You"
+        description="If the landlord still hasn't responded after the reminder, you'll be alerted to follow up directly."
+        changed={isChanged('landlord_timeout_hours')}
+      >
+        <div className="space-y-2">
+          <Select
+            value={draft.landlord_timeout_hours}
+            onValueChange={(v) => updateDraft({ landlord_timeout_hours: v })}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLandlordTimeoutOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Landlord reminded at{' '}
+            {LANDLORD_FOLLOWUP_OPTIONS.find(o => o.value === draft.landlord_followup_hours)?.label || draft.landlord_followup_hours + 'h'}
+            , then escalated to you at{' '}
+            {availableLandlordTimeoutOptions.find(o => o.value === draft.landlord_timeout_hours)?.label || draft.landlord_timeout_hours + 'h'}
+            . Ticket marked &quot;Landlord No Response&quot;.
+          </p>
         </div>
+      </SettingRow>
+    </div>
+  )
+}
 
-        {/* Contractor Reminder — only shown if timeout is long enough */}
-        {canEnableReminder && (
-          <div className="bg-card rounded-xl border p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-                <Bell className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-medium">Reminder Before Timeout</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Send a nudge to contractors who haven&apos;t responded yet.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={reminderEnabled}
-                    onCheckedChange={handleReminderToggle}
-                    disabled={saving === 'contractor_reminder_minutes'}
-                  />
-                </div>
-                {reminderEnabled && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Remind after:
-                    </p>
-                    <Select
-                      value={reminderMinutes}
-                      onValueChange={handleReminderChange}
-                      disabled={saving === 'contractor_reminder_minutes'}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Select reminder time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableReminderOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {dispatchMode === 'sequential'
-                        ? `A reminder will be sent after ${availableReminderOptions.find(o => o.value === reminderMinutes)?.label || reminderMinutes + ' minutes'}, then the next contractor will be contacted after ${TIMEOUT_OPTIONS.find(o => o.value === timeoutMinutes)?.label?.replace(' (default)', '') || timeoutMinutes + ' minutes'} if still no response.`
-                        : `Contractors who haven't responded will receive a reminder after ${availableReminderOptions.find(o => o.value === reminderMinutes)?.label || reminderMinutes + ' minutes'}.`}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+// ─── Reusable setting row ───
 
-        {/* ─── LANDLORD APPROVAL ─── */}
-        <div className="space-y-1 pt-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Landlord Approval</h2>
+function SettingRow({
+  icon: Icon,
+  label,
+  description,
+  changed,
+  children,
+}: {
+  icon: typeof Clock
+  label: string
+  description: string
+  changed: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className={cn(
+      'rounded-xl border p-5 transition-colors',
+      changed ? 'border-primary/40 bg-primary/[0.02]' : 'border-border bg-card'
+    )}>
+      <div className="flex items-start gap-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0 mt-0.5">
+          <Icon className="h-4 w-4 text-primary" />
         </div>
-
-        {/* Landlord Follow-up Reminder */}
-        <div className="bg-card rounded-xl border p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-              <Bell className="h-5 w-5 text-primary" />
+        <div className="flex-1 space-y-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium">{label}</h3>
+              {changed && (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 rounded px-1.5 py-0.5">
+                  Changed
+                </span>
+              )}
             </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <h2 className="text-sm font-medium">Landlord Reminder</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  If a landlord hasn&apos;t responded to an approval request, Yarro will send them a follow-up reminder after this time.
-                </p>
-              </div>
-              <Select
-                value={landlordFollowupHours}
-                onValueChange={handleLandlordFollowupChange}
-                disabled={saving === 'landlord_followup_hours'}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANDLORD_FOLLOWUP_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
           </div>
-        </div>
-
-        {/* Landlord Timeout → PM Escalation */}
-        <div className="bg-card rounded-xl border p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <h2 className="text-sm font-medium">Escalate to You</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  If the landlord still hasn&apos;t responded after the reminder, Yarro will alert you to follow up directly. The ticket will be marked as &quot;Landlord No Response&quot;.
-                </p>
-              </div>
-              <Select
-                value={landlordTimeoutHours}
-                onValueChange={handleLandlordTimeoutChange}
-                disabled={saving === 'landlord_timeout_hours'}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableLandlordTimeoutOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Landlord gets a reminder at {LANDLORD_FOLLOWUP_OPTIONS.find(o => o.value === landlordFollowupHours)?.label?.replace(' (default)', '') || landlordFollowupHours + ' hours'}, then you&apos;re alerted at {availableLandlordTimeoutOptions.find(o => o.value === landlordTimeoutHours)?.label?.replace(' (default)', '') || landlordTimeoutHours + ' hours'} if still no response.
-              </p>
-            </div>
-          </div>
+          {children}
         </div>
       </div>
     </div>
