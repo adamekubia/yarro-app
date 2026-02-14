@@ -62,6 +62,8 @@ interface DashboardStats {
   awaitingManager: number
   awaitingLandlord: number
   landlordDeclined: number
+  landlordNoResponse: number
+  noContractorsLeft: number
   scheduledJobs: number
   awaitingBooking: number
   jobNotCompleted: number
@@ -94,6 +96,7 @@ interface TicketSummary {
   final_amount?: number | null
   address?: string
   handoff?: boolean
+  landlord_declined?: boolean
 }
 
 // Chart colors
@@ -107,6 +110,8 @@ const ACTION_DESCRIPTIONS = {
   landlord: 'Tickets waiting for landlord approval on the quoted price',
   scheduled: 'Jobs that have been scheduled with a contractor and have a confirmed date',
   declined: 'Tickets where the landlord declined the quoted price — these need follow-up',
+  landlordNoResponse: 'Landlord hasn\'t responded to the approval request after the follow-up — contact them directly',
+  noContractorsLeft: 'All contractors either declined or didn\'t respond — re-dispatch or find a new contractor',
   booking: 'Booking confirmation has been sent to the tenant — waiting for them to confirm a slot',
   notCompleted: 'Contractor marked the job as not completed — needs follow-up action',
 }
@@ -260,6 +265,18 @@ export default function DashboardPage() {
         return data?.landlord?.approval === false
       }).length
 
+      const landlordNoResponse = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const js = (t.job_stage || '').toLowerCase()
+        return js === 'landlord no response'
+      }).length
+
+      const noContractorsLeft = tickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = getMessageStage(t)
+        return msgStage === 'no_contractors_left'
+      }).length
+
       const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t)).length
 
       const awaitingBooking = tickets.filter((t) => {
@@ -283,6 +300,8 @@ export default function DashboardPage() {
         awaitingManager,
         awaitingLandlord,
         landlordDeclined,
+        landlordNoResponse,
+        noContractorsLeft,
         scheduledJobs,
         awaitingBooking,
         jobNotCompleted,
@@ -292,7 +311,10 @@ export default function DashboardPage() {
         const isClosed = t.status?.toLowerCase() === 'closed'
         if (isClosed) return 'Completed'
         if (t.handoff) return 'Handoff'
+        const js2 = (t.job_stage || '').toLowerCase()
+        if (js2 === 'landlord no response') return 'Landlord No Response'
         const ms = (msgStage || '').toLowerCase()
+        if (ms === 'no_contractors_left') return 'No Contractors'
         if (ms === 'awaiting_manager') return 'Awaiting Manager'
         if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
         if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
@@ -322,6 +344,12 @@ export default function DashboardPage() {
           final_amount: t.final_amount,
           address: (t.c1_properties as unknown as { address: string } | null)?.address,
           handoff: t.handoff,
+          landlord_declined: (() => {
+            const data = messages
+              ? Array.isArray(messages) ? messages[0] : messages
+              : null
+            return data?.landlord?.approval === false
+          })(),
         }
       })
       setAllTickets(mappedTickets)
@@ -373,7 +401,15 @@ export default function DashboardPage() {
     } else if (type === 'handoff') {
       filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
     } else if (type === 'declined') {
-      filtered = []
+      filtered = allTickets.filter((t) => t.landlord_declined === true)
+    } else if (type === 'landlordNoResponse') {
+      filtered = allTickets.filter((t) => t.display_stage === 'Landlord No Response')
+    } else if (type === 'noContractorsLeft') {
+      filtered = allTickets.filter((t) => {
+        if (!isOpen(t)) return false
+        const msgStage = (t.message_stage || '').toLowerCase()
+        return msgStage === 'no_contractors_left'
+      })
     } else if (type === 'notCompleted') {
       filtered = allTickets.filter((t) => isOpen(t) && notCompletedIds.has(t.id))
     }
@@ -420,6 +456,8 @@ export default function DashboardPage() {
       case 'landlord': return 'Awaiting Landlord'
       case 'scheduled': return 'Scheduled Jobs'
       case 'declined': return 'Landlord Declined'
+      case 'landlordNoResponse': return 'Landlord No Response'
+      case 'noContractorsLeft': return 'No Contractors Available'
       case 'booking': return 'Awaiting Booking'
       case 'notCompleted': return 'Job Not Completed'
       default: return ''
@@ -604,10 +642,12 @@ export default function DashboardPage() {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
                 const declinedCount = stats?.landlordDeclined || 0
+                const landlordNoResponseCount = stats?.landlordNoResponse || 0
                 const managerCount = stats?.awaitingManager || 0
+                const noContractorsCount = stats?.noContractorsLeft || 0
                 const notCompletedCount = stats?.jobNotCompleted || 0
 
-                const totalAction = totalHandoffs + declinedCount + managerCount + notCompletedCount
+                const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-4">
@@ -689,6 +729,48 @@ export default function DashboardPage() {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => landlordNoResponseCount > 0 ? showAwaitingTickets('landlordNoResponse') : undefined}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${landlordNoResponseCount > 0 ? 'bg-orange-500/15' : 'bg-muted'}`}>
+                              <Clock className={`h-4 w-4 ${landlordNoResponseCount > 0 ? 'text-orange-500' : 'text-muted-foreground/50'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${landlordNoResponseCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Landlord No Response</p>
+                              <p className="text-xs text-muted-foreground">Contact directly</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${landlordNoResponseCount > 0 ? 'text-orange-500' : 'text-muted-foreground/40'}`}>
+                              {landlordNoResponseCount}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.landlordNoResponse}</p></TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${noContractorsCount > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
+                              <AlertTriangle className={`h-4 w-4 ${noContractorsCount > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>No Contractors</p>
+                              <p className="text-xs text-muted-foreground">Re-dispatch or find new</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${noContractorsCount > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`}>
+                              {noContractorsCount}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.noContractorsLeft}</p></TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
