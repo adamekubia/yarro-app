@@ -112,14 +112,29 @@ export function TicketDetailModal({
             </div>
           ) : context && basic ? (
             <>
+              {/* Handoff warning */}
+              {isHandoff && (
+                <div className="p-3 mt-2 mb-1 bg-red-500/10 dark:bg-red-500/15 rounded-lg border border-red-300 dark:border-red-500/30 flex-shrink-0">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-red-700 dark:text-red-300">Handoff — Needs Manual Review</p>
+                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">
+                        The AI couldn&apos;t complete this ticket automatically. Review the conversation and dispatch manually.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Double-quote warning */}
               {previouslyApprovedContractor && basic.contractor_id && (
-                <div className="p-3 mt-2 mb-3 bg-muted/50 rounded-lg border flex-shrink-0">
+                <div className="p-3 mt-2 mb-1 bg-red-500/10 dark:bg-red-500/15 rounded-lg border border-red-300 dark:border-red-500/30 flex-shrink-0">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="font-medium">Previous contractor already approved</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="font-medium text-red-700 dark:text-red-300">Previous contractor already approved</p>
+                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">
                         <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved.
                         Cancel the previous arrangement before proceeding with a new contractor.
                       </p>

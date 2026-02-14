@@ -84,6 +84,7 @@ export default function TicketsPage() {
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [showClosed, setShowClosed] = useState(false)
   const [stageFilter, setStageFilter] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -94,7 +95,7 @@ export default function TicketsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchTickets()
-  }, [propertyManager, dateRange, showArchived])
+  }, [propertyManager, dateRange, showArchived, showClosed])
 
   useEffect(() => {
     if (shouldCreate === 'true') {
@@ -158,6 +159,10 @@ export default function TicketsPage() {
 
     if (!showArchived) {
       query = query.or('archived.is.null,archived.eq.false')
+    }
+
+    if (!showClosed) {
+      query = query.not('status', 'ilike', 'closed')
     }
 
     // Also fetch not-completed job IDs for display stage
@@ -505,15 +510,27 @@ export default function TicketsPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 pb-2">
-          <Switch
-            id="show-archived"
-            checked={showArchived}
-            onCheckedChange={setShowArchived}
-          />
-          <label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
-            Show archived
-          </label>
+        <div className="flex items-center gap-4 pb-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-closed"
+              checked={showClosed}
+              onCheckedChange={setShowClosed}
+            />
+            <label htmlFor="show-closed" className="text-sm text-muted-foreground cursor-pointer">
+              Show closed
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-archived"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
+            />
+            <label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
+              Show archived
+            </label>
+          </div>
         </div>
       </div>
 
