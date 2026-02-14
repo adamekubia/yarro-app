@@ -586,10 +586,17 @@ export default function DashboardPage() {
                 const managerCount = stats?.awaitingManager || 0
                 const notCompletedCount = stats?.jobNotCompleted || 0
 
+                const totalAction = totalHandoffs + declinedCount + managerCount + notCompletedCount
+
                 return (
                   <div className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-card-foreground">Requires Action</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
+                        {totalAction > 0 && (
+                          <span className="text-xs font-bold text-white bg-red-500 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalAction}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Tooltip>
@@ -682,7 +689,15 @@ export default function DashboardPage() {
 
               {/* In Progress */}
               <div className="bg-card rounded-xl border border-border p-4">
-                <h3 className="text-sm font-semibold text-card-foreground mb-3">In Progress</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
+                  {(() => {
+                    const totalProgress = (stats?.awaitingContractor || 0) + (stats?.awaitingBooking || 0) + (stats?.scheduledJobs || 0) + (stats?.awaitingLandlord || 0)
+                    return totalProgress > 0 ? (
+                      <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalProgress}</span>
+                    ) : null
+                  })()}
+                </div>
                 <div className="space-y-1.5">
                   {[
                     { key: 'contractor' as const, label: 'Awaiting Contractor', desc: 'Waiting for quote or availability', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },

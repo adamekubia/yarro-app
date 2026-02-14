@@ -1,6 +1,13 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { PRIORITY_DESCRIPTIONS } from '@/lib/constants'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 type StatusBadgeProps = {
   status: string
@@ -66,8 +73,9 @@ function formatStatus(status: string): string {
 
 export function StatusBadge({ status, variant = 'default', size = 'sm', className }: StatusBadgeProps) {
   const colors = statusColors[status.toLowerCase()] || statusColors.default
+  const priorityDesc = PRIORITY_DESCRIPTIONS[status] || PRIORITY_DESCRIPTIONS[status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()]
 
-  return (
+  const badge = (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 font-medium rounded-full',
@@ -80,4 +88,17 @@ export function StatusBadge({ status, variant = 'default', size = 'sm', classNam
       {formatStatus(status)}
     </span>
   )
+
+  if (priorityDesc) {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>{badge}</TooltipTrigger>
+          <TooltipContent><p className="text-xs">{priorityDesc}</p></TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  return badge
 }

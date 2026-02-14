@@ -37,6 +37,7 @@ import {
   SlidersHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
+  MessageCircle,
 } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 
@@ -61,6 +62,7 @@ const dataManagementItems = [
   { href: '/guide/rules', label: 'Rules & Preferences', icon: SlidersHorizontal },
   { href: '/guide', label: 'Product Guide', icon: BookOpen },
   { href: '/guide/import', label: 'Import Data', icon: Upload },
+  { href: '/feedback', label: 'Feedback', icon: MessageCircle },
 ]
 
 export function Sidebar() {

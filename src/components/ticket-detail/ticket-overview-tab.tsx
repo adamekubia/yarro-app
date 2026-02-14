@@ -5,7 +5,7 @@ import { Building2, Users, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
-import { formatCurrency, getContractors } from '@/hooks/use-ticket-detail'
+import { formatCurrency, getContractors, getRecipient } from '@/hooks/use-ticket-detail'
 
 interface TicketOverviewTabProps {
   context: TicketContext
@@ -83,7 +83,12 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
           <DetailRow label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight={!!basic.scheduled_date} />
           <DetailRow label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono />
           {contractorNotes && <DetailRow label="Quote Notes" value={contractorNotes} />}
-          <DetailRow label="Your Markup" value={basic.contractor_quote && basic.final_amount ? formatCurrency(basic.final_amount - basic.contractor_quote) : null} mono />
+          <DetailRow label="Your Markup" value={(() => {
+            if (basic.contractor_quote && basic.final_amount) return formatCurrency(basic.final_amount - basic.contractor_quote)
+            const mgr = getRecipient(messages?.manager ?? null)
+            if (basic.contractor_quote && mgr?.approval_amount) return formatCurrency(Number(mgr.approval_amount) - basic.contractor_quote)
+            return null
+          })()} mono />
           <DetailRow label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight={!!basic.final_amount} />
         </div>
       </div>

@@ -24,6 +24,14 @@ export type ContractorCategory = (typeof CONTRACTOR_CATEGORIES)[number]
 export const TICKET_PRIORITIES = ['Cosmetic', 'Damaging', 'Destructive', 'Urgent', 'Emergency'] as const
 export type TicketPriority = (typeof TICKET_PRIORITIES)[number]
 
+export const PRIORITY_DESCRIPTIONS: Record<string, string> = {
+  Cosmetic: 'Minor blemish, no functional impact',
+  Damaging: 'Causing ongoing damage if left',
+  Destructive: 'Actively worsening, needs prompt attention',
+  Urgent: 'Significant risk, should be resolved same day',
+  Emergency: 'Immediate danger to safety or property',
+}
+
 // Tenant roles
 export const TENANT_ROLES = ['tenant', 'lead_tenant', 'other'] as const
 export type TenantRole = (typeof TENANT_ROLES)[number]

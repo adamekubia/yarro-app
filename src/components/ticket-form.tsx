@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
-import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
+import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
 import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
 
@@ -753,7 +753,10 @@ export function TicketForm({
               <SelectContent>
                 {PRIORITY_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    <div>
+                      <span>{opt.label}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{PRIORITY_DESCRIPTIONS[opt.value]}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -797,7 +800,7 @@ export function TicketForm({
             addNewLabel="Add new contractor"
           />
           <p className="text-xs text-muted-foreground">
-            First selected = contacted immediately, others after 6h if no response.
+            First selected = contacted immediately, others after {Math.round((propertyManager?.contractor_timeout_minutes || 360) / 60)}h if no response.
           </p>
         </div>
 
