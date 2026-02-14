@@ -616,6 +616,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="space-y-1.5">
+                      {/* Primary actions */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
@@ -640,27 +641,6 @@ export default function DashboardPage() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            onClick={() => declinedCount > 0 ? showAwaitingTickets('declined') : undefined}
-                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
-                          >
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${declinedCount > 0 ? 'bg-orange-500/15' : 'bg-muted'}`}>
-                              <XCircle className={`h-4 w-4 ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/50'}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium ${declinedCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Landlord Declined</p>
-                              <p className="text-xs text-muted-foreground">Needs follow-up</p>
-                            </div>
-                            <span className={`text-lg font-bold tabular-nums ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/40'}`}>
-                              {declinedCount}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
                             onClick={() => managerCount > 0 ? showAwaitingTickets('manager') : undefined}
                             className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
                           >
@@ -677,6 +657,34 @@ export default function DashboardPage() {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
+                      </Tooltip>
+
+                      {/* Separator */}
+                      <div className="flex items-center gap-2 py-1">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">Needs Follow Up</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => declinedCount > 0 ? showAwaitingTickets('declined') : undefined}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${declinedCount > 0 ? 'bg-orange-500/15' : 'bg-muted'}`}>
+                              <XCircle className={`h-4 w-4 ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/50'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${declinedCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Landlord Declined</p>
+                              <p className="text-xs text-muted-foreground">Needs follow-up</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${declinedCount > 0 ? 'text-orange-500' : 'text-muted-foreground/40'}`}>
+                              {declinedCount}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
