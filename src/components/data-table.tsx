@@ -234,7 +234,7 @@ export function DataTable<T>({
       </div>
 
       {/* Footer */}
-      <div className={cn("px-4 py-3 border-t text-sm text-muted-foreground", fillHeight && "flex-shrink-0")}>
+      <div className={cn("px-4 py-2 border-t text-xs text-muted-foreground", fillHeight && "flex-shrink-0")}>
         {filteredData.length} of {data.length} results
       </div>
     </div>
