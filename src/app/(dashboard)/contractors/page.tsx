@@ -543,14 +543,14 @@ export default function ContractorsPage() {
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Wrench className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Contractors</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your contractor network
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Contractors
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage your contractor network
+          </p>
         </div>
         <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
       </div>

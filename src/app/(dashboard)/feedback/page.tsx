@@ -114,14 +114,12 @@ export default function FeedbackPage() {
       <div className="relative bg-gradient-to-br from-primary/5 via-background to-blue-500/5 dark:from-primary/10 dark:to-blue-500/10 border-b flex-shrink-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.03] via-transparent to-transparent" />
         <div className="relative px-8 pt-6 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
-              <MessageCircle className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Feedback</h1>
-              <p className="text-sm text-muted-foreground">Help us shape Yarro. Every piece of feedback makes the product better.</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Feedback
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Help us shape Yarro. Every piece of feedback makes the product better.</p>
           </div>
         </div>
       </div>

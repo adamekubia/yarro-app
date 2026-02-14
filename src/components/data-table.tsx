@@ -113,13 +113,13 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={cn("bg-card rounded-xl border", fillHeight && "flex flex-col h-full")}>
-        <div className={cn("p-4 border-b", fillHeight && "flex-shrink-0")}>
+      <div className={cn("rounded-xl", fillHeight && "flex flex-col h-full")}>
+        <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
           <div className="h-10 w-64 bg-muted animate-pulse rounded-lg" />
         </div>
-        <div className={cn("divide-y", fillHeight && "flex-1 min-h-0 overflow-hidden")}>
+        <div className={cn("space-y-1 px-4", fillHeight && "flex-1 min-h-0 overflow-hidden")}>
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="p-4">
+            <div key={i} className="py-3">
               <div className="h-5 w-full bg-muted animate-pulse rounded" />
             </div>
           ))}
@@ -129,9 +129,9 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("bg-card rounded-xl border", fillHeight && "flex flex-col h-full")}>
+    <div className={cn("rounded-xl", fillHeight && "flex flex-col h-full")}>
       {/* Search + Filters */}
-      <div className={cn("p-4 border-b", fillHeight && "flex-shrink-0")}>
+      <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
         <div className="flex items-center gap-3">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -152,14 +152,14 @@ export function DataTable<T>({
         style={fillHeight ? undefined : { maxHeight }}
       >
         <Table>
-          <TableHeader>
+          <TableHeader className="[&_tr]:border-0">
             <TableRow className="hover:bg-transparent">
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
                   style={{ width: col.width }}
                   className={cn(
-                    'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                    'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
                     col.sortable && 'cursor-pointer select-none hover:text-foreground'
                   )}
                   onClick={() => col.sortable && handleSort(col.key)}
@@ -185,7 +185,7 @@ export function DataTable<T>({
               {onViewClick && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr]:border-0">
             {filteredData.length === 0 ? (
               <TableRow>
                 <TableCell
@@ -201,7 +201,7 @@ export function DataTable<T>({
                   key={getRowId(row)}
                   className={cn(
                     'group',
-                    onRowClick && 'cursor-pointer hover:bg-muted/50',
+                    onRowClick && 'cursor-pointer hover:bg-muted/40',
                     getRowClassName?.(row)
                   )}
                   onClick={() => onRowClick?.(row)}
@@ -234,7 +234,7 @@ export function DataTable<T>({
       </div>
 
       {/* Footer */}
-      <div className={cn("px-4 py-2 border-t text-xs text-muted-foreground", fillHeight && "flex-shrink-0")}>
+      <div className={cn("px-4 py-2 text-xs text-muted-foreground/50", fillHeight && "flex-shrink-0")}>
         {filteredData.length} of {data.length} results
       </div>
     </div>

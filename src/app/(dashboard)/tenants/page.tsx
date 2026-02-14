@@ -456,14 +456,14 @@ export default function TenantsPage() {
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Tenants</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage tenant contacts across your properties
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Tenants
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage tenant contacts across your properties
+          </p>
         </div>
         <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
       </div>

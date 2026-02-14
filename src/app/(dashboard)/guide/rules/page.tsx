@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Clock, Users, Bell } from 'lucide-react'
+import { Clock, Users, Bell, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Timeout options: value in minutes, label for display
@@ -102,10 +102,15 @@ export default function RulesPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-semibold text-foreground mb-2">Rules & Preferences</h1>
-      <p className="text-muted-foreground mb-6">
-        Configure how Yarro handles your tickets and communications.
-      </p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <SlidersHorizontal className="h-5 w-5" />
+          Rules & Preferences
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Configure how Yarro handles your tickets and communications.
+        </p>
+      </div>
 
       <div className="space-y-6">
         {/* Dispatch Mode */}

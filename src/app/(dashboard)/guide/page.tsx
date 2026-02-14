@@ -3,7 +3,7 @@
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
 import { WhatsAppPreview } from '@/components/whatsapp-preview'
-import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield } from 'lucide-react'
+import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield, BookOpen } from 'lucide-react'
 
 const PM_GUIDE_TEXT = `HOW TO USE YARRO AS A PROPERTY MANAGER
 
@@ -44,8 +44,11 @@ export default function GuidePage() {
       <div className="h-full p-6 flex flex-col gap-4 overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0">
-          <h1 className="text-2xl font-semibold text-foreground">Product Guide</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Product Guide
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Your complete guide to Yarro property management
           </p>
         </div>

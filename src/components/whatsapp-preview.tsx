@@ -24,7 +24,7 @@ export function WhatsAppPreview({
       </div>
 
       {/* Chat area */}
-      <div className="bg-[#e5ddd5] dark:bg-[#0b141a] p-3 space-y-1.5">
+      <div className="bg-muted/60 dark:bg-[#0b141a] p-3 space-y-1.5">
         {label && (
           <p className="text-[10px] text-center text-black/40 dark:text-white/30 mb-2">
             {label}
