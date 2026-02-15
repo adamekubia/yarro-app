@@ -10,14 +10,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Activity, MessageCircle } from 'lucide-react'
+import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Activity } from 'lucide-react'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
 import { TicketDispatchTab } from './ticket-dispatch-tab'
 import { TicketCompletionTab } from './ticket-completion-tab'
 import { TicketActivityTab } from './ticket-activity-tab'
-import { TicketMessagesTab } from './ticket-messages-tab'
 
 interface TicketDetailModalProps {
   ticketId: string | null
@@ -158,16 +157,10 @@ export function TicketDetailModal({
                       Conversation
                     </TabsTrigger>
                   )}
-                  {hasDispatch && (
+                  {(hasDispatch || hasOutboundLog) && (
                     <TabsTrigger value="dispatch" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
                       <Wrench className="h-3.5 w-3.5" />
                       Dispatch
-                    </TabsTrigger>
-                  )}
-                  {hasOutboundLog && (
-                    <TabsTrigger value="messages" className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs">
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      Messages
                     </TabsTrigger>
                   )}
                   {hasCompletion && (
@@ -205,15 +198,9 @@ export function TicketDetailModal({
                   </TabsContent>
                 )}
 
-                {hasDispatch && messages && (
+                {(hasDispatch || hasOutboundLog) && (
                   <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
-                    <TicketDispatchTab messages={messages} />
-                  </TabsContent>
-                )}
-
-                {hasOutboundLog && (
-                  <TabsContent value="messages" className="mt-4 flex-1 min-h-0 overflow-y-auto">
-                    <TicketMessagesTab outboundLog={outboundLog} />
+                    <TicketDispatchTab messages={messages} outboundLog={outboundLog} />
                   </TabsContent>
                 )}
 
