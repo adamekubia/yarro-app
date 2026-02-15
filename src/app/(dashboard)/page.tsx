@@ -641,7 +641,7 @@ export default function DashboardPage() {
               {/* RIGHT: Overview + In Progress (stacked, same height as left) */}
               <div className="flex flex-col gap-3">
                 {/* Ticket Overview */}
-                <div className="bg-card rounded-xl border border-border p-4 flex-[3] min-h-0 overflow-hidden">
+                <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-primary" />
@@ -715,7 +715,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* In Progress */}
-                <div className="bg-card rounded-xl border border-border p-4 flex-[2] min-h-0">
+                <div className="bg-card rounded-xl border border-border p-4 flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
                     {(() => {
