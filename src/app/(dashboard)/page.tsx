@@ -277,7 +277,7 @@ export default function DashboardPage() {
         return msgStage === 'no_contractors_left'
       }).length
 
-      const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t)).length
+      const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t) && !ncIds.has(t.id)).length
 
       const awaitingBooking = tickets.filter((t) => {
         if (!isOpen(t)) return false
@@ -395,6 +395,7 @@ export default function DashboardPage() {
     } else if (type === 'scheduled') {
       filtered = allTickets.filter((t) => {
         if (!isOpen(t)) return false
+        if (notCompletedIds.has(t.id)) return false
         const jobStage = (t.job_stage || '').toLowerCase()
         return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
       })
