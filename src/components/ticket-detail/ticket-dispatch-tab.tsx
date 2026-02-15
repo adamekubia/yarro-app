@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, X, MessageCircle } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
@@ -29,6 +29,14 @@ const FOLLOWUP_LOG_TYPES = new Set(['contractor_job_reminder', 'contractor_compl
 
 type ChatMsg = { role: string; text: string; timestamp?: string; allowHtml?: boolean; meta?: { quote?: string; approved?: boolean; amount?: string } }
 
+interface SubEntry {
+  id: string
+  label: string
+  timestamp: string
+  variant: 'reminder' | 'warning'
+  chatMessages: ChatMsg[]
+}
+
 interface PurposeEntry {
   id: string
   phase: string
@@ -39,9 +47,10 @@ interface PurposeEntry {
   timestamp: string
   isEscalation: boolean
   chatMessages: ChatMsg[]
+  subEntries: SubEntry[]
 }
 
-// ─── Badge ───
+// ─── Status badge styles ───
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-muted text-muted-foreground',
@@ -58,47 +67,46 @@ const STATUS_STYLES: Record<string, string> = {
 function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[]): PurposeEntry[] {
   const entries: PurposeEntry[] = []
 
-  // Group log entries
   const contractorLogs = outboundLog.filter(e => CONTRACTOR_LOG_TYPES.has(e.message_type))
   const managerLogs = outboundLog.filter(e => MANAGER_LOG_TYPES.has(e.message_type))
   const landlordLogs = outboundLog.filter(e => LANDLORD_LOG_TYPES.has(e.message_type))
   const bookingLogs = outboundLog.filter(e => BOOKING_LOG_TYPES.has(e.message_type))
   const followupLogs = outboundLog.filter(e => FOLLOWUP_LOG_TYPES.has(e.message_type))
 
-  // ─── Contractors: one row per contractor ───
+  // ─── Contractors: one row per contractor, reminders nested ───
   if (messages) {
     const contractors = getContractors(messages.contractors)
     for (const c of contractors) {
       const rawStatus = getContractorStatus(c)
       const status = rawStatus === 'approved' ? 'approved' : rawStatus === 'replied' ? 'quoted' : rawStatus === 'sent' ? 'sent' : 'pending'
-
-      // Chat messages: dispatch + reminders + reply
-      const chatMsgs: ChatMsg[] = []
       const myLogs = contractorLogs.filter(e => e.recipient_phone === c.phone)
 
+      // Primary chat: dispatch + reply only
+      const chatMsgs: ChatMsg[] = []
       const dispatchLog = myLogs.find(e => e.message_type === 'contractor_dispatch')
       const dispatchBody = dispatchLog?.body || c.body
       if (dispatchBody) chatMsgs.push({ role: 'assistant', text: dispatchBody, timestamp: dispatchLog?.sent_at || c.sent_at, allowHtml: true })
-
-      for (const r of myLogs.filter(e => e.message_type === 'contractor_reminder')) {
-        if (r.body) chatMsgs.push({ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true })
-      }
-
       if (c.reply_text) {
         chatMsgs.push({
-          role: 'tenant',
-          text: c.reply_text,
-          timestamp: c.replied_at,
+          role: 'tenant', text: c.reply_text, timestamp: c.replied_at,
           meta: c.quote_amount ? { quote: formatAmount(c.quote_amount), approved: c.manager_decision === 'approved' } : undefined,
         })
       }
 
-      // Sublabel
+      // Sub-entries: reminders
+      const reminderLogs = myLogs.filter(e => e.message_type === 'contractor_reminder')
+      const subEntries: SubEntry[] = reminderLogs.map((r, i) => ({
+        id: `${c.id}-reminder-${i}`,
+        label: 'Reminder sent',
+        timestamp: r.sent_at,
+        variant: 'reminder' as const,
+        chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
+      }))
+
+      // Sublabel: category + sent time + quote notes
       const parts: string[] = []
       if (c.category) parts.push(c.category)
       if (c.sent_at) parts.push(format(new Date(c.sent_at), 'dd MMM, HH:mm'))
-      const reminders = myLogs.filter(e => e.message_type === 'contractor_reminder')
-      if (reminders.length > 0) parts.push(`${reminders.length} reminder${reminders.length > 1 ? 's' : ''}`)
       if (c.quote_notes) parts.push(c.quote_notes)
 
       entries.push({
@@ -111,6 +119,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         timestamp: c.sent_at || '',
         isEscalation: false,
         chatMessages: chatMsgs,
+        subEntries,
       })
     }
   }
@@ -126,15 +135,15 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       timestamp: entry.sent_at,
       isEscalation: true,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
     })
   }
 
-  // ─── Manager: one row ───
+  // ─── Manager: one row, no sub-entries ───
   if (messages) {
     const manager = getRecipient(messages.manager)
     if (manager && (manager.review_request_sent_at || managerLogs.length > 0)) {
       const chatMsgs: ChatMsg[] = []
-
       for (const log of managerLogs) {
         if (log.body) chatMsgs.push({ role: 'assistant', text: log.body, timestamp: log.sent_at, allowHtml: true })
       }
@@ -162,19 +171,19 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         timestamp: manager.review_request_sent_at || '',
         isEscalation: false,
         chatMessages: chatMsgs,
+        subEntries: [],
       })
     }
   }
 
-  // ─── Landlord: one row (includes follow-ups, timeouts) ───
+  // ─── Landlord: primary row = quote + reply, sub-entries = follow-ups + warnings ───
   if (messages) {
     const landlord = getRecipient(messages.landlord)
     if (landlord && (landlord.review_request_sent_at || landlordLogs.length > 0)) {
+      // Primary chat: initial quote + reply only
       const chatMsgs: ChatMsg[] = []
-
-      // All outbound chronologically (quote, follow-ups, timeout alerts, approval notifs)
-      const sortedLogs = [...landlordLogs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
-      for (const log of sortedLogs) {
+      const quoteLogs = landlordLogs.filter(e => e.message_type === 'landlord_quote')
+      for (const log of quoteLogs) {
         if (log.body) chatMsgs.push({ role: 'assistant', text: log.body, timestamp: log.sent_at, allowHtml: true })
       }
       if (chatMsgs.length === 0 && landlord.last_outbound_body) {
@@ -187,32 +196,61 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         })
       }
 
+      // Sub-entries: follow-ups (reminder), timeouts (warning), approval notifs (reminder)
+      const subEntries: SubEntry[] = []
+
+      for (const f of landlordLogs.filter(e => e.message_type === 'landlord_followup')) {
+        subEntries.push({
+          id: f.id,
+          label: 'Follow-up to landlord',
+          timestamp: f.sent_at,
+          variant: 'reminder',
+          chatMessages: f.body ? [{ role: 'assistant', text: f.body, timestamp: f.sent_at, allowHtml: true }] : [],
+        })
+      }
+
+      for (const t of landlordLogs.filter(e => e.message_type === 'pm_landlord_timeout')) {
+        subEntries.push({
+          id: t.id,
+          label: 'Timeout alert to manager',
+          timestamp: t.sent_at,
+          variant: 'warning',
+          chatMessages: t.body ? [{ role: 'assistant', text: t.body, timestamp: t.sent_at, allowHtml: true }] : [],
+        })
+      }
+
+      for (const a of landlordLogs.filter(e => e.message_type === 'pm_landlord_approved')) {
+        subEntries.push({
+          id: a.id,
+          label: 'Approval sent to manager',
+          timestamp: a.sent_at,
+          variant: 'reminder',
+          chatMessages: a.body ? [{ role: 'assistant', text: a.body, timestamp: a.sent_at, allowHtml: true }] : [],
+        })
+      }
+
+      // Sort sub-entries by time
+      subEntries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
       const status = landlord.approval !== undefined
         ? (landlord.approval ? 'approved' : 'declined')
         : landlord.replied_at ? 'quoted' : 'awaiting'
-
-      // Sublabel with context
-      const subParts: string[] = []
-      if (landlord.review_request_sent_at) subParts.push(`Sent ${format(new Date(landlord.review_request_sent_at), 'dd MMM, HH:mm')}`)
-      const followups = landlordLogs.filter(e => e.message_type === 'landlord_followup')
-      if (followups.length > 0) subParts.push(`${followups.length} follow-up${followups.length > 1 ? 's' : ''}`)
-      const timeouts = landlordLogs.filter(e => e.message_type === 'pm_landlord_timeout')
-      if (timeouts.length > 0) subParts.push('timeout alert')
 
       entries.push({
         id: 'landlord-approval',
         phase: 'Landlord Approval',
         label: landlord.name || 'Landlord Approval',
-        sublabel: subParts.join(' · '),
+        sublabel: landlord.review_request_sent_at ? `Sent ${format(new Date(landlord.review_request_sent_at), 'dd MMM, HH:mm')}` : undefined,
         status,
         timestamp: landlord.review_request_sent_at || '',
         isEscalation: false,
         chatMessages: chatMsgs,
+        subEntries,
       })
     }
   }
 
-  // ─── Booking: individual notifications ───
+  // ─── Booking: individual rows ───
   for (const entry of bookingLogs) {
     entries.push({
       id: entry.id,
@@ -223,10 +261,11 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       timestamp: entry.sent_at,
       isEscalation: false,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
     })
   }
 
-  // ─── Follow-up: individual reminders/escalations ───
+  // ─── Follow-up: individual rows, escalations get warning styling ───
   for (const entry of followupLogs) {
     entries.push({
       id: entry.id,
@@ -237,10 +276,22 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       timestamp: entry.sent_at,
       isEscalation: entry.message_type === 'pm_completion_overdue',
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
     })
   }
 
   return entries
+}
+
+// ─── Sub-entry toggle label ───
+
+function subEntryLabel(subs: SubEntry[]): string {
+  const reminders = subs.filter(s => s.variant === 'reminder')
+  const warnings = subs.filter(s => s.variant === 'warning')
+  const parts: string[] = []
+  if (reminders.length > 0) parts.push(`${reminders.length} follow-up${reminders.length > 1 ? 's' : ''}`)
+  if (warnings.length > 0) parts.push(`${warnings.length} alert${warnings.length > 1 ? 's' : ''}`)
+  return parts.join(' · ')
 }
 
 // ─── Component ───
@@ -252,7 +303,17 @@ interface TicketDispatchTabProps {
 
 export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabProps) {
   const [overlay, setOverlay] = useState<{ title: string; messages: ChatMsg[] } | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const entries = useMemo(() => buildEntries(messages, outboundLog), [messages, outboundLog])
+
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   if (entries.length === 0) {
     return (
@@ -275,6 +336,8 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
         lastPhase = entry.phase
 
         const isClickable = entry.chatMessages.length > 0
+        const hasSubs = entry.subEntries.length > 0
+        const isExpanded = expanded.has(entry.id)
 
         return (
           <div key={entry.id}>
@@ -295,11 +358,12 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
                   'rounded-full shrink-0 mt-1.5 h-2.5 w-2.5',
                   entry.isEscalation ? 'bg-red-500' : 'bg-foreground/40',
                 )} />
-                {!isLast && <div className="w-px flex-1 bg-border/40 mt-1" />}
+                {(!isLast || (hasSubs && isExpanded)) && <div className="w-px flex-1 bg-border/40 mt-1" />}
               </div>
 
               {/* Content */}
-              <div className={cn('min-w-0 flex-1', !isLast ? 'pb-4' : 'pb-1')}>
+              <div className={cn('min-w-0 flex-1', !isLast || (hasSubs && isExpanded) ? 'pb-3' : 'pb-1')}>
+                {/* Main row — click for overlay */}
                 <button
                   onClick={() => isClickable && setOverlay({ title: entry.label, messages: entry.chatMessages })}
                   disabled={!isClickable}
@@ -329,6 +393,63 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
                     )}
                   </div>
                 </button>
+
+                {/* Sub-entry toggle */}
+                {hasSubs && (
+                  <button
+                    onClick={() => toggleExpand(entry.id)}
+                    className="flex items-center gap-1 mt-1 ml-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {isExpanded
+                      ? <ChevronDown className="h-3 w-3" />
+                      : <ChevronRight className="h-3 w-3" />
+                    }
+                    <span>{subEntryLabel(entry.subEntries)}</span>
+                  </button>
+                )}
+
+                {/* Expanded sub-entries */}
+                {hasSubs && isExpanded && (
+                  <div className="mt-2 ml-1 space-y-1.5">
+                    {entry.subEntries.map(sub => {
+                      const subClickable = sub.chatMessages.length > 0
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => subClickable && setOverlay({ title: sub.label, messages: sub.chatMessages })}
+                          disabled={!subClickable}
+                          className={cn(
+                            'w-full text-left rounded-md px-2.5 py-2 transition-colors',
+                            sub.variant === 'warning'
+                              ? 'border border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10'
+                              : 'border border-border/50 bg-muted/20 hover:bg-muted/40',
+                            !subClickable && 'cursor-default',
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {sub.variant === 'warning' && (
+                                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">⚠</span>
+                              )}
+                              <span className={cn(
+                                'text-xs',
+                                sub.variant === 'warning' ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
+                              )}>
+                                {sub.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-muted-foreground">
+                                {format(new Date(sub.timestamp), 'dd MMM, HH:mm')}
+                              </span>
+                              {subClickable && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
