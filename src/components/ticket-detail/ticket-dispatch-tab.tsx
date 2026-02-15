@@ -265,18 +265,78 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
     })
   }
 
-  // ─── Follow-up: individual rows, escalations get warning styling ───
-  for (const entry of followupLogs) {
+  // ─── Follow-up: day-of reminder is primary, completion entries nested ───
+  const dayOfReminders = followupLogs.filter(e => e.message_type === 'contractor_job_reminder')
+  const completionReminders = followupLogs.filter(e => e.message_type === 'contractor_completion_reminder')
+  const completionOverdue = followupLogs.filter(e => e.message_type === 'pm_completion_overdue')
+
+  if (dayOfReminders.length > 0) {
+    // First day-of reminder is the primary row
+    const primary = dayOfReminders[0]
+    const subEntries: SubEntry[] = []
+
+    // Extra day-of reminders nested (edge case / bug)
+    for (let i = 1; i < dayOfReminders.length; i++) {
+      const r = dayOfReminders[i]
+      subEntries.push({
+        id: r.id, label: 'Day-of reminder (repeat)', timestamp: r.sent_at, variant: 'reminder',
+        chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
+      })
+    }
+
+    // Completion reminders nested
+    for (const r of completionReminders) {
+      subEntries.push({
+        id: r.id, label: 'Completion reminder to contractor', timestamp: r.sent_at, variant: 'reminder',
+        chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
+      })
+    }
+
+    // Completion overdue nested as warning
+    for (const r of completionOverdue) {
+      subEntries.push({
+        id: r.id, label: 'Completion overdue — manager alerted', timestamp: r.sent_at, variant: 'warning',
+        chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
+      })
+    }
+
+    subEntries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
     entries.push({
-      id: entry.id,
+      id: primary.id,
       phase: 'Follow-up',
-      label: TYPE_LABELS[entry.message_type] || entry.message_type,
-      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
-      status: entry.message_type === 'pm_completion_overdue' ? 'escalation' : 'sent',
-      timestamp: entry.sent_at,
-      isEscalation: entry.message_type === 'pm_completion_overdue',
-      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
-      subEntries: [],
+      label: 'Day-of Reminder',
+      sublabel: format(new Date(primary.sent_at), 'dd MMM, HH:mm'),
+      status: 'sent',
+      timestamp: primary.sent_at,
+      isEscalation: false,
+      chatMessages: primary.body ? [{ role: 'assistant', text: primary.body, timestamp: primary.sent_at, allowHtml: true }] : [],
+      subEntries,
+    })
+  } else if (completionReminders.length > 0 || completionOverdue.length > 0) {
+    // No day-of reminder but completion entries exist — first completion is primary
+    const allCompletion = [...completionReminders, ...completionOverdue].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
+    const primary = allCompletion[0]
+    const isPrimaryOverdue = primary.message_type === 'pm_completion_overdue'
+
+    const subEntries: SubEntry[] = allCompletion.slice(1).map(r => ({
+      id: r.id,
+      label: r.message_type === 'pm_completion_overdue' ? 'Completion overdue — manager alerted' : 'Completion reminder to contractor',
+      timestamp: r.sent_at,
+      variant: (r.message_type === 'pm_completion_overdue' ? 'warning' : 'reminder') as 'warning' | 'reminder',
+      chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
+    }))
+
+    entries.push({
+      id: primary.id,
+      phase: 'Follow-up',
+      label: TYPE_LABELS[primary.message_type] || primary.message_type,
+      sublabel: format(new Date(primary.sent_at), 'dd MMM, HH:mm'),
+      status: isPrimaryOverdue ? 'escalation' : 'sent',
+      timestamp: primary.sent_at,
+      isEscalation: isPrimaryOverdue,
+      chatMessages: primary.body ? [{ role: 'assistant', text: primary.body, timestamp: primary.sent_at, allowHtml: true }] : [],
+      subEntries,
     })
   }
 
