@@ -541,7 +541,7 @@ export default function DashboardPage() {
           /* Dashboard — Top cards + full-width recent tickets */
           <div className="flex-1 min-h-0 flex flex-col gap-3">
             {/* Top section: two columns */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 grid-rows-[auto_1fr] gap-3">
               {/* LEFT: Your To-Do */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
@@ -555,8 +555,8 @@ export default function DashboardPage() {
                 const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
                 return (
-                  <div className="flex flex-col gap-3">
-                    <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
+                  <>
+                    <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-1">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
@@ -600,7 +600,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Needs Follow Up Card */}
-                    <div className="bg-card rounded-xl border border-border p-4 flex-1">
+                    <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-sm font-semibold text-card-foreground">Needs Follow Up</h3>
                       </div>
@@ -634,14 +634,13 @@ export default function DashboardPage() {
                       ))}
                       </div>
                     </div>
-                  </div>
+                  </>
                 )
               })()}
 
               {/* RIGHT: Overview + In Progress (stacked, same height as left) */}
-              <div className="flex flex-col gap-3">
-                {/* Ticket Overview */}
-                <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
+              {/* Ticket Overview */}
+              <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-2">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-primary" />
@@ -714,8 +713,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* In Progress */}
-                <div className="bg-card rounded-xl border border-border p-4 flex-1">
+              {/* In Progress */}
+              <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-2">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
                     {(() => {
@@ -754,7 +753,6 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
-              </div>
             </div>
 
             {/* Bottom: Recent Tickets — full width */}
