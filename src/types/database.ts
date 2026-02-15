@@ -315,6 +315,7 @@ export type Database = {
       c1_property_managers: {
         Row: {
           business_name: string
+          completion_reminder_hours: number | null
           contractor_reminder_minutes: number | null
           contractor_timeout_minutes: number | null
           created_at: string
@@ -330,6 +331,7 @@ export type Database = {
         }
         Insert: {
           business_name: string
+          completion_reminder_hours?: number | null
           contractor_reminder_minutes?: number | null
           contractor_timeout_minutes?: number | null
           created_at?: string
@@ -345,6 +347,7 @@ export type Database = {
         }
         Update: {
           business_name?: string
+          completion_reminder_hours?: number | null
           contractor_reminder_minutes?: number | null
           contractor_timeout_minutes?: number | null
           created_at?: string

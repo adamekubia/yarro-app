@@ -76,3 +76,48 @@ npm run build   # production build check
 - Do NOT install unnecessary dependencies
 - Keep UI consistent with existing patterns (shadcn, Yarro brand colors #0059FF primary)
 - All data queries must filter by `property_manager_id` from auth context
+
+## Self-Anneal Protocol for Dev Work (MANDATORY)
+
+Before claiming ANY fix is done, run this checklist. Faraaz reviews live — broken claims waste his time.
+
+### 1. Verify Queries Against DB Schema
+**Before writing ANY Supabase query, check the actual table columns via MCP:**
+```sql
+SELECT column_name FROM information_schema.columns WHERE table_name = 'c1_TABLE_NAME';
+```
+Never assume a column exists because the TypeScript interface says so.
+
+**Check FK relationships before using `.select('*, related_table(col)'):`**
+```sql
+SELECT kcu.column_name, ccu.table_name, ccu.column_name AS fk_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+WHERE tc.table_name = 'c1_TABLE_NAME' AND tc.constraint_type = 'FOREIGN KEY';
+```
+
+### 2. Check API Logs After Deploy
+Use `mcp__yarro-supabase__get_logs` (service: "api") to check for 400/406 errors on the endpoints you changed. A build passing is NOT the same as queries succeeding.
+
+### 3. Known Supabase Pitfalls
+| Pitfall | Fix |
+|---------|-----|
+| `.single()` returns 406 on 0 or 2+ rows | Use `.maybeSingle()` + error logging |
+| Column doesn't exist → 400 Bad Request | Always verify schema first |
+| RLS silently returns empty (no error) | Check `pg_policies` and test with `get_pm_id()` |
+| Non-existent column in `.eq()` → 400 | Same as above — verify schema |
+
+### 4. UI Verification
+- Build passing ≠ visually correct
+- After pushing, think through the CSS implications of every class change
+- `cn()` merges Tailwind classes — later classes override earlier ones
+- When editing shared components (like InteractiveHoverButton), check ALL usage sites
+
+### 5. Schema Reference (quick lookup)
+| Table | Has `ticket_id`? | Has `created_at`? | PK relationship |
+|-------|------------------|-------------------|-----------------|
+| `c1_tickets` | N/A (IS tickets) | No — uses `date_logged` | — |
+| `c1_conversations` | No | **No** | Own PK |
+| `c1_messages` | Yes | Yes | Own PK |
+| `c1_job_completions` | **No** | Yes | `id` = ticket id (FK to c1_tickets) |

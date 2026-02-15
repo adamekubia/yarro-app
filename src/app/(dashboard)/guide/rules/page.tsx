@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Save,
   Check,
+  ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -54,6 +55,14 @@ const LANDLORD_FOLLOWUP_OPTIONS = [
   { value: '48', label: '48 hours' },
 ]
 
+const COMPLETION_REMINDER_OPTIONS = [
+  { value: '3', label: '3 hours' },
+  { value: '6', label: '6 hours' },
+  { value: '12', label: '12 hours' },
+  { value: '24', label: '24 hours' },
+  { value: '48', label: '48 hours' },
+]
+
 const ALL_LANDLORD_TIMEOUT_OPTIONS = [
   { value: '12', label: '12 hours' },
   { value: '24', label: '24 hours' },
@@ -72,6 +81,7 @@ interface DraftSettings {
   contractor_reminder_minutes: string
   landlord_followup_hours: string
   landlord_timeout_hours: string
+  completion_reminder_hours: string
 }
 
 const DEFAULTS: DraftSettings = {
@@ -81,6 +91,7 @@ const DEFAULTS: DraftSettings = {
   contractor_reminder_minutes: '120',
   landlord_followup_hours: '24',
   landlord_timeout_hours: '48',
+  completion_reminder_hours: '6',
 }
 
 export default function RulesPage() {
@@ -99,6 +110,7 @@ export default function RulesPage() {
       contractor_reminder_minutes: (propertyManager.contractor_reminder_minutes || 120).toString(),
       landlord_followup_hours: (propertyManager.landlord_followup_hours || 24).toString(),
       landlord_timeout_hours: (propertyManager.landlord_timeout_hours || 48).toString(),
+      completion_reminder_hours: (propertyManager.completion_reminder_hours || 6).toString(),
     }
     setDraft(fromPM)
     setSaved(fromPM)
@@ -165,6 +177,7 @@ export default function RulesPage() {
         contractor_reminder_minutes: draft.contractor_reminder_enabled ? parseInt(draft.contractor_reminder_minutes) : null,
         landlord_followup_hours: parseInt(draft.landlord_followup_hours),
         landlord_timeout_hours: parseInt(draft.landlord_timeout_hours),
+        completion_reminder_hours: parseInt(draft.completion_reminder_hours),
       })
       .eq('id', propertyManager.id)
 
@@ -333,6 +346,52 @@ export default function RulesPage() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Alert you if landlord still hasn&apos;t responded. Ticket marked &quot;Landlord No Response&quot;.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── JOB COMPLETION ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Job Completion</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Completion Reminder */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Outcome Form Reminder</span>
+              </div>
+              <Select
+                value={draft.completion_reminder_hours}
+                onValueChange={(v) => updateDraft({ completion_reminder_hours: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPLETION_REMINDER_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Nudge contractor to submit outcome form after this time.
+              </p>
+            </div>
+
+            {/* Escalation (auto-calculated) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Escalate to You</span>
+              </div>
+              <div className="flex items-center h-10 px-3 rounded-md border bg-muted/30">
+                <span className="text-sm text-muted-foreground">
+                  {parseInt(draft.completion_reminder_hours) * 2} hours
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Auto-set to 2× the reminder. Alert you if contractor still hasn&apos;t submitted.
               </p>
             </div>
           </div>

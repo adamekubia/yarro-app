@@ -161,6 +161,19 @@ export interface LedgerEntry {
   created_at: string
 }
 
+export interface OutboundLogEntry {
+  id: string
+  ticket_id: string
+  message_type: string
+  recipient_phone: string | null
+  recipient_role: string
+  twilio_sid: string | null
+  template_sid: string | null
+  body: string | null
+  status: string | null
+  sent_at: string
+}
+
 export interface LogEntry {
   role?: string
   direction?: 'in' | 'out'
@@ -313,12 +326,14 @@ interface UseTicketDetailResult {
   messages: MessageData | null
   completion: CompletionData | null
   ledger: LedgerEntry[]
+  outboundLog: OutboundLogEntry[]
   loading: boolean
   error: string | null
   refetch: () => void
   hasConversation: boolean
   hasDispatch: boolean
   hasCompletion: boolean
+  hasOutboundLog: boolean
   previouslyApprovedContractor: string | null
   displayStage: string | null
 }
@@ -330,6 +345,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [messages, setMessages] = useState<MessageData | null>(null)
   const [completion, setCompletion] = useState<CompletionData | null>(null)
   const [ledger, setLedger] = useState<LedgerEntry[]>([])
+  const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -342,6 +358,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setMessages(null)
     setCompletion(null)
     setLedger([])
+    setOutboundLog([])
     setError(null)
   }, [])
 
@@ -441,7 +458,17 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         setLedger((data as LedgerEntry[]) || [])
       }
 
-      await Promise.all([fetchConversation(), fetchMessages(), fetchCompletion(), fetchLedger()])
+      const fetchOutboundLog = async () => {
+        const { data, error: logError } = await supabase
+          .from('c1_outbound_log')
+          .select('*')
+          .eq('ticket_id', id)
+          .order('sent_at', { ascending: true })
+        if (logError) console.error('Outbound log fetch error:', logError)
+        setOutboundLog((data as OutboundLogEntry[]) || [])
+      }
+
+      await Promise.all([fetchConversation(), fetchMessages(), fetchCompletion(), fetchLedger(), fetchOutboundLog()])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ticket details')
     } finally {
@@ -469,6 +496,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     getRecipient(messages.landlord) !== null
   )
   const hasCompletion = !!completion
+  const hasOutboundLog = outboundLog.length > 0
 
   // Check for previously approved contractor — only relevant during awaiting_manager with multiple quotes
   const previouslyApprovedContractor = messages?.contractors
@@ -510,12 +538,14 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     messages,
     completion,
     ledger,
+    outboundLog,
     loading,
     error,
     refetch,
     hasConversation,
     hasDispatch,
     hasCompletion,
+    hasOutboundLog,
     previouslyApprovedContractor,
     displayStage,
   }
