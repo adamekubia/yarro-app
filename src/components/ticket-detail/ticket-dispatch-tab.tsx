@@ -2,247 +2,222 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import {
-  Wrench,
-  User,
-  Building2,
-  Phone,
-  ChevronDown,
-  ChevronRight,
-  AlertTriangle,
-  Bell,
-  MessageCircle,
-  ArrowDownLeft,
-} from 'lucide-react'
-import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
-import { getContractors, getRecipient } from '@/hooks/use-ticket-detail'
+import { ChevronDown, ChevronRight, X, MessageCircle } from 'lucide-react'
+import type { MessageData, OutboundLogEntry, ContractorEntry } from '@/hooks/use-ticket-detail'
+import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
+import type { Json } from '@/types/database'
 
 // ─── Config ───
 
-const ROLE_ICONS: Record<string, typeof Wrench> = {
-  contractor: Wrench,
-  manager: User,
-  landlord: Building2,
-  tenant: Phone,
-}
-
-const ROLE_COLORS: Record<string, string> = {
-  contractor: 'text-blue-500',
-  manager: 'text-violet-500',
-  landlord: 'text-amber-500',
-  tenant: 'text-emerald-500',
-}
-
-const ROLE_DOT_BG: Record<string, string> = {
-  contractor: 'bg-blue-500/10',
-  manager: 'bg-violet-500/10',
-  landlord: 'bg-amber-500/10',
-  tenant: 'bg-emerald-500/10',
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  contractor_dispatch: 'Contractor Dispatched',
-  contractor_reminder: 'Contractor Reminder',
+const SECTION_LABELS: Record<string, string> = {
+  contractor_dispatch: 'Quote Request Sent',
+  contractor_reminder: 'Reminder Sent',
   no_contractors_left: 'No Contractors Available',
-  pm_quote: 'Quote Sent to Manager',
-  landlord_quote: 'Quote Sent to Landlord',
-  landlord_followup: 'Landlord Follow-up',
+  pm_quote: 'Quote Forwarded',
+  landlord_quote: 'Approval Request Sent',
+  landlord_followup: 'Follow-up Sent',
   pm_landlord_timeout: 'Landlord Timeout Alert',
-  pm_landlord_approved: 'Landlord Approved — PM Notified',
-  tenant_job_booked: 'Job Booked — Tenant',
-  pm_job_booked: 'Job Booked — Manager',
-  landlord_job_booked: 'Job Booked — Landlord',
-  contractor_job_reminder: 'Job Reminder',
+  pm_landlord_approved: 'Approval Notification',
+  tenant_job_booked: 'Tenant Notified',
+  pm_job_booked: 'Manager Notified',
+  landlord_job_booked: 'Landlord Notified',
+  contractor_job_reminder: 'Day-of Reminder',
   contractor_completion_reminder: 'Completion Reminder',
-  pm_completion_overdue: 'Completion Overdue',
-  contractor_reply: 'Contractor Quoted',
-  manager_reply: 'Manager Responded',
-  landlord_reply: 'Landlord Responded',
+  pm_completion_overdue: 'Completion Overdue Alert',
 }
 
-const INTERACTION_TYPES = new Set(['contractor_dispatch', 'pm_quote', 'landlord_quote'])
-const FOLLOWUP_TYPES = new Set(['contractor_reminder', 'landlord_followup', 'contractor_completion_reminder'])
-const ESCALATION_TYPES = new Set(['pm_landlord_timeout', 'pm_completion_overdue', 'no_contractors_left'])
+const CONTRACTOR_MSG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_contractors_left'])
+const MANAGER_MSG_TYPES = new Set(['pm_quote'])
+const LANDLORD_MSG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved'])
+const BOOKING_MSG_TYPES = new Set(['tenant_job_booked', 'pm_job_booked', 'landlord_job_booked'])
+const FOLLOWUP_MSG_TYPES = new Set(['contractor_job_reminder', 'contractor_completion_reminder', 'pm_completion_overdue'])
 
-// ─── Timeline types ───
+// ─── Bubble types ───
 
-interface TimelineItem {
-  id: string
-  timestamp: string
-  direction: 'outbound' | 'inbound'
-  messageType: string
-  role: string
-  label: string
-  sublabel?: string
-  body?: string | null
-  status?: string | null
-  isInteraction: boolean
-  isFollowUp: boolean
-  isEscalation: boolean
-  badge?: { text: string; color: string }
+interface BubbleMsg {
+  direction: 'out' | 'in'
+  text: string
+  timestamp?: string
+  html?: boolean
+  footer?: string
 }
 
-// ─── Build unified timeline ───
+// ─── Helpers ───
 
-function buildTimeline(messages: MessageData | null, outboundLog: OutboundLogEntry[]): TimelineItem[] {
-  const items: TimelineItem[] = []
-  const logTypePhones = new Set(outboundLog.map(e => `${e.message_type}:${e.recipient_phone}`))
-
-  // 1. All outbound log entries
-  for (const entry of outboundLog) {
-    const item: TimelineItem = {
-      id: entry.id,
-      timestamp: entry.sent_at,
-      direction: 'outbound',
-      messageType: entry.message_type,
-      role: entry.recipient_role,
-      label: TYPE_LABELS[entry.message_type] || entry.message_type.replace(/_/g, ' '),
-      body: entry.body,
-      status: entry.status,
-      isInteraction: INTERACTION_TYPES.has(entry.message_type),
-      isFollowUp: FOLLOWUP_TYPES.has(entry.message_type),
-      isEscalation: ESCALATION_TYPES.has(entry.message_type),
-    }
-
-    // Enrich contractor entries with name from JSONB
-    if (messages && entry.recipient_role === 'contractor') {
-      const contractors = getContractors(messages.contractors)
-      const match = contractors.find(c => c.phone === entry.recipient_phone)
-      if (match) {
-        item.sublabel = `${match.name}${match.category ? ` · ${match.category}` : ''}`
-      }
-    }
-
-    items.push(item)
-  }
-
-  // 2. Synthetic entries from JSONB (where not in outbound log)
-  if (messages) {
-    const contractors = getContractors(messages.contractors)
-    for (const c of contractors) {
-      // Synthetic dispatch
-      if (c.sent_at && !logTypePhones.has(`contractor_dispatch:${c.phone}`)) {
-        items.push({
-          id: `synth-dispatch-${c.id}`,
-          timestamp: c.sent_at,
-          direction: 'outbound',
-          messageType: 'contractor_dispatch',
-          role: 'contractor',
-          label: 'Contractor Dispatched',
-          sublabel: `${c.name}${c.category ? ` · ${c.category}` : ''}`,
-          body: c.body || null,
-          isInteraction: true,
-          isFollowUp: false,
-          isEscalation: false,
-        })
-      }
-
-      // Contractor reply (always synthetic — inbound)
-      if (c.replied_at) {
-        items.push({
-          id: `synth-reply-${c.id}`,
-          timestamp: c.replied_at,
-          direction: 'inbound',
-          messageType: 'contractor_reply',
-          role: 'contractor',
-          label: `${c.name} quoted${c.quote_amount ? ` ${c.quote_amount}` : ''}`,
-          sublabel: c.quote_notes || undefined,
-          isInteraction: false,
-          isFollowUp: false,
-          isEscalation: false,
-          badge: c.manager_decision === 'approved'
-            ? { text: `Approved${c.quote_amount ? ` ${c.quote_amount}` : ''}`, color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
-            : { text: `Quoted${c.quote_amount ? ` ${c.quote_amount}` : ''}`, color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
-        })
-      }
-    }
-
-    const manager = getRecipient(messages.manager)
-    if (manager) {
-      if (manager.review_request_sent_at && !logTypePhones.has(`pm_quote:${manager.phone}`)) {
-        items.push({
-          id: 'synth-pm-quote',
-          timestamp: manager.review_request_sent_at,
-          direction: 'outbound',
-          messageType: 'pm_quote',
-          role: 'manager',
-          label: 'Quote Sent to Manager',
-          body: manager.last_outbound_body || null,
-          isInteraction: true,
-          isFollowUp: false,
-          isEscalation: false,
-        })
-      }
-      if (manager.replied_at) {
-        items.push({
-          id: 'synth-manager-reply',
-          timestamp: manager.replied_at,
-          direction: 'inbound',
-          messageType: 'manager_reply',
-          role: 'manager',
-          label: manager.approval ? 'Manager Approved' : manager.approval === false ? 'Manager Declined' : 'Manager Replied',
-          isInteraction: false,
-          isFollowUp: false,
-          isEscalation: false,
-          badge: manager.approval
-            ? { text: `Approved${manager.approval_amount ? ` ${manager.approval_amount}` : ''}`, color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
-            : manager.approval === false
-            ? { text: 'Declined', color: 'bg-red-500/10 text-red-700 dark:text-red-400' }
-            : { text: 'Replied', color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
-        })
-      }
-    }
-
-    const landlord = getRecipient(messages.landlord)
-    if (landlord) {
-      if (landlord.review_request_sent_at && !logTypePhones.has(`landlord_quote:${landlord.phone}`)) {
-        items.push({
-          id: 'synth-ll-quote',
-          timestamp: landlord.review_request_sent_at,
-          direction: 'outbound',
-          messageType: 'landlord_quote',
-          role: 'landlord',
-          label: 'Quote Sent to Landlord',
-          body: landlord.last_outbound_body || null,
-          isInteraction: true,
-          isFollowUp: false,
-          isEscalation: false,
-        })
-      }
-      if (landlord.replied_at) {
-        items.push({
-          id: 'synth-landlord-reply',
-          timestamp: landlord.replied_at,
-          direction: 'inbound',
-          messageType: 'landlord_reply',
-          role: 'landlord',
-          label: landlord.approval ? 'Landlord Approved' : landlord.approval === false ? 'Landlord Declined' : 'Landlord Replied',
-          isInteraction: false,
-          isFollowUp: false,
-          isEscalation: false,
-          badge: landlord.approval
-            ? { text: 'Approved', color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
-            : landlord.approval === false
-            ? { text: 'Declined', color: 'bg-red-500/10 text-red-700 dark:text-red-400' }
-            : { text: 'Replied', color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
-        })
-      }
-    }
-  }
-
-  // 3. Sort by timestamp
-  items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  return items
-}
-
-function formatBody(body: string): string {
-  return body
+function formatBody(text: string): string {
+  return text
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br/>')
 }
 
-// ─── Component ───
+function buildContractorBubbles(c: ContractorEntry, logEntries: OutboundLogEntry[]): BubbleMsg[] {
+  const msgs: BubbleMsg[] = []
+
+  // Outbound dispatch
+  const dispatchLog = logEntries.find(e => e.message_type === 'contractor_dispatch')
+  const body = dispatchLog?.body || c.body
+  if (body) {
+    msgs.push({
+      direction: 'out',
+      text: body,
+      timestamp: dispatchLog?.sent_at || c.sent_at,
+      html: true,
+    })
+  }
+
+  // Reminders
+  for (const r of logEntries.filter(e => e.message_type === 'contractor_reminder')) {
+    if (r.body) msgs.push({ direction: 'out', text: r.body, timestamp: r.sent_at, html: true })
+  }
+
+  // Inbound reply
+  if (c.reply_text) {
+    const parts: string[] = []
+    if (c.quote_amount) parts.push(formatAmount(c.quote_amount))
+    if (c.quote_notes) parts.push(c.quote_notes)
+    if (c.manager_decision === 'approved') parts.unshift('✓ Approved')
+
+    msgs.push({
+      direction: 'in',
+      text: c.reply_text,
+      timestamp: c.replied_at,
+      footer: parts.length > 0 ? parts.join(' · ') : undefined,
+    })
+  }
+
+  return msgs
+}
+
+function buildRecipientBubbles(json: Json | null, logEntries: OutboundLogEntry[]): BubbleMsg[] {
+  const msgs: BubbleMsg[] = []
+  const entry = getRecipient(json)
+
+  // Outbound from log
+  for (const log of logEntries) {
+    if (log.body) msgs.push({ direction: 'out', text: log.body, timestamp: log.sent_at, html: true })
+  }
+
+  // Fallback: JSONB outbound body if no log entries
+  if (msgs.length === 0 && entry?.last_outbound_body) {
+    msgs.push({ direction: 'out', text: entry.last_outbound_body, timestamp: entry.review_request_sent_at, html: true })
+  }
+
+  // Inbound reply
+  if (entry?.last_text) {
+    const footer = entry.approval !== undefined
+      ? `${entry.approval ? '✓ Approved' : '✗ Declined'}${entry.approval_amount ? ` · ${entry.approval_amount}` : ''}`
+      : undefined
+    msgs.push({ direction: 'in', text: entry.last_text, timestamp: entry.replied_at, footer })
+  }
+
+  return msgs
+}
+
+// ─── Sub-components ───
+
+function StatusBadge({ status }: { status: string }) {
+  const style: Record<string, string> = {
+    pending: 'bg-muted text-muted-foreground',
+    sent: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+    quoted: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    approved: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    declined: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  }
+  return (
+    <span className={cn('px-2 py-0.5 text-[11px] rounded-full font-medium capitalize', style[status] || style.pending)}>
+      {status}
+    </span>
+  )
+}
+
+function SectionBlock({ title, badge, children, visible = true, defaultOpen = false }: {
+  title: string
+  badge?: string
+  children: React.ReactNode
+  visible?: boolean
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  if (!visible) return null
+
+  return (
+    <div className="border rounded-lg">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          {open
+            ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          }
+          <span className="text-sm font-semibold">{title}</span>
+        </div>
+        {badge && (
+          <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{badge}</span>
+        )}
+      </button>
+      {open && <div className="border-t">{children}</div>}
+    </div>
+  )
+}
+
+function MessageOverlay({ title, messages, onClose }: {
+  title: string
+  messages: BubbleMsg[]
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div
+        className="bg-background border rounded-xl shadow-xl w-full max-w-md max-h-[70vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <span className="text-sm font-semibold">{title}</span>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {messages.length > 0 ? messages.map((msg, i) => (
+            <div key={i} className={cn('flex', msg.direction === 'out' ? 'justify-end' : 'justify-start')}>
+              <div className={cn(
+                'max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed',
+                msg.direction === 'out' ? 'bg-primary/10 border' : 'bg-muted',
+              )}>
+                {msg.html ? (
+                  <div dangerouslySetInnerHTML={{ __html: formatBody(msg.text) }} />
+                ) : (
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                )}
+                {msg.footer && (
+                  <p className={cn(
+                    'mt-1.5 pt-1.5 border-t text-[11px] font-medium',
+                    msg.footer.startsWith('✓') ? 'text-emerald-600 dark:text-emerald-400' :
+                    msg.footer.startsWith('✗') ? 'text-red-600 dark:text-red-400' : 'text-foreground/70',
+                  )}>
+                    {msg.footer}
+                  </p>
+                )}
+                {msg.timestamp && (
+                  <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                    {format(new Date(msg.timestamp), 'dd MMM, HH:mm')}
+                  </p>
+                )}
+              </div>
+            </div>
+          )) : (
+            <p className="text-xs text-muted-foreground text-center py-8">No messages recorded</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component ───
 
 interface TicketDispatchTabProps {
   messages: MessageData | null
@@ -250,19 +225,40 @@ interface TicketDispatchTabProps {
 }
 
 export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const timeline = useMemo(() => buildTimeline(messages, outboundLog), [messages, outboundLog])
+  const [overlay, setOverlay] = useState<{ title: string; messages: BubbleMsg[] } | null>(null)
 
-  const toggle = (id: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  // Group outbound log entries by section
+  const logBySection = useMemo(() => {
+    const groups = {
+      contractor: [] as OutboundLogEntry[],
+      manager: [] as OutboundLogEntry[],
+      landlord: [] as OutboundLogEntry[],
+      booking: [] as OutboundLogEntry[],
+      followup: [] as OutboundLogEntry[],
+    }
+    for (const entry of outboundLog) {
+      if (CONTRACTOR_MSG_TYPES.has(entry.message_type)) groups.contractor.push(entry)
+      else if (MANAGER_MSG_TYPES.has(entry.message_type)) groups.manager.push(entry)
+      else if (LANDLORD_MSG_TYPES.has(entry.message_type)) groups.landlord.push(entry)
+      else if (BOOKING_MSG_TYPES.has(entry.message_type)) groups.booking.push(entry)
+      else if (FOLLOWUP_MSG_TYPES.has(entry.message_type)) groups.followup.push(entry)
+    }
+    return groups
+  }, [outboundLog])
 
-  if (timeline.length === 0) {
+  // Contractor data from JSONB
+  const contractors = useMemo(() => messages ? getContractors(messages.contractors) : [], [messages])
+  const manager = useMemo(() => messages ? getRecipient(messages.manager) : null, [messages])
+  const landlord = useMemo(() => messages ? getRecipient(messages.landlord) : null, [messages])
+
+  // Section visibility
+  const hasContractors = contractors.length > 0 || logBySection.contractor.length > 0
+  const hasManager = manager !== null || logBySection.manager.length > 0
+  const hasLandlord = landlord !== null || logBySection.landlord.length > 0
+  const hasBooking = logBySection.booking.length > 0
+  const hasFollowup = logBySection.followup.length > 0
+
+  if (!hasContractors && !hasManager && !hasLandlord && !hasBooking && !hasFollowup) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <div className="text-center">
@@ -273,150 +269,228 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
     )
   }
 
+  // ─── Contractor section click handler ───
+  const openContractor = (c: ContractorEntry) => {
+    const logEntries = logBySection.contractor.filter(e => e.recipient_phone === c.phone)
+    const bubbles = buildContractorBubbles(c, logEntries)
+    setOverlay({ title: c.name, messages: bubbles })
+  }
+
+  // ─── Manager section click handler ───
+  const openManager = () => {
+    const bubbles = buildRecipientBubbles(messages?.manager ?? null, logBySection.manager)
+    setOverlay({ title: manager?.name || 'Manager', messages: bubbles })
+  }
+
+  // ─── Landlord section click handler ───
+  const openLandlord = () => {
+    const bubbles = buildRecipientBubbles(messages?.landlord ?? null, logBySection.landlord)
+    setOverlay({ title: landlord?.name || 'Landlord', messages: bubbles })
+  }
+
+  // ─── Log entry click handler ───
+  const openLogEntry = (entry: OutboundLogEntry) => {
+    if (!entry.body) return
+    const label = SECTION_LABELS[entry.message_type] || entry.message_type.replace(/_/g, ' ')
+    setOverlay({
+      title: label,
+      messages: [{ direction: 'out', text: entry.body, timestamp: entry.sent_at, html: true }],
+    })
+  }
+
+  // Contractor badge
+  const quotedCount = contractors.filter(c => c.replied_at || c.quote_amount).length
+  const contractorBadge = quotedCount > 0
+    ? `${quotedCount} quoted · ${contractors.length} total`
+    : `${contractors.length} contractor${contractors.length !== 1 ? 's' : ''}`
+
+  // Manager status
+  const managerStatus = manager?.approval !== undefined
+    ? (manager.approval ? 'approved' : 'declined')
+    : manager?.replied_at ? 'replied' : manager?.review_request_sent_at ? 'sent' : 'pending'
+
+  // Landlord status
+  const landlordStatus = landlord?.approval !== undefined
+    ? (landlord.approval ? 'approved' : 'declined')
+    : landlord?.replied_at ? 'replied' : landlord?.review_request_sent_at ? 'sent' : 'pending'
+
   return (
-    <div>
-      {timeline.map((item, index) => {
-        const isLast = index === timeline.length - 1
-        const isOpen = expanded.has(item.id)
-        const RoleIcon = ROLE_ICONS[item.role] || MessageCircle
-        const roleColor = ROLE_COLORS[item.role] || 'text-muted-foreground'
-        const dotBg = ROLE_DOT_BG[item.role] || 'bg-muted'
-        const isInbound = item.direction === 'inbound'
+    <div className="space-y-3">
+      {/* ─── Section 1: Contractor Quote Collection ─── */}
+      <SectionBlock
+        title="Contractor Quotes"
+        badge={hasContractors ? contractorBadge : undefined}
+        visible={hasContractors}
+        defaultOpen={hasContractors}
+      >
+        <div className="divide-y">
+          {contractors.map(c => {
+            const status = getContractorStatus(c)
+            const statusLabel = status === 'approved' ? 'approved' : status === 'replied' ? 'quoted' : status === 'sent' ? 'sent' : 'pending'
 
-        return (
-          <div
-            key={item.id}
-            className={cn(
-              'flex gap-3',
-              (isInbound || item.isFollowUp) && 'ml-5',
-            )}
-          >
-            {/* Timeline dot + line */}
-            <div className="flex flex-col items-center">
-              <div className={cn(
-                'rounded-full flex items-center justify-center shrink-0',
-                item.isInteraction ? 'h-8 w-8' : 'h-7 w-7',
-                item.isEscalation ? 'bg-red-500/10' : dotBg,
-              )}>
-                {item.isEscalation ? (
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-                ) : isInbound ? (
-                  <ArrowDownLeft className={cn('h-3.5 w-3.5', roleColor)} />
-                ) : item.isFollowUp ? (
-                  <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : (
-                  <RoleIcon className={cn(item.isInteraction ? 'h-4 w-4' : 'h-3.5 w-3.5', roleColor)} />
-                )}
+            return (
+              <button
+                key={c.id}
+                onClick={() => openContractor(c)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{c.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {c.category && <>{c.category} · </>}
+                    {c.sent_at ? format(new Date(c.sent_at), 'dd MMM, HH:mm') : 'Not yet sent'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {c.quote_amount && (
+                    <span className="text-xs font-medium">{formatAmount(c.quote_amount)}</span>
+                  )}
+                  <StatusBadge status={statusLabel} />
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </button>
+            )
+          })}
+
+          {/* Log-only entries not tied to a contractor (e.g. no_contractors_left) */}
+          {logBySection.contractor
+            .filter(e => e.message_type === 'no_contractors_left')
+            .map(entry => (
+              <div key={entry.id} className="px-4 py-3 text-sm text-muted-foreground">
+                No contractors available · {format(new Date(entry.sent_at), 'dd MMM, HH:mm')}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-border/50" />}
-            </div>
+            ))
+          }
+        </div>
+      </SectionBlock>
 
-            {/* Content */}
-            <div className={cn('min-w-0 flex-1', !isLast ? 'pb-4' : 'pb-1')}>
-              {item.isInteraction ? (
-                /* ─── INTERACTION CARD (bold, bordered) ─── */
-                <div className="border rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => item.body && toggle(item.id)}
-                    className="w-full text-left p-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{item.label}</p>
-                        {item.sublabel && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{item.sublabel}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] text-muted-foreground">
-                          {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
-                        </span>
-                        {item.body && (
-                          isOpen
-                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                  {isOpen && item.body && (
-                    <div className="px-3 pb-3 border-t bg-muted/20">
-                      <p
-                        className="text-xs text-foreground/80 leading-relaxed pt-2"
-                        dangerouslySetInnerHTML={{ __html: formatBody(item.body) }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-              ) : isInbound ? (
-                /* ─── INBOUND REPLY ─── */
-                <div className="py-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                      <p className="text-sm font-medium">{item.label}</p>
-                      {item.badge && (
-                        <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium', item.badge.color)}>
-                          {item.badge.text}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
-                    </span>
-                  </div>
-                  {item.sublabel && (
-                    <p className="text-xs text-muted-foreground mt-0.5 italic">&ldquo;{item.sublabel}&rdquo;</p>
-                  )}
-                </div>
-
-              ) : (
-                /* ─── NOTIFICATION (light, expandable) ─── */
-                <div className="py-0.5">
-                  <button
-                    onClick={() => item.body && toggle(item.id)}
-                    className="w-full text-left group"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                        <p className="text-sm font-medium">{item.label}</p>
-                        {item.isEscalation && (
-                          <span className="px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-red-500/10 text-red-700 dark:text-red-400">
-                            escalation
-                          </span>
-                        )}
-                        {item.isFollowUp && (
-                          <span className="px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-muted text-muted-foreground">
-                            follow-up
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] text-muted-foreground">
-                          {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
-                        </span>
-                        {item.body && (
-                          isOpen
-                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                  {isOpen && item.body && (
-                    <div className="mt-2 rounded-lg bg-muted/30 border px-3 py-2.5">
-                      <p
-                        className="text-xs text-foreground/80 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: formatBody(item.body) }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+      {/* ─── Section 2: Manager Approval ─── */}
+      <SectionBlock
+        title="Quote Approval"
+        badge={hasManager ? managerStatus : undefined}
+        visible={hasManager}
+        defaultOpen={hasManager}
+      >
+        <button
+          onClick={openManager}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{manager?.name || 'Property Manager'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {manager?.review_request_sent_at
+                ? `Sent ${format(new Date(manager.review_request_sent_at), 'dd MMM, HH:mm')}`
+                : 'Pending'
+              }
+              {manager?.approval_amount && ` · ${manager.approval_amount}`}
+            </p>
           </div>
-        )
-      })}
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusBadge status={managerStatus} />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </button>
+      </SectionBlock>
+
+      {/* ─── Section 3: Landlord Approval ─── */}
+      <SectionBlock
+        title="Landlord Approval"
+        badge={hasLandlord ? landlordStatus : undefined}
+        visible={hasLandlord}
+        defaultOpen={hasLandlord}
+      >
+        <button
+          onClick={openLandlord}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{landlord?.name || 'Landlord'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {landlord?.review_request_sent_at
+                ? `Sent ${format(new Date(landlord.review_request_sent_at), 'dd MMM, HH:mm')}`
+                : 'Pending'
+              }
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusBadge status={landlordStatus} />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </button>
+      </SectionBlock>
+
+      {/* ─── Section 4: Job Booking ─── */}
+      <SectionBlock
+        title="Job Booking"
+        badge={hasBooking ? `${logBySection.booking.length} sent` : undefined}
+        visible={hasBooking}
+        defaultOpen={false}
+      >
+        <div className="divide-y">
+          {logBySection.booking.map(entry => (
+            <button
+              key={entry.id}
+              onClick={() => openLogEntry(entry)}
+              disabled={!entry.body}
+              className={cn(
+                'w-full flex items-center justify-between px-4 py-3 text-left',
+                entry.body ? 'hover:bg-muted/30 transition-colors' : 'opacity-70',
+              )}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {SECTION_LABELS[entry.message_type] || entry.message_type}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {format(new Date(entry.sent_at), 'dd MMM, HH:mm')}
+                </p>
+              </div>
+              {entry.body && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+            </button>
+          ))}
+        </div>
+      </SectionBlock>
+
+      {/* ─── Section 5: Follow-up & Reminders ─── */}
+      <SectionBlock
+        title="Follow-up"
+        badge={hasFollowup ? `${logBySection.followup.length}` : undefined}
+        visible={hasFollowup}
+        defaultOpen={false}
+      >
+        <div className="divide-y">
+          {logBySection.followup.map(entry => (
+            <button
+              key={entry.id}
+              onClick={() => openLogEntry(entry)}
+              disabled={!entry.body}
+              className={cn(
+                'w-full flex items-center justify-between px-4 py-3 text-left',
+                entry.body ? 'hover:bg-muted/30 transition-colors' : 'opacity-70',
+              )}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {SECTION_LABELS[entry.message_type] || entry.message_type}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {format(new Date(entry.sent_at), 'dd MMM, HH:mm')}
+                </p>
+              </div>
+              {entry.body && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+            </button>
+          ))}
+        </div>
+      </SectionBlock>
+
+      {/* ─── Message Overlay ─── */}
+      {overlay && (
+        <MessageOverlay
+          title={overlay.title}
+          messages={overlay.messages}
+          onClose={() => setOverlay(null)}
+        />
+      )}
     </div>
   )
 }
