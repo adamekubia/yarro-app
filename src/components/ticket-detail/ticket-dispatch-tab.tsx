@@ -87,6 +87,21 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
   const completionLogs = outboundLog.filter(e => COMPLETION_LOG_TYPES.has(e.message_type))
   const followupLogs = outboundLog.filter(e => FOLLOWUP_LOG_TYPES.has(e.message_type))
 
+  // ─── Handoff: PM alerted for handoff tickets (before Ticket Created) ───
+  for (const entry of handoffLogs) {
+    entries.push({
+      id: entry.id,
+      phase: 'Handoff',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: 'escalation',
+      timestamp: entry.sent_at,
+      isEscalation: true,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
+
   // ─── Ticket Created: PM + LL initial notifications (auto + manual + reviewed) ───
   const sortedCreatedLogs = [...ticketCreatedLogs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
   for (const entry of sortedCreatedLogs) {
@@ -98,21 +113,6 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'sent',
       timestamp: entry.sent_at,
       isEscalation: false,
-      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
-      subEntries: [],
-    })
-  }
-
-  // ─── Handoff: PM alerted for handoff tickets ───
-  for (const entry of handoffLogs) {
-    entries.push({
-      id: entry.id,
-      phase: 'Handoff',
-      label: TYPE_LABELS[entry.message_type] || entry.message_type,
-      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
-      status: 'escalation',
-      timestamp: entry.sent_at,
-      isEscalation: true,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
