@@ -165,11 +165,11 @@ export default function RulesPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 space-y-8 overflow-y-auto pb-20">
+      <div className="flex-1 space-y-2 overflow-y-auto pb-20">
 
         {/* ─── CONTRACTOR DISPATCH ─── */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Contractor Dispatch</h2>
+        <section className="border rounded-lg p-4">
+          <h2 className="text-sm font-semibold mb-4">Contractor Dispatch</h2>
           <div className="grid grid-cols-2 gap-4">
             {/* Dispatch Mode — full width */}
             <div className="col-span-2 space-y-2">
@@ -247,8 +247,8 @@ export default function RulesPage() {
         </section>
 
         {/* ─── LANDLORD APPROVAL ─── */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Landlord Approval</h2>
+        <section className="border rounded-lg p-4">
+          <h2 className="text-sm font-semibold mb-4">Landlord Approval</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -291,8 +291,8 @@ export default function RulesPage() {
         </section>
 
         {/* ─── JOB COMPLETION ─── */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Job Completion</h2>
+        <section className="border rounded-lg p-4">
+          <h2 className="text-sm font-semibold mb-4">Job Completion</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
