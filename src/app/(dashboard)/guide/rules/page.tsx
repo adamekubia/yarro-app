@@ -169,12 +169,19 @@ export default function RulesPage() {
   const handleSave = async () => {
     if (!propertyManager) return
     setSaving(true)
+
+    // Broadcast mode: timeout = 2× reminder (auto-calculated)
+    const reminderMinutes = draft.contractor_reminder_enabled ? parseInt(draft.contractor_reminder_minutes) : null
+    const timeoutMinutes = draft.dispatch_mode === 'broadcast' && reminderMinutes
+      ? reminderMinutes * 2
+      : parseInt(draft.contractor_timeout_minutes)
+
     const { error } = await supabase
       .from('c1_property_managers')
       .update({
         dispatch_mode: draft.dispatch_mode,
-        contractor_timeout_minutes: parseInt(draft.contractor_timeout_minutes),
-        contractor_reminder_minutes: draft.contractor_reminder_enabled ? parseInt(draft.contractor_reminder_minutes) : null,
+        contractor_timeout_minutes: timeoutMinutes,
+        contractor_reminder_minutes: reminderMinutes,
         landlord_followup_hours: parseInt(draft.landlord_followup_hours),
         landlord_timeout_hours: parseInt(draft.landlord_timeout_hours),
         completion_reminder_hours: parseInt(draft.completion_reminder_hours),
@@ -289,9 +296,22 @@ export default function RulesPage() {
                       </SelectContent>
                     </Select>
                     {draft.dispatch_mode === 'broadcast' && (
-                      <p className="text-xs text-muted-foreground">
-                        Nudge all contractors who haven&apos;t responded after this time.
-                      </p>
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Nudge all contractors who haven&apos;t responded after this time.
+                        </p>
+                        <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30 mt-1">
+                          <span className="text-sm text-muted-foreground">
+                            Give up after: {parseInt(draft.contractor_reminder_minutes) * 2 >= 60
+                              ? `${parseInt(draft.contractor_reminder_minutes) * 2 / 60} hours`
+                              : `${parseInt(draft.contractor_reminder_minutes) * 2} min`
+                            } (auto)
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          2× the reminder — no response from anyone triggers escalation.
+                        </p>
+                      </>
                     )}
                   </>
                 )}

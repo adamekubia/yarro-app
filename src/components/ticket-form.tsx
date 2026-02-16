@@ -28,6 +28,7 @@ import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
 import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
+import { format } from 'date-fns'
 
 interface Property {
   id: string
@@ -602,15 +603,22 @@ export function TicketForm({
       {/* Conversation thread for handoff tickets — collapsible */}
       {isHandoff && (conversationLog.length > 0 || loadingConversation) && (
         <div className="space-y-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 text-xs"
-            onClick={() => setShowConversation(!showConversation)}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            {showConversation ? 'Hide Conversation' : 'View Conversation'}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs"
+              onClick={() => setShowConversation(!showConversation)}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              {showConversation ? 'Hide Conversation' : 'View Conversation'}
+            </Button>
+            {conversationLog.length > 0 && conversationLog[0].timestamp && (
+              <span className="text-xs text-muted-foreground">
+                Reported {format(new Date(conversationLog[0].timestamp), 'dd MMM, HH:mm')}
+              </span>
+            )}
+          </div>
           {showConversation && loadingConversation && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -626,7 +634,7 @@ export function TicketForm({
                 >
                   {msg.label === 'HANDOFF' ? (
                     <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
-                      — Handed off —
+                      — Handed off{msg.timestamp ? ` at ${format(new Date(msg.timestamp), 'HH:mm')}` : ''} —
                     </div>
                   ) : (
                     <div
@@ -636,7 +644,12 @@ export function TicketForm({
                           : 'bg-primary/10 text-foreground'
                       }`}
                     >
-                      {msg.message}
+                      <div>{msg.message}</div>
+                      {msg.timestamp && (
+                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 text-right">
+                          {format(new Date(msg.timestamp), 'HH:mm')}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
