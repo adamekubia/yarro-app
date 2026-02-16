@@ -259,6 +259,16 @@ export default function TicketsPage() {
         throw new Error(error.message)
       }
 
+      try {
+        await fetch('https://yarro.app.n8n.cloud/webhook/manual-ll-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: handoffTicketId }),
+        })
+      } catch (webhookErr) {
+        console.error('Landlord notification webhook failed:', webhookErr)
+      }
+
       toast.success('Handoff completed - contractor notified')
     } else {
       const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
