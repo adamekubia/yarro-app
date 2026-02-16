@@ -50,6 +50,7 @@ interface PurposeEntry {
   amount?: string
   timestamp: string
   isEscalation: boolean
+  isCompleted?: boolean
   chatMessages: ChatMsg[]
   subEntries: SubEntry[]
 }
@@ -62,6 +63,7 @@ const STATUS_STYLES: Record<string, string> = {
   awaiting: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
   quoted: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   approved: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  completed: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   declined: 'bg-red-500/10 text-red-700 dark:text-red-400',
   escalation: 'bg-red-500/10 text-red-700 dark:text-red-400',
 }
@@ -348,14 +350,16 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
   const sortedCompletionLogs = [...completionLogs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
   for (const entry of sortedCompletionLogs) {
     const isWarning = entry.message_type === 'pm_job_not_completed'
+    const isCompleted = entry.message_type === 'pm_job_completed' || entry.message_type === 'll_job_completed'
     entries.push({
       id: entry.id,
       phase: 'Completion',
       label: TYPE_LABELS[entry.message_type] || entry.message_type,
       sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
-      status: isWarning ? 'escalation' : 'sent',
+      status: isWarning ? 'escalation' : isCompleted ? 'completed' : 'sent',
       timestamp: entry.sent_at,
       isEscalation: isWarning,
+      isCompleted,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -437,7 +441,7 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
               <div className="flex flex-col items-center">
                 <div className={cn(
                   'rounded-full shrink-0 mt-1.5 h-2.5 w-2.5',
-                  entry.isEscalation ? 'bg-red-500' : 'bg-foreground/40',
+                  entry.isEscalation ? 'bg-red-500' : entry.isCompleted ? 'bg-emerald-500' : 'bg-foreground/40',
                 )} />
                 {(!isLast || (hasSubs && isExpanded)) && <div className="w-px flex-1 bg-border/40 mt-1" />}
               </div>
