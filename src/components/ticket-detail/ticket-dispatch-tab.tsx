@@ -133,7 +133,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       if (dispatchBody) chatMsgs.push({ role: 'assistant', text: dispatchBody, timestamp: dispatchLog?.sent_at || c.sent_at, allowHtml: true })
       if (c.reply_text) {
         chatMsgs.push({
-          role: 'tenant', text: c.reply_text, timestamp: c.replied_at,
+          role: 'contractor', text: c.reply_text, timestamp: c.replied_at,
           meta: c.quote_amount ? { quote: formatAmount(c.quote_amount), approved: c.manager_decision === 'approved' } : undefined,
         })
       }
@@ -197,7 +197,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       }
       if (manager.last_text) {
         chatMsgs.push({
-          role: 'tenant', text: manager.last_text, timestamp: manager.replied_at,
+          role: 'manager', text: manager.last_text, timestamp: manager.replied_at,
           meta: { approved: manager.approval ?? undefined, amount: manager.approval_amount },
         })
       }
@@ -236,7 +236,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       }
       if (landlord.last_text) {
         chatMsgs.push({
-          role: 'tenant', text: landlord.last_text, timestamp: landlord.replied_at,
+          role: 'landlord', text: landlord.last_text, timestamp: landlord.replied_at,
           meta: { approved: landlord.approval ?? undefined },
         })
       }

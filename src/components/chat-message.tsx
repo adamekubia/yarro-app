@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { User, Bot, Phone } from 'lucide-react'
 
-export type MessageRole = 'user' | 'tenant' | 'assistant' | 'system' | 'agent'
+export type MessageRole = 'user' | 'tenant' | 'assistant' | 'system' | 'agent' | 'contractor' | 'manager' | 'landlord'
 
 type MessageMeta = {
   quote?: string
@@ -42,6 +42,27 @@ const roleConfig: Record<string, {
     textColor: 'text-primary-foreground',
     align: 'right',
     icon: Phone,
+  },
+  contractor: {
+    label: 'Contractor',
+    bgColor: 'bg-primary',
+    textColor: 'text-primary-foreground',
+    align: 'right',
+    icon: Phone,
+  },
+  manager: {
+    label: 'Manager',
+    bgColor: 'bg-primary',
+    textColor: 'text-primary-foreground',
+    align: 'right',
+    icon: User,
+  },
+  landlord: {
+    label: 'Landlord',
+    bgColor: 'bg-primary',
+    textColor: 'text-primary-foreground',
+    align: 'right',
+    icon: User,
   },
   assistant: {
     label: 'Yarro',
