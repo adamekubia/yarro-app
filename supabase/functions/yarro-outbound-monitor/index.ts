@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
     const numMedia = parseInt(params.get("NumMedia") || "0", 10);
 
     const phone = from.replace("whatsapp:", "").replace("+", "");
-    if (!phone) return new Response("OK", { status: 200 });
+    if (!phone) return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
 
     console.log(`[${FN}] Reply from ${phone}: ${body.slice(0, 120)}`);
 
@@ -60,9 +60,9 @@ Deno.serve(async (req: Request) => {
       }).catch((e) => console.error("[telegram]", e));
     }
 
-    return new Response("OK", { status: 200 });
+    return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
   } catch (err) {
     console.error(`[${FN}] Error:`, err);
-    return new Response("OK", { status: 200 }); // Always 200 for Twilio
+    return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } }); // Always 200 for Twilio
   }
 });

@@ -339,7 +339,7 @@ Deno.serve(async (req: Request) => {
 
     const phone = twilioFrom.replace("whatsapp:", "").replace("+", "");
     if (!phone) {
-      return new Response("Missing From", { status: 400 });
+      return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
     }
 
     console.log(`[${FN}] Inbound from ${phone}: ${twilioBody.slice(0, 80)}`);
@@ -361,13 +361,13 @@ Deno.serve(async (req: Request) => {
 
     if (ctxError) {
       await alertTelegram("c1_context_logic", ctxError.message, { Phone: phone });
-      return new Response("OK", { status: 200 });
+      return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
     }
 
     const ctx = ctxData;
     if (!ctx || !ctx.conversation) {
       await alertTelegram("c1_context_logic", "No conversation returned", { Phone: phone });
-      return new Response("OK", { status: 200 });
+      return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
     }
 
     // 4. Build system prompt with context values
@@ -405,7 +405,7 @@ Deno.serve(async (req: Request) => {
       await alertTelegram("OpenAI call", msg, { Phone: phone, Stage: ctx.ai_instruction });
       // Send fallback message to tenant
       await sendFreeformWhatsApp(phone, "Sorry, I'm having a temporary issue. Please try again in a moment.");
-      return new Response("OK", { status: 200 });
+      return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
     }
 
     // 8. Normalise response + detect branch
@@ -450,7 +450,7 @@ Deno.serve(async (req: Request) => {
           Phone: phone,
           ConvoId: ctx.conversation.id,
         });
-        return new Response("OK", { status: 200 });
+        return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
       }
 
       const finalized = finalizeData;
@@ -535,7 +535,7 @@ Deno.serve(async (req: Request) => {
           Phone: phone,
           ConvoId: ctx.conversation.id,
         });
-        return new Response("OK", { status: 200 });
+        return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
       }
 
       const ticketId = ticket?.id;
@@ -585,12 +585,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // Return 200 to Twilio
-    return new Response("OK", { status: 200 });
+    return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[${FN}] Unhandled error:`, msg);
     await alertTelegram("Unhandled exception", msg);
-    return new Response("OK", { status: 200 }); // Always 200 to prevent Twilio retries
+    return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } }); // Always 200 to prevent Twilio retries
   }
 });
