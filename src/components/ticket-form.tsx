@@ -533,7 +533,7 @@ export function TicketForm({
       const tenant = tenants.find(t => t.id === formData.tenant_id)
 
       try {
-        await fetch('https://yarro.app.n8n.cloud/webhook/yarro-dispatcher', {
+        await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/yarro-dispatcher`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
