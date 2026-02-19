@@ -1,6 +1,3 @@
-[project]
-id = "qedsceehrrvohsjmbodc"
-
 # Edge Function settings
 # verify_jwt = false for functions called by SQL (net.http_post)
 # verify_jwt = true for functions called by the app (supabase.functions.invoke)
