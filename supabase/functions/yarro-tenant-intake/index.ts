@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { alertTelegram as _alertTelegram } from "../_shared/telegram.ts";
 import {
   buildSystemPrompt,
   buildUserPrompt,
@@ -10,54 +11,15 @@ import {
   type IssueAIContext,
 } from "./prompts.ts";
 
-// ─── Shared: Supabase Client ─────────────────────────────────────────────
+const FN = "yarro-tenant-intake";
 
-type SupabaseClient = ReturnType<typeof createClient>;
-
-function createSupabaseClient(): SupabaseClient {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-}
-
-// ─── Shared: Alerts ──────────────────────────────────────────────────────
-
+// Local wrapper — tenant-intake uses 3-arg signature throughout
 async function alertTelegram(
   flowStep: string,
   error: string,
   extras?: Record<string, string>,
 ): Promise<void> {
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")?.trim();
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID")?.trim();
-  if (!botToken || !chatId) {
-    console.error("[alert] Not configured:", flowStep, error);
-    return;
-  }
-
-  const lines = [
-    "\ud83d\udea8 <b>Edge Function Error</b>",
-    "",
-    `<b>Function:</b> yarro-tenant-intake`,
-    `<b>Flow Step:</b> ${flowStep}`,
-    `<b>Error:</b> ${error}`,
-  ];
-  if (extras) {
-    for (const [k, v] of Object.entries(extras)) {
-      if (v) lines.push(`<b>${k}:</b> ${v}`);
-    }
-  }
-  lines.push(`<b>Time:</b> ${new Date().toISOString()}`);
-
-  try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: lines.join("\n"), parse_mode: "HTML" }),
-    });
-  } catch (e) {
-    console.error("[alert] Failed:", e);
-  }
+  await _alertTelegram(FN, flowStep, error, extras);
 }
 
 // ─── Twilio: Send freeform WhatsApp (tenant-facing) ─────────────────────

@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createSupabaseClient } from "../_shared/supabase.ts";
 
 // Handles ALL replies to the OUTBOUND WhatsApp number (+447463558759).
 // Two jobs:
@@ -26,10 +26,7 @@ Deno.serve(async (req: Request) => {
     const displayBody = body || (numMedia > 0 ? "(media only)" : "(empty)");
     console.log(`[${FN}] Reply from ${phone}: ${displayBody.slice(0, 120)}`);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createSupabaseClient();
 
     // 1. Process reply through c1_inbound_reply (handles quotes, approvals, completions)
     const { data: replyResult, error: replyError } = await supabase.rpc("c1_inbound_reply", {
@@ -59,28 +56,28 @@ Deno.serve(async (req: Request) => {
     });
 
     // 3. Telegram alert for visibility
+    const replyStatus = replyError
+      ? `Error: ${replyError.message}`
+      : replyResult?.matched
+        ? `Matched ticket ${replyResult.ticket_id || "?"}`
+        : "No ticket match";
+
+    const text = [
+      "\ud83d\udce9 <b>Outbound Number Reply</b>",
+      "",
+      `<b>From:</b> +${phone}`,
+      `<b>Message:</b> ${displayBody.slice(0, 500)}`,
+      numMedia > 0 ? `<b>Media:</b> ${numMedia} attachment(s)` : "",
+      originalSid ? `<b>Reply to SID:</b> ${originalSid}` : "",
+      `<b>Processing:</b> ${replyStatus}`,
+      `<b>Time:</b> ${new Date().toISOString()}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")?.trim();
     const chatId = Deno.env.get("TELEGRAM_CHAT_ID")?.trim();
     if (botToken && chatId) {
-      const replyStatus = replyError
-        ? `Error: ${replyError.message}`
-        : replyResult?.matched
-          ? `Matched ticket ${replyResult.ticket_id || "?"}`
-          : "No ticket match";
-
-      const text = [
-        "\ud83d\udce9 <b>Outbound Number Reply</b>",
-        "",
-        `<b>From:</b> +${phone}`,
-        `<b>Message:</b> ${displayBody.slice(0, 500)}`,
-        numMedia > 0 ? `<b>Media:</b> ${numMedia} attachment(s)` : "",
-        originalSid ? `<b>Reply to SID:</b> ${originalSid}` : "",
-        `<b>Processing:</b> ${replyStatus}`,
-        `<b>Time:</b> ${new Date().toISOString()}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
