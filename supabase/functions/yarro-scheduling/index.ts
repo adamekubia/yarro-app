@@ -203,16 +203,28 @@ async function handleFinalizeJob(
 }
 
 // ─── Path B: Fillout Scheduling Form ─────────────────────────────────────
+
+/** Extract a URL parameter from Fillout's array format: [{name, value}, ...] */
+function getUrlParam(urlParams: any, name: string): string | null {
+  if (Array.isArray(urlParams)) {
+    const param = urlParams.find((p: any) => p.name === name || p.id === name);
+    return param?.value ?? null;
+  }
+  // Fallback: object format (in case Fillout ever changes)
+  return urlParams?.[name]?.value ?? urlParams?.[name] ?? null;
+}
+
 async function handleFilloutScheduling(
   supabase: SupabaseClient,
   body: Record<string, any>,
 ): Promise<Response> {
-  // Parse Fillout webhook
-  const ticketId = body?.urlParameters?.ticket_id?.value ?? null;
-  const contractorId = body?.urlParameters?.contractor_id?.value ?? null;
+  // Parse Fillout webhook — urlParameters is an ARRAY of {id, name, value}
+  const ticketId = getUrlParam(body?.urlParameters, "ticket_id");
+  const contractorId = getUrlParam(body?.urlParameters, "contractor_id");
   const submissionId = body?.submissionId ?? null;
 
   if (!ticketId) {
+    console.error(`[${FN}] No ticket_id found. urlParameters:`, JSON.stringify(body?.urlParameters)?.slice(0, 500));
     return new Response(
       JSON.stringify({ ok: false, error: "No ticket_id in Fillout URL parameters" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -221,10 +233,11 @@ async function handleFilloutScheduling(
 
   console.log(`[${FN}] fillout scheduling for ticket ${ticketId}, submission ${submissionId}`);
 
-  // Parse scheduling dates
-  const scheduling = body?.scheduling || {};
-  const startIso = scheduling.eventStartTime || null;
-  const endIso = scheduling.eventEndTime || null;
+  // Parse scheduling dates — scheduling is an ARRAY of {id, name, value: {eventStartTime, eventEndTime}}
+  const schedulingArr = Array.isArray(body?.scheduling) ? body.scheduling : [];
+  const schedulingValue = schedulingArr[0]?.value || {};
+  const startIso = schedulingValue.eventStartTime || null;
+  const endIso = schedulingValue.eventEndTime || null;
 
   if (!startIso) {
     await alertTelegram(FN, "fillout → no eventStartTime", `ticket ${ticketId}`, {
