@@ -393,10 +393,43 @@ async function handleFilloutScheduling(
 
 // ─── Main Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      },
+    });
+  }
+
   try {
     const url = new URL(req.url);
     const source = url.searchParams.get("source") || "finalize-job";
-    const body = await req.json();
+
+    // Safely parse JSON body
+    let body: Record<string, any>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Invalid or empty JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    console.log(`[${FN}] source=${source}, method=${req.method}, body keys: ${Object.keys(body).join(",")}`);
+
+    // DEBUG: Trace fillout webhooks via Telegram so we can see what arrives
+    if (source === "fillout") {
+      const bodyPreview = JSON.stringify(body).slice(0, 800);
+      await alertTelegram(FN, "🔍 Fillout webhook received", bodyPreview, {
+        "URL Params": JSON.stringify(body.urlParameters)?.slice(0, 300) || "none",
+        "Scheduling": JSON.stringify(body.scheduling)?.slice(0, 300) || "none",
+        "Top-level keys": Object.keys(body).join(", "),
+      });
+    }
 
     const supabase = createSupabaseClient();
 
