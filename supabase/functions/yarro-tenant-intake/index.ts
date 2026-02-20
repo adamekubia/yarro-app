@@ -287,8 +287,6 @@ async function uploadImages(
 
 // ─── Main Handler ────────────────────────────────────────────────────────
 
-const FN = "yarro-tenant-intake";
-
 Deno.serve(async (req: Request) => {
   try {
     // 1. Parse Twilio form-encoded POST
