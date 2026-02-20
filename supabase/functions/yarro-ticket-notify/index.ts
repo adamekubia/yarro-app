@@ -213,9 +213,31 @@ async function handleManualLandlord(
 
 // ─── Main Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight from browser-based supabase.functions.invoke()
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      },
+    });
+  }
+
   try {
     const url = new URL(req.url);
-    const body = await req.json();
+
+    // Safely parse JSON body (empty body from preflight/bad request = 400, not 500)
+    let body: Record<string, any>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Invalid or empty JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const source = url.searchParams.get("source") || body.source || "intake";
 
     const ticketId = body.ticket_id || body.payload?.ticket_id || null;
