@@ -251,12 +251,15 @@ function extractSchedulingDates(body: any): { startIso: string | null; endIso: s
 
 async function handleFilloutScheduling(
   supabase: SupabaseClient,
-  body: Record<string, any>,
+  rawBody: Record<string, any>,
 ): Promise<Response> {
+  // Fillout Workflows wrap data under body.submission — unwrap if present
+  const body = rawBody.submission ?? rawBody;
+
   // Parse ticket_id from multiple possible locations
   const ticketId = getUrlParam(body, "ticket_id");
   const contractorId = getUrlParam(body, "contractor_id");
-  const submissionId = body?.submissionId ?? body?.submission_id ?? null;
+  const submissionId = body?.submissionId ?? body?.submission_id ?? rawBody?.submissionId ?? null;
 
   if (!ticketId) {
     console.error(`[${FN}] No ticket_id found. Body keys: ${Object.keys(body).join(",")}, urlParameters:`, JSON.stringify(body?.urlParameters)?.slice(0, 500));
