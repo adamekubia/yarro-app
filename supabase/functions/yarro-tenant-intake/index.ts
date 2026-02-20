@@ -541,14 +541,22 @@ Deno.serve(async (req: Request) => {
       const ticketId = ticket?.id;
       console.log(`[${FN}] Ticket created: ${ticketId}`);
 
-      // Upload images in parallel (if any)
-      if (images.length > 0 && ticketId) {
-        const storedUrls = await uploadImages(supabase, ticketId, images);
-        if (storedUrls.length > 0) {
-          await supabase
-            .from("c1_tickets")
-            .update({ images: storedUrls })
-            .eq("id", ticketId);
+      // Upload images to Supabase Storage (from ticket's stored Twilio URLs)
+      if (ticketId) {
+        const ticketImages: string[] = ticket?.images || [];
+        const twilioUrls = ticketImages.filter(
+          (u: string) => typeof u === "string" && u.startsWith("https://api.twilio.com"),
+        );
+
+        if (twilioUrls.length > 0) {
+          const storedUrls = await uploadImages(supabase, ticketId, twilioUrls);
+          if (storedUrls.length > 0) {
+            await supabase
+              .from("c1_tickets")
+              .update({ images: storedUrls })
+              .eq("id", ticketId);
+            console.log(`[${FN}] Uploaded ${storedUrls.length} images to Storage`);
+          }
         }
       }
 
