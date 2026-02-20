@@ -263,21 +263,62 @@ interface JobReminder {
   formatted_window: string;
 }
 
+// ─── Send a single reminder (reused by both cron and direct modes) ────────
+async function sendReminder(
+  supabase: SupabaseClient,
+  reminder: JobReminder,
+): Promise<{ ticket_id: string; sent: boolean; messageSid?: string; error?: string }> {
+  const result = await sendAndLog(supabase, FN, "contractor_job_reminder", {
+    ticketId: reminder.ticket_id,
+    recipientPhone: reminder.contractor_phone,
+    recipientRole: "contractor",
+    messageType: "contractor_job_reminder",
+    templateSid: TEMPLATE_SID,
+    variables: {
+      "1": reminder.formatted_window || "",
+      "2": reminder.property_address || "",
+      "3": reminder.access_text || "",
+      "4": String(reminder.ticket_id),
+      "5": String(reminder.ticket_id),
+    },
+  });
+
+  return {
+    ticket_id: reminder.ticket_id,
+    sent: result.ok,
+    messageSid: result.messageSid,
+    error: result.error,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   try {
-    // Auth: check cron secret if configured
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    if (cronSecret) {
-      const provided = req.headers.get("x-cron-secret");
-      if (provided !== cronSecret) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+    const url = new URL(req.url);
+    const source = url.searchParams.get("source") || "cron";
+    const supabase = createSupabaseClient();
+
+    // ── Direct mode: single reminder from DB trigger (same-day booking) ──
+    if (source === "direct") {
+      const body = await req.json();
+      const reminder = body as JobReminder;
+
+      if (!reminder.ticket_id || !reminder.contractor_phone) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Missing ticket_id or contractor_phone" }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
       }
+
+      console.log(`[${FN}] Direct reminder for ticket ${reminder.ticket_id}`);
+      const result = await sendReminder(supabase, reminder);
+
+      return new Response(
+        JSON.stringify({ source: "direct", ...result }),
+        { status: result.sent ? 200 : 500, headers: { "Content-Type": "application/json" } },
+      );
     }
 
-    const supabase = createSupabaseClient();
+    // ── Cron mode: send all reminders for today ──
     const today = new Date().toISOString().split("T")[0];
 
     const { data: reminders, error: rpcError } = await supabase.rpc(
@@ -303,31 +344,8 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${FN}] Sending ${reminders.length} reminders for ${today}`);
 
-    // Send all reminders in parallel
     const results = await Promise.all(
-      (reminders as JobReminder[]).map(async (reminder) => {
-        const result = await sendAndLog(supabase, FN, "contractor_job_reminder", {
-          ticketId: reminder.ticket_id,
-          recipientPhone: reminder.contractor_phone,
-          recipientRole: "contractor",
-          messageType: "contractor_job_reminder",
-          templateSid: TEMPLATE_SID,
-          variables: {
-            "1": reminder.formatted_window || "",
-            "2": reminder.property_address || "",
-            "3": reminder.access_text || "",
-            "4": String(reminder.ticket_id),
-            "5": String(reminder.ticket_id),
-          },
-        });
-
-        return {
-          ticket_id: reminder.ticket_id,
-          sent: result.ok,
-          messageSid: result.messageSid,
-          error: result.error,
-        };
-      }),
+      (reminders as JobReminder[]).map((reminder) => sendReminder(supabase, reminder)),
     );
 
     const sent = results.filter((r) => r.sent).length;
