@@ -176,7 +176,7 @@ export interface OutboundLogEntry {
 
 export interface LogEntry {
   role?: string
-  direction?: 'in' | 'out'
+  direction?: 'in' | 'out' | 'inbound' | 'outbound'
   text?: string
   content?: string
   message?: string
