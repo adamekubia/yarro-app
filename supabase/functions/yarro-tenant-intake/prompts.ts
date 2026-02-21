@@ -487,7 +487,7 @@ After this stage:
 ### ai_instruction = "ask_confirm_duplicate"
 -------------------------------------------------
 There is at least one open ticket in the last 7 days for this property.
-The recent tickets are available in the context as `recent_tickets`.
+The recent tickets are available in the context as \`recent_tickets\`.
 
 **First time this instruction fires** (no prior outbound about existing tickets in the conversation log):
 Mention the most recent ticket naturally and ask what their issue is. Example:
