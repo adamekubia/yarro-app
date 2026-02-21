@@ -86,6 +86,17 @@ interface TicketFormProps {
   isHandoff?: boolean            // Visual styling for handoff tickets
 }
 
+/** Auto-format issue_title for manual tickets to match AI output format.
+ *  Rules: lowercase, starts with "the"/"a"/"an", no trailing period. */
+function formatIssueTitle(raw: string): string {
+  let t = raw.trim().replace(/\.$/, '').toLowerCase()
+  if (!t) return t
+  if (!/^(the |a |an )/.test(t)) {
+    t = 'the ' + t
+  }
+  return t
+}
+
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
   value: c,
   label: c,
@@ -125,7 +136,7 @@ export function TicketForm({
     issue_description: mergedPrefill?.issue_description || '',
     issue_title: mergedPrefill?.issue_title || '',
     category: mergedPrefill?.category || '',
-    priority: mergedPrefill?.priority || 'Damaging',
+    priority: mergedPrefill?.priority || 'Medium',
     contractor_ids: initialContractorIds,
     availability: mergedPrefill?.availability || '',
     access: mergedPrefill?.access || '',
@@ -471,10 +482,13 @@ export function TicketForm({
     setSubmitting(true)
     setError(null)
 
+    // Auto-format issue_title for manual tickets
+    const formatted = { ...formData, issue_title: formatIssueTitle(formData.issue_title) }
+
     try {
       // If onSubmit provided, use external handler
       if (onSubmit) {
-        await onSubmit(formData)
+        await onSubmit(formatted)
         return
       }
 
@@ -485,14 +499,14 @@ export function TicketForm({
       const { data: ticket, error: ticketError } = await supabase
         .from('c1_tickets')
         .insert({
-          property_id: formData.property_id,
-          tenant_id: formData.tenant_id,
-          issue_description: formData.issue_description,
-          issue_title: formData.issue_title || null,
-          category: formData.category,
-          priority: formData.priority,
-          availability: formData.availability || null,
-          access: formData.access || null,
+          property_id: formatted.property_id,
+          tenant_id: formatted.tenant_id,
+          issue_description: formatted.issue_description,
+          issue_title: formatted.issue_title || null,
+          category: formatted.category,
+          priority: formatted.priority,
+          availability: formatted.availability || null,
+          access: formatted.access || null,
           status: 'OPEN',
           job_stage: 'logged',
           handoff: false,  // No longer a handoff once we create the ticket
@@ -506,14 +520,14 @@ export function TicketForm({
       if (ticketError) throw ticketError
 
       // Create messages entry for dispatcher
-      const firstContractor = contractors.find(c => c.id === formData.contractor_ids[0])
+      const firstContractor = contractors.find(c => c.id === formatted.contractor_ids[0])
       const { error: msgError } = await supabase
         .from('c1_messages')
         .insert({
           ticket_id: ticket.id,
           stage: 'contractor_notified',
-          contractor_id: formData.contractor_ids[0],
-          contractor_queue: formData.contractor_ids,
+          contractor_id: formatted.contractor_ids[0],
+          contractor_queue: formatted.contractor_ids,
           contractor_queue_index: 0,
           property_manager_id: propertyManager!.id,
         })
@@ -529,8 +543,8 @@ export function TicketForm({
       }
 
       // Trigger dispatcher webhook to send SMS to contractor
-      const property = properties.find(p => p.id === formData.property_id)
-      const tenant = tenants.find(t => t.id === formData.tenant_id)
+      const property = properties.find(p => p.id === formatted.property_id)
+      const tenant = tenants.find(t => t.id === formatted.tenant_id)
 
       try {
         await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/yarro-dispatcher`, {
@@ -539,16 +553,16 @@ export function TicketForm({
           body: JSON.stringify({
             instruction: 'contractor-sms',
             ticket_id: ticket.id,
-            contractor_id: formData.contractor_ids[0],
+            contractor_id: formatted.contractor_ids[0],
             contractor_name: firstContractor?.contractor_name,
-            issue_description: formData.issue_description,
-            issue_title: formData.issue_title,
-            category: formData.category,
-            priority: formData.priority,
+            issue_description: formatted.issue_description,
+            issue_title: formatted.issue_title,
+            category: formatted.category,
+            priority: formatted.priority,
             address: property?.address,
             tenant_name: tenant?.full_name,
-            availability: formData.availability,
-            access: formData.access,
+            availability: formatted.availability,
+            access: formatted.access,
           }),
         })
       } catch (webhookErr) {

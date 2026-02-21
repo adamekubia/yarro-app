@@ -288,21 +288,18 @@ async function handleFilloutScheduling(
   const formattedWindow = formatSchedulingWindow(startIso, endIso || startIso);
   const scheduledIso = new Date(startIso).toISOString();
 
-  // Dedup: skip if ticket already scheduled for this exact date (Fillout retry)
+  // Dedup: reject if ticket already scheduled or further in the flow
+  const ALREADY_BOOKED = ["Job Scheduled", "Completed", "Closed"];
   const { data: currentTicket } = await supabase
     .from("c1_tickets")
     .select("status, scheduled_date")
     .eq("id", ticketId)
     .maybeSingle();
 
-  if (
-    currentTicket?.status === "Job Scheduled" &&
-    currentTicket?.scheduled_date &&
-    new Date(currentTicket.scheduled_date).toISOString() === scheduledIso
-  ) {
-    console.log(`[${FN}] Duplicate scheduling for ticket ${ticketId} (same date ${scheduledIso}), skipping`);
+  if (currentTicket && ALREADY_BOOKED.includes(currentTicket.status)) {
+    console.log(`[${FN}] Ticket ${ticketId} already has status "${currentTicket.status}", rejecting duplicate booking`);
     return new Response(
-      JSON.stringify({ ok: true, duplicate: true, ticket_id: ticketId }),
+      JSON.stringify({ ok: true, duplicate: true, ticket_id: ticketId, current_status: currentTicket.status }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   }

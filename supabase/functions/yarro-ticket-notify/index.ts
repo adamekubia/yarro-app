@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
-import { alertTelegram } from "../_shared/telegram.ts";
+import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES } from "../_shared/templates.ts";
 
@@ -78,6 +78,23 @@ async function handleIntake(
         },
       });
       results.push({ type: "pm_handoff", sent: r.ok, error: r.error });
+    } else {
+      // No PM phone — property not matched. Send urgent Telegram alert.
+      const isEmergency = (ctx.label || "").toUpperCase().includes("EMERGENCY")
+        || (ctx.priority || "").toLowerCase() === "emergency";
+      const alertFn = isEmergency ? alertTelegram : alertInfo;
+      await alertFn(FN, isEmergency
+        ? "EMERGENCY handoff — no property manager found"
+        : "Handoff ticket — no property manager found", {
+        Ticket: ticketId,
+        Label: ctx.label || "N/A",
+        Priority: ctx.priority || "N/A",
+        "Caller Phone": ctx.caller_phone || ctx.tenant_phone || "Unknown",
+        "Caller Name": ctx.caller_name || ctx.tenant_name || "Unknown",
+        Issue: (ctx.issue_description || "").slice(0, 200),
+        "Property Address": ctx.property_address || "NOT MATCHED",
+      });
+      results.push({ type: "telegram_fallback", sent: true });
     }
   } else {
     const sends: Promise<void>[] = [];
@@ -125,6 +142,16 @@ async function handleIntake(
     }
 
     await Promise.all(sends);
+
+    // Safety net: if neither PM nor landlord could be reached, alert Telegram
+    if (!ctx.manager_phone && !ctx.landlord_phone) {
+      await alertInfo(FN, "Ticket created but no PM or landlord phone found", {
+        Ticket: ticketId,
+        Priority: ctx.priority || "N/A",
+        Issue: (ctx.issue_description || "").slice(0, 200),
+        "Caller Phone": ctx.caller_phone || ctx.tenant_phone || "Unknown",
+      });
+    }
 
     const { error: dispatchError } = await supabase.rpc(
       "c1_contractor_context",

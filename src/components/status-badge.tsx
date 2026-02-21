@@ -34,15 +34,15 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   completed:           { border: 'border-green-400 dark:border-green-500', text: 'text-green-600 dark:text-green-400' },
 
   // Priority (green→red scale)
+  low:         { border: 'border-emerald-400 dark:border-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  medium:      { border: 'border-yellow-400 dark:border-yellow-500', text: 'text-yellow-600 dark:text-yellow-400' },
+  high:        { border: 'border-orange-400 dark:border-orange-500', text: 'text-orange-600 dark:text-orange-400' },
+  urgent:      { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
+  emergency:   { border: 'border-red-600 dark:border-red-400', text: 'text-red-700 dark:text-red-300' },
+  // Legacy priority names (backward compat with existing DB records)
   cosmetic:    { border: 'border-emerald-400 dark:border-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
   damaging:    { border: 'border-yellow-400 dark:border-yellow-500', text: 'text-yellow-600 dark:text-yellow-400' },
   destructive: { border: 'border-orange-400 dark:border-orange-500', text: 'text-orange-600 dark:text-orange-400' },
-  urgent:      { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
-  emergency:   { border: 'border-red-600 dark:border-red-400', text: 'text-red-700 dark:text-red-300' },
-  // Legacy priority
-  high:   { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
-  medium: { border: 'border-yellow-400 dark:border-yellow-500', text: 'text-yellow-600 dark:text-yellow-400' },
-  low:    { border: 'border-emerald-400 dark:border-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
 
   // Display stages
   'awaiting contractor': { border: 'border-amber-400 dark:border-amber-500', text: 'text-amber-600 dark:text-amber-400' },

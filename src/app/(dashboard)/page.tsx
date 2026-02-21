@@ -311,17 +311,18 @@ export default function DashboardPage() {
         const isClosed = t.status?.toLowerCase() === 'closed'
         if (isClosed) return 'Completed'
         if (t.handoff) return 'Handoff'
-        const js2 = (t.job_stage || '').toLowerCase()
-        if (js2 === 'landlord no response') return 'Landlord No Response'
+        const js = (t.job_stage || '').toLowerCase()
+        if (js === 'landlord no response') return 'Landlord No Response'
+        // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
+        if (ncIds.has(t.id)) return 'Not Completed'
+        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
+        if (js === 'sent') return 'Awaiting Booking'
+        // Message stage (only relevant when job hasn't progressed past this point)
         const ms = (msgStage || '').toLowerCase()
         if (ms === 'no_contractors_left') return 'No Contractors'
         if (ms === 'awaiting_manager') return 'Awaiting Manager'
         if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
         if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
-        if (ncIds.has(t.id)) return 'Not Completed'
-        const js = (t.job_stage || '').toLowerCase()
-        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
-        if (js === 'sent') return 'Awaiting Booking'
         return 'Created'
       }
 

@@ -513,21 +513,23 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       })()
     : null
 
-  // Derive display stage using dashboard logic (message stage is more descriptive)
+  // Derive display stage — job progress takes priority over stale message stage
   const displayStage = (() => {
     if (!basic) return null
     const isClosed = basic.status?.toLowerCase() === 'closed'
     if (isClosed) return 'Completed'
     if (basic.handoff) return 'handoff'
-    const msgStage = (messages?.stage || '').toLowerCase()
-    if (msgStage === 'awaiting_manager') return 'Awaiting Manager'
-    if (msgStage === 'awaiting_landlord') return 'Awaiting Landlord'
-    if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
+    // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
     if (hasCompletion && completion && !completion.completed) return 'Not Completed'
     const jobStage = (basic.job_stage || '').toLowerCase()
     if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
     if (jobStage === 'sent') return 'Awaiting Booking'
     if (hasCompletion) return 'Completed'
+    // Message stage (only relevant when job hasn't progressed past this point)
+    const msgStage = (messages?.stage || '').toLowerCase()
+    if (msgStage === 'awaiting_manager') return 'Awaiting Manager'
+    if (msgStage === 'awaiting_landlord') return 'Awaiting Landlord'
+    if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
     return 'Created'
   })()
 
