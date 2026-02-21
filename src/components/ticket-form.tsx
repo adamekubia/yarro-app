@@ -61,7 +61,6 @@ interface TicketFormData {
   property_id: string
   tenant_id: string
   issue_description: string
-  issue_title: string            // Short embeddable phrase e.g. "a blocked shower"
   category: string
   priority: string
   contractor_ids: string[]       // Array, required, ORDERED
@@ -84,17 +83,6 @@ interface TicketFormProps {
   onDismiss?: () => void         // Archive/dismiss handoff without completing
   submitLabel?: string
   isHandoff?: boolean            // Visual styling for handoff tickets
-}
-
-/** Auto-format issue_title for manual tickets to match AI output format.
- *  Rules: lowercase, starts with "the"/"a"/"an", no trailing period. */
-function formatIssueTitle(raw: string): string {
-  let t = raw.trim().replace(/\.$/, '').toLowerCase()
-  if (!t) return t
-  if (!/^(the |a |an )/.test(t)) {
-    t = 'the ' + t
-  }
-  return t
 }
 
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
@@ -134,7 +122,6 @@ export function TicketForm({
     property_id: mergedPrefill?.property_id || '',
     tenant_id: mergedPrefill?.tenant_id || '',
     issue_description: mergedPrefill?.issue_description || '',
-    issue_title: mergedPrefill?.issue_title || '',
     category: mergedPrefill?.category || '',
     priority: mergedPrefill?.priority || 'Medium',
     contractor_ids: initialContractorIds,
@@ -466,10 +453,6 @@ export function TicketForm({
       setError('Please describe the issue')
       return
     }
-    if (!formData.issue_title.trim()) {
-      setError('Please enter a short phrase for the issue')
-      return
-    }
     if (!formData.category) {
       setError('Please select a category')
       return
@@ -482,8 +465,7 @@ export function TicketForm({
     setSubmitting(true)
     setError(null)
 
-    // Auto-format issue_title for manual tickets
-    const formatted = { ...formData, issue_title: formatIssueTitle(formData.issue_title) }
+    const formatted = formData
 
     try {
       // If onSubmit provided, use external handler
@@ -502,7 +484,6 @@ export function TicketForm({
           property_id: formatted.property_id,
           tenant_id: formatted.tenant_id,
           issue_description: formatted.issue_description,
-          issue_title: formatted.issue_title || null,
           category: formatted.category,
           priority: formatted.priority,
           availability: formatted.availability || null,
@@ -556,7 +537,6 @@ export function TicketForm({
             contractor_id: formatted.contractor_ids[0],
             contractor_name: firstContractor?.contractor_name,
             issue_description: formatted.issue_description,
-            issue_title: formatted.issue_title,
             category: formatted.category,
             priority: formatted.priority,
             address: property?.address,
@@ -705,21 +685,9 @@ export function TicketForm({
             value={formData.issue_description}
             onChange={(e) => updateField('issue_description', e.target.value)}
             placeholder="Describe the maintenance issue..."
-            className="min-h-[100px]"
-            rows={4}
+            className="min-h-[120px]"
+            rows={5}
           />
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              Short phrase <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={formData.issue_title}
-              onChange={(e) => updateField('issue_title', e.target.value)}
-              placeholder='e.g. "a blocked shower"'
-              required
-              className="h-8 text-sm"
-            />
-          </div>
         </div>
 
         {/* Row 2 left: Tenant */}
