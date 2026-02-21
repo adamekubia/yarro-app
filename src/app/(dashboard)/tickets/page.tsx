@@ -184,14 +184,16 @@ export default function TicketsPage() {
         const isClosed = t.status?.toLowerCase() === 'closed'
         if (isClosed) return 'Completed'
         if (t.handoff) return 'handoff'
-        const ms = (msgStage || '').toLowerCase()
-        if (ms === 'awaiting_manager') return 'Awaiting Manager'
-        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
-        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
+        // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
         if (notCompletedIds.has(t.id)) return 'Not Completed'
         const js = (t.job_stage || '').toLowerCase()
         if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
         if (js === 'sent') return 'Awaiting Booking'
+        // Message stage (only when job hasn't progressed past this point)
+        const ms = (msgStage || '').toLowerCase()
+        if (ms === 'awaiting_manager') return 'Awaiting Manager'
+        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
+        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
         return 'Created'
       }
 
