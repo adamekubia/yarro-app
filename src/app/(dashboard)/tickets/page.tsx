@@ -437,7 +437,7 @@ export default function TicketsPage() {
       header: '',
       width: '110px',
       render: (ticket) => (
-        ticket.handoff && ticket.status === 'open' ? (
+        ticket.handoff && ticket.status === 'open' && !ticket.archived ? (
           <InteractiveHoverButton
             text="Review"
             className="w-24 text-xs h-7"
