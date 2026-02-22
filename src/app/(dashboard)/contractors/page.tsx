@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   Popover,
   PopoverContent,
@@ -281,7 +282,7 @@ export default function ContractorsPage() {
   }
 
   const handleRowClick = (contractor: Contractor) => {
-    router.push(`/contractors?id=${contractor.id}`)
+    router.push(`/contractors/${contractor.id}`)
   }
 
   const handleCloseDrawer = () => {
@@ -608,7 +609,12 @@ export default function ContractorsPage() {
             Manage your contractor network
           </p>
         </div>
-        <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -721,7 +727,7 @@ export default function ContractorsPage() {
                     {propertyAddresses.map((property) => (
                       <Link
                         key={property.id}
-                        href={`/properties?id=${property.id}`}
+                        href={`/properties/${property.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >
@@ -737,7 +743,7 @@ export default function ContractorsPage() {
                     {propertyAddresses.map((property) => (
                       <Link
                         key={property.id}
-                        href={`/properties?id=${property.id}`}
+                        href={`/properties/${property.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                         onClick={handleCloseDrawer}
                       >

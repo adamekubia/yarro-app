@@ -17,7 +17,9 @@ import { Badge } from '@/components/ui/badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Contact } from 'lucide-react'
+import { Phone, Mail, Building2, Contact, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 
@@ -205,7 +207,7 @@ export default function LandlordsPage() {
   }
 
   const handleRowClick = (landlord: Landlord) => {
-    router.push(`/landlords?id=${landlord.id}`)
+    router.push(`/landlords/${landlord.id}`)
   }
 
   const handleCloseDrawer = () => {
@@ -353,7 +355,12 @@ export default function LandlordsPage() {
             Manage landlord contacts across your properties
           </p>
         </div>
-        <InteractiveHoverButton text="Add Landlord" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchLandlords()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Landlord" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -443,7 +450,7 @@ export default function LandlordsPage() {
                     {selectedLandlord.properties.map((p) => (
                       <Link
                         key={p.id}
-                        href={`/properties?id=${p.id}`}
+                        href={`/properties/${p.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                         onClick={handleCloseDrawer}
                       >

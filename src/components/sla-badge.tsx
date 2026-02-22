@@ -1,0 +1,88 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import { SLA_WINDOWS } from '@/lib/constants'
+
+interface SlaBadgeProps {
+  slaDueAt: string | null
+  resolvedAt?: string | null
+  priority?: string | null
+  className?: string
+}
+
+function getMinutesRemaining(slaDueAt: string): number {
+  const due = new Date(slaDueAt).getTime()
+  const now = Date.now()
+  return Math.round((due - now) / 60000)
+}
+
+function formatDuration(totalMinutes: number): string {
+  const abs = Math.abs(totalMinutes)
+  const sign = totalMinutes < 0 ? '-' : ''
+
+  if (abs < 60) return `${sign}${abs}m`
+  if (abs < 1440) {
+    const hours = Math.floor(abs / 60)
+    const mins = abs % 60
+    return mins > 0 ? `${sign}${hours}h ${mins}m` : `${sign}${hours}h`
+  }
+  const days = Math.floor(abs / 1440)
+  const hours = Math.floor((abs % 1440) / 60)
+  return hours > 0 ? `${sign}${days}d ${hours}h` : `${sign}${days}d`
+}
+
+type SlaStatus = 'green' | 'amber' | 'red' | 'breached' | 'resolved'
+
+function getSlaStatus(slaDueAt: string, resolvedAt?: string | null, priority?: string | null): { status: SlaStatus; label: string } {
+  // If resolved, show resolution time relative to SLA
+  if (resolvedAt) {
+    const due = new Date(slaDueAt).getTime()
+    const resolved = new Date(resolvedAt).getTime()
+    const diff = Math.round((due - resolved) / 60000)
+    if (diff >= 0) {
+      return { status: 'resolved', label: `Resolved (${formatDuration(diff)} early)` }
+    }
+    return { status: 'resolved', label: `Resolved (${formatDuration(diff)} late)` }
+  }
+
+  const minutesRemaining = getMinutesRemaining(slaDueAt)
+  const totalWindow = SLA_WINDOWS[priority || ''] || 10080
+
+  if (minutesRemaining <= 0) {
+    return { status: 'breached', label: `BREACHED ${formatDuration(minutesRemaining)}` }
+  }
+
+  const percentRemaining = (minutesRemaining / totalWindow) * 100
+
+  if (percentRemaining <= 10) {
+    return { status: 'red', label: formatDuration(minutesRemaining) }
+  }
+  if (percentRemaining <= 50) {
+    return { status: 'amber', label: formatDuration(minutesRemaining) }
+  }
+  return { status: 'green', label: formatDuration(minutesRemaining) }
+}
+
+const statusStyles: Record<SlaStatus, string> = {
+  green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  red: 'bg-red-500/10 text-red-700 dark:text-red-400 font-semibold',
+  breached: 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold',
+  resolved: 'bg-muted text-muted-foreground',
+}
+
+export function SlaBadge({ slaDueAt, resolvedAt, priority, className }: SlaBadgeProps) {
+  if (!slaDueAt) return null
+
+  const { status, label } = getSlaStatus(slaDueAt, resolvedAt, priority)
+
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs whitespace-nowrap',
+      statusStyles[status],
+      className,
+    )}>
+      {label}
+    </span>
+  )
+}

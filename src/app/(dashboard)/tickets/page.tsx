@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
@@ -27,6 +28,8 @@ import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import { SlaBadge } from '@/components/sla-badge'
+import { RefreshCw } from 'lucide-react'
 
 interface TicketRow {
   id: string
@@ -50,6 +53,8 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  sla_due_at?: string | null
+  resolved_at?: string | null
   message_stage?: string | null
   display_stage?: string | null
   address?: string
@@ -149,6 +154,8 @@ export default function TicketsPage() {
         images,
         next_action,
         next_action_reason,
+        sla_due_at,
+        resolved_at,
         c1_properties(address),
         c1_tenants(full_name),
         c1_contractors(contractor_name)
@@ -418,6 +425,20 @@ export default function TicketsPage() {
       render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} /> : '-',
     },
     {
+      key: 'sla',
+      header: 'SLA',
+      width: '110px',
+      sortable: true,
+      render: (ticket) => (
+        <SlaBadge
+          slaDueAt={ticket.sla_due_at ?? null}
+          resolvedAt={ticket.resolved_at}
+          priority={ticket.priority}
+        />
+      ),
+      getValue: (ticket) => ticket.sla_due_at ? new Date(ticket.sla_due_at).getTime() : 0,
+    },
+    {
       key: 'actions',
       header: '',
       width: '110px',
@@ -479,6 +500,15 @@ export default function TicketsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => fetchTickets()}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
           <DateFilter value={dateRange} onChange={setDateRange} />
           <InteractiveHoverButton
             text="Create"

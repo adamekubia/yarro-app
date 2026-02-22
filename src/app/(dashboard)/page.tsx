@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Phone,
   User,
+  RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -44,6 +45,7 @@ import {
 } from '@/components/ui/dialog'
 import { TicketForm } from '@/components/ticket-form'
 import { ChatHistory } from '@/components/chat-message'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
@@ -397,6 +399,15 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => fetchData()}
+                disabled={loading}
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </Button>
               {/* View Toggle */}
               <div className="flex items-center bg-muted rounded-lg p-0.5">
                 <button

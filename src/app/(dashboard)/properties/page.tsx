@@ -26,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact } from 'lucide-react'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -281,7 +283,7 @@ export default function PropertiesPage() {
 
   const handleRowClick = (property: PropertyHub) => {
     if (property.property_id) {
-      router.push(`/properties?id=${property.property_id}`)
+      router.push(`/properties/${property.property_id}`)
     }
   }
 
@@ -513,7 +515,12 @@ export default function PropertiesPage() {
             Manage your property portfolio
           </p>
         </div>
-        <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -563,7 +570,7 @@ export default function PropertiesPage() {
               <DetailSection title="Landlord">
                 {selectedProperty.landlord_id ? (
                   <Link
-                    href={`/landlords?id=${selectedProperty.landlord_id}`}
+                    href={`/landlords/${selectedProperty.landlord_id}`}
                     className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                     onClick={handleCloseDrawer}
                   >
@@ -653,7 +660,7 @@ export default function PropertiesPage() {
                     {getTenants(selectedProperty.tenants).map((tenant) => (
                       <Link
                         key={tenant.id}
-                        href={`/tenants?id=${tenant.id}`}
+                        href={`/tenants/${tenant.id}`}
                         className="flex items-center justify-between p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >
@@ -683,7 +690,7 @@ export default function PropertiesPage() {
                     {getContractors(selectedProperty.contractors).map((contractor) => (
                       <Link
                         key={contractor.id}
-                        href={`/contractors?id=${contractor.id}`}
+                        href={`/contractors/${contractor.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >

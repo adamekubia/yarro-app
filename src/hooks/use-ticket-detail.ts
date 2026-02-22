@@ -81,6 +81,8 @@ export interface TicketBasic {
   images: string[] | null
   next_action: string | null
   next_action_reason: string | null
+  sla_due_at: string | null
+  resolved_at: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -379,7 +381,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id,
-            archived, images, next_action, next_action_reason,
+            archived, images, next_action, next_action_reason, sla_due_at, resolved_at,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)
