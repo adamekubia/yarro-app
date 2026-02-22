@@ -153,7 +153,7 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="properties_template.csv"
-        exampleRow={{
+        exampleRows={[{
           address: '14 Meadow Lane, Manchester, M14 5RL',
           landlord_name: 'David Williams',
           landlord_email: 'david.williams@example.com',
@@ -161,7 +161,7 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
           access_instructions: 'Key safe code 4521',
           emergency_access_contact: '07700 900300',
           auto_approve_limit: '250',
-        }}
+        }]}
       />
 
       {/* Unified info box */}

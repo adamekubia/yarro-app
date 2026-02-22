@@ -66,11 +66,11 @@ export function StepLandlords({ landlords, onChange }: StepLandlordsProps) {
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="landlords_template.csv"
-        exampleRow={{
+        exampleRows={[{
           name: 'David Williams',
           email: 'david.williams@example.com',
           phone: '07700 900200',
-        }}
+        }]}
       />
 
       <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">

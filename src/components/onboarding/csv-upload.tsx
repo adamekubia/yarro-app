@@ -8,7 +8,7 @@ interface CsvUploadProps {
   expectedColumns: string[]
   onParsed: (rows: Record<string, string>[]) => void
   templateFilename: string
-  exampleRow?: Record<string, string>
+  exampleRows?: Record<string, string>[]
 }
 
 function parseCSVLine(line: string): string[] {
@@ -31,7 +31,7 @@ function parseCSVLine(line: string): string[] {
   return values
 }
 
-export function CsvUpload({ expectedColumns, onParsed, templateFilename, exampleRow }: CsvUploadProps) {
+export function CsvUpload({ expectedColumns, onParsed, templateFilename, exampleRows }: CsvUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,11 +106,13 @@ export function CsvUpload({ expectedColumns, onParsed, templateFilename, example
 
   const downloadTemplate = () => {
     let csvContent = expectedColumns.join(',') + '\n'
-    if (exampleRow) {
-      csvContent += expectedColumns.map((col) => {
-        const val = exampleRow[col] || ''
-        return val.includes(',') ? `"${val}"` : val
-      }).join(',') + '\n'
+    if (exampleRows && exampleRows.length > 0) {
+      exampleRows.forEach((row) => {
+        csvContent += expectedColumns.map((col) => {
+          const val = row[col] || ''
+          return val.includes(',') ? `"${val}"` : val
+        }).join(',') + '\n'
+      })
     }
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)

@@ -431,6 +431,8 @@ export type Database = {
           issue_title: string | null
           job_stage: string | null
           landlord_approved_on: string | null
+          next_action: string | null
+          next_action_reason: string | null
           priority: string | null
           property_id: string | null
           property_manager_id: string | null
@@ -463,6 +465,8 @@ export type Database = {
           issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
+          next_action?: string | null
+          next_action_reason?: string | null
           priority?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -495,6 +499,8 @@ export type Database = {
           issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
+          next_action?: string | null
+          next_action_reason?: string | null
           priority?: string | null
           property_id?: string | null
           property_manager_id?: string | null

@@ -38,8 +38,12 @@ function parseFillout(rawBody: Record<string, any>): ParsedCompletion | null {
   // Fillout Workflows wrap data under body.submission — unwrap if present
   const body = rawBody.submission ?? rawBody;
 
-  const ticket_id = getUrlParam(body?.urlParameters, "ticket_id") || body?.ticket_id || null;
+  let ticket_id = getUrlParam(body?.urlParameters, "ticket_id") || body?.ticket_id || null;
   if (!ticket_id) return null;
+  // Strip display prefix (e.g. "T-7327dc8c" → "7327dc8c") — Fillout may pass short ref
+  if (typeof ticket_id === "string" && ticket_id.startsWith("T-")) {
+    ticket_id = ticket_id.slice(2);
+  }
 
   const questions = Array.isArray(body?.questions)
     ? body.questions

@@ -99,6 +99,8 @@ interface TicketSummary {
   address?: string
   handoff?: boolean
   landlord_declined?: boolean
+  next_action?: string | null
+  next_action_reason?: string | null
 }
 
 // Chart colors
@@ -139,7 +141,6 @@ export default function DashboardPage() {
   const [selectedHandoff, setSelectedHandoff] = useState<HandoffConversation | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
-  const [notCompletedIds, setNotCompletedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -153,8 +154,8 @@ export default function DashboardPage() {
     if (!propertyManager) return
     setLoading(true)
 
-    // Fetch tickets with message stage (source of truth for workflow state)
-    const [ticketsRes, convosRes, notCompletedRes] = await Promise.all([
+    // Fetch tickets — next_action/next_action_reason is the single source of truth for state
+    const [ticketsRes, convosRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -169,8 +170,9 @@ export default function DashboardPage() {
           final_amount,
           handoff,
           conversation_id,
-          c1_properties(address),
-          c1_messages(stage, landlord)
+          next_action,
+          next_action_reason,
+          c1_properties(address)
         `)
         .eq('property_manager_id', propertyManager.id)
         .gte('date_logged', dateRange.from.toISOString())
@@ -196,17 +198,10 @@ export default function DashboardPage() {
         .eq('handoff', true)
         .eq('status', 'open')
         .order('last_updated', { ascending: false }),
-      // Fetch not-completed job IDs
-      supabase
-        .from('c1_job_completions')
-        .select('id')
-        .eq('completed', false),
     ])
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
-    const ncIds = new Set((notCompletedRes.data || []).map(r => r.id))
-    setNotCompletedIds(ncIds)
 
     // Filter conversations that don't have tickets yet
     const ticketConvoIds = new Set(tickets?.map(t => t.conversation_id).filter(Boolean) || [])
@@ -223,74 +218,17 @@ export default function DashboardPage() {
       const closed = tickets.filter((t) => t.status?.toLowerCase() === 'closed').length
       const open = total - closed
 
-      type MessageData = { stage: string; landlord?: { approval?: boolean | null } | null }
-      const getMessageData = (t: { c1_messages: MessageData | MessageData[] | null }): MessageData | null => {
-        const messages = t.c1_messages
-        if (!messages) return null
-        if (Array.isArray(messages)) {
-          return messages[0] || null
-        }
-        return messages
-      }
-      const getMessageStage = (t: { c1_messages: MessageData | MessageData[] | null }) => {
-        const data = getMessageData(t)
-        return (data?.stage || '').toLowerCase()
-      }
-      const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
-      const isScheduled = (t: { job_stage: string | null; scheduled_date: string | null }) => {
-        const stage = (t.job_stage || '').toLowerCase()
-        return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
-      }
-
-      const handoffTickets = tickets.filter((t) => isOpen(t) && t.handoff === true).length
-
-      const awaitingContractor = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
-      }).length
-
-      const awaitingManager = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'awaiting_manager'
-      }).length
-
-      const awaitingLandlord = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'awaiting_landlord'
-      }).length
-
-      const landlordDeclined = tickets.filter((t) => {
-        const data = getMessageData(t)
-        return data?.landlord?.approval === false
-      }).length
-
-      const landlordNoResponse = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const js = (t.job_stage || '').toLowerCase()
-        return js === 'landlord no response'
-      }).length
-
-      const noContractorsLeft = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'no_contractors_left'
-      }).length
-
-      const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t) && !ncIds.has(t.id)).length
-
-      const awaitingBooking = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const stage = (t.job_stage || '').toLowerCase()
-        return stage === 'sent'
-      }).length
-
-      const jobNotCompleted = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        return ncIds.has(t.id)
-      }).length
+      // All counts derived from next_action / next_action_reason (DB trigger computed)
+      const handoffTickets = tickets.filter((t) => t.next_action_reason === 'handoff_review').length
+      const awaitingManager = tickets.filter((t) => t.next_action_reason === 'manager_approval').length
+      const noContractorsLeft = tickets.filter((t) => t.next_action_reason === 'no_contractors').length
+      const landlordDeclined = tickets.filter((t) => t.next_action_reason === 'landlord_declined').length
+      const landlordNoResponse = tickets.filter((t) => t.next_action_reason === 'landlord_no_response').length
+      const jobNotCompleted = tickets.filter((t) => t.next_action_reason === 'job_not_completed').length
+      const awaitingContractor = tickets.filter((t) => t.next_action_reason === 'awaiting_contractor').length
+      const awaitingLandlord = tickets.filter((t) => t.next_action_reason === 'awaiting_landlord').length
+      const scheduledJobs = tickets.filter((t) => t.next_action_reason === 'scheduled').length
+      const awaitingBooking = tickets.filter((t) => t.next_action_reason === 'awaiting_booking').length
 
       setStats({
         totalTickets: total,
@@ -309,52 +247,41 @@ export default function DashboardPage() {
         jobNotCompleted,
       })
 
-      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
-        const isClosed = t.status?.toLowerCase() === 'closed'
-        if (isClosed) return 'Completed'
-        if (t.handoff) return 'Handoff'
-        const js = (t.job_stage || '').toLowerCase()
-        if (js === 'landlord no response') return 'Landlord No Response'
-        // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
-        if (ncIds.has(t.id)) return 'Not Completed'
-        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
-        if (js === 'sent') return 'Awaiting Booking'
-        // Message stage (only relevant when job hasn't progressed past this point)
-        const ms = (msgStage || '').toLowerCase()
-        if (ms === 'no_contractors_left') return 'No Contractors'
-        if (ms === 'awaiting_manager') return 'Awaiting Manager'
-        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
-        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
-        return 'Created'
+      // Map next_action_reason → display label
+      const reasonToDisplayStage: Record<string, string> = {
+        handoff_review: 'Handoff',
+        manager_approval: 'Awaiting Manager',
+        no_contractors: 'No Contractors',
+        landlord_declined: 'Landlord Declined',
+        landlord_no_response: 'Landlord No Response',
+        job_not_completed: 'Not Completed',
+        awaiting_contractor: 'Awaiting Contractor',
+        awaiting_landlord: 'Awaiting Landlord',
+        awaiting_booking: 'Awaiting Booking',
+        scheduled: 'Scheduled',
+        completed: 'Completed',
+        dismissed: 'Dismissed',
+        new: 'Created',
       }
 
-      const mappedTickets = tickets.map((t) => {
-        const messages = t.c1_messages as MessageData | MessageData[] | null
-        const messageStage = messages
-          ? Array.isArray(messages) ? messages[0]?.stage : messages.stage
-          : null
-        return {
-          id: t.id,
-          issue_description: t.issue_description,
-          status: t.status,
-          job_stage: t.job_stage,
-          display_stage: deriveDisplayStage(t, messageStage),
-          message_stage: messageStage || null,
-          category: t.category,
-          priority: t.priority,
-          date_logged: t.date_logged,
-          scheduled_date: t.scheduled_date,
-          final_amount: t.final_amount,
-          address: (t.c1_properties as unknown as { address: string } | null)?.address,
-          handoff: t.handoff,
-          landlord_declined: (() => {
-            const data = messages
-              ? Array.isArray(messages) ? messages[0] : messages
-              : null
-            return data?.landlord?.approval === false
-          })(),
-        }
-      })
+      const mappedTickets = tickets.map((t) => ({
+        id: t.id,
+        issue_description: t.issue_description,
+        status: t.status,
+        job_stage: t.job_stage,
+        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || 'Created',
+        message_stage: null,
+        category: t.category,
+        priority: t.priority,
+        date_logged: t.date_logged,
+        scheduled_date: t.scheduled_date,
+        final_amount: t.final_amount,
+        address: (t.c1_properties as unknown as { address: string } | null)?.address,
+        handoff: t.handoff,
+        landlord_declined: t.next_action_reason === 'landlord_declined',
+        next_action: t.next_action || null,
+        next_action_reason: t.next_action_reason || null,
+      }))
       setAllTickets(mappedTickets)
       setRecentTickets(mappedTickets.slice(0, 5))
     }
@@ -367,56 +294,24 @@ export default function DashboardPage() {
   }, [fetchData])
 
   const showAwaitingTickets = (type: string) => {
-    const isOpen = (t: TicketSummary) => t.status?.toLowerCase() !== 'closed'
-
-    let filtered: TicketSummary[] = []
-
-    if (type === 'contractor') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
-      })
-    } else if (type === 'manager') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'awaiting_manager'
-      })
-    } else if (type === 'landlord') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'awaiting_landlord'
-      })
-    } else if (type === 'booking') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const jobStage = (t.job_stage || '').toLowerCase()
-        return jobStage === 'sent'
-      })
-    } else if (type === 'scheduled') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        if (notCompletedIds.has(t.id)) return false
-        const jobStage = (t.job_stage || '').toLowerCase()
-        return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
-      })
-    } else if (type === 'handoff') {
-      filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
-    } else if (type === 'declined') {
-      filtered = allTickets.filter((t) => t.landlord_declined === true)
-    } else if (type === 'landlordNoResponse') {
-      filtered = allTickets.filter((t) => t.display_stage === 'Landlord No Response')
-    } else if (type === 'noContractorsLeft') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'no_contractors_left'
-      })
-    } else if (type === 'notCompleted') {
-      filtered = allTickets.filter((t) => isOpen(t) && notCompletedIds.has(t.id))
+    // All filtering uses next_action_reason from DB
+    const reasonMap: Record<string, string> = {
+      handoff: 'handoff_review',
+      manager: 'manager_approval',
+      noContractorsLeft: 'no_contractors',
+      declined: 'landlord_declined',
+      landlordNoResponse: 'landlord_no_response',
+      notCompleted: 'job_not_completed',
+      contractor: 'awaiting_contractor',
+      landlord: 'awaiting_landlord',
+      booking: 'awaiting_booking',
+      scheduled: 'scheduled',
     }
+
+    const reason = reasonMap[type]
+    const filtered = reason
+      ? allTickets.filter((t) => t.next_action_reason === reason)
+      : []
 
     setAwaitingTickets(filtered)
     setAwaitingType(type)

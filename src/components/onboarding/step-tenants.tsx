@@ -98,13 +98,13 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="tenants_template.csv"
-        exampleRow={{
+        exampleRows={[{
           full_name: 'Emma Thompson',
           phone: '07700 900400',
           email: 'emma.t@example.com',
           role_tag: 'tenant',
           property_address: '14 Meadow Lane, Manchester, M14 5RL',
-        }}
+        }]}
       />
       <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
         <Lightbulb className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />

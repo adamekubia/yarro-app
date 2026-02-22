@@ -184,13 +184,78 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="contractors_template.csv"
-        exampleRow={{
-          contractor_name: 'QuickFix Plumbing Ltd',
-          categories: 'Plumber, General / Handyman',
-          contractor_phone: '07700 900500',
-          contractor_email: 'info@quickfix-demo.co.uk',
-          service_areas: 'Manchester, Salford',
-        }}
+        exampleRows={[
+          {
+            contractor_name: 'QuickFix Plumbing Ltd',
+            categories: 'Plumber, General / Handyman',
+            contractor_phone: '07700 900100',
+            contractor_email: 'info@quickfix-demo.co.uk',
+            service_areas: 'Manchester, Salford',
+          },
+          {
+            contractor_name: 'Spark Electrical',
+            categories: 'Electrician',
+            contractor_phone: '07700 900200',
+            contractor_email: 'jobs@spark-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+          {
+            contractor_name: 'SafeGas Services',
+            categories: 'Gas, Boiler Engineer',
+            contractor_phone: '07700 900300',
+            contractor_email: 'hello@safegas-demo.co.uk',
+            service_areas: 'Bolton',
+          },
+          {
+            contractor_name: 'AllTrades Maintenance',
+            categories: 'Joiner, Locksmith',
+            contractor_phone: '07700 900400',
+            contractor_email: 'team@alltrades-demo.co.uk',
+            service_areas: 'Bury',
+          },
+          {
+            contractor_name: 'CleanPest Solutions',
+            categories: 'Pest Control, Cleaning',
+            contractor_phone: '07700 900500',
+            contractor_email: 'info@cleanpest-demo.co.uk',
+            service_areas: 'Stockport',
+          },
+          {
+            contractor_name: 'TopCoat Decorators',
+            categories: 'Decorator',
+            contractor_phone: '07700 900600',
+            contractor_email: 'quote@topcoat-demo.co.uk',
+            service_areas: 'Manchester, Salford',
+          },
+          {
+            contractor_name: 'RoofRight Ltd',
+            categories: 'Roofing / Guttering, Window Specialist',
+            contractor_phone: '07700 900700',
+            contractor_email: 'jobs@roofright-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+          {
+            contractor_name: 'DrainPro Services',
+            categories: 'Drainage',
+            contractor_phone: '07700 900800',
+            contractor_email: 'info@drainpro-demo.co.uk',
+            service_areas: 'Salford, Bolton',
+          },
+          {
+            contractor_name: 'GreenThumb Gardens',
+            categories: 'Gardener',
+            contractor_phone: '07700 900900',
+            contractor_email: 'hello@greenthumb-demo.co.uk',
+            service_areas: 'Bury, Stockport',
+          },
+          {
+            contractor_name: 'FixIt Appliances',
+            categories: 'Appliance Engineer',
+            contractor_phone: '07700 901000',
+            contractor_email: 'repair@fixit-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+        ]}
       />
 
       {/* Service Area Assignment Explanation */}
