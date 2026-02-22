@@ -93,6 +93,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
             priority={basic.priority}
             dateLogged={basic.date_logged}
             archived={basic.archived}
+            ticketStatus={basic.status}
           />
           {basic.priority && SLA_WINDOWS[basic.priority] && (
             <span className="text-xs text-muted-foreground">

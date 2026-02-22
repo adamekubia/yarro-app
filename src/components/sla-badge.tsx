@@ -9,6 +9,7 @@ interface SlaBadgeProps {
   priority?: string | null
   dateLogged?: string | null
   archived?: boolean | null
+  ticketStatus?: string | null
   className?: string
 }
 
@@ -36,7 +37,6 @@ function formatDuration(totalMinutes: number): string {
 type SlaStatus = 'green' | 'amber' | 'red' | 'breached' | 'resolved'
 
 function getSlaStatus(slaDueAt: string, resolvedAt?: string | null, priority?: string | null, dateLogged?: string | null): { status: SlaStatus; label: string } {
-  // If resolved, show actual resolution time
   if (resolvedAt) {
     if (dateLogged) {
       const logged = new Date(dateLogged).getTime()
@@ -73,11 +73,25 @@ const statusStyles: Record<SlaStatus, string> = {
   resolved: 'bg-muted text-muted-foreground',
 }
 
-export function SlaBadge({ slaDueAt, resolvedAt, priority, dateLogged, archived, className }: SlaBadgeProps) {
+export function SlaBadge({ slaDueAt, resolvedAt, priority, dateLogged, archived, ticketStatus, className }: SlaBadgeProps) {
   if (!slaDueAt) return null
 
-  // Archived tickets without resolution — don't show ongoing countdown
+  // Archived without resolution — no badge
   if (archived && !resolvedAt) return null
+
+  // Ticket is closed/completed but resolved_at was never set — show "Resolved" without time
+  const isClosed = ticketStatus?.toLowerCase() === 'closed'
+  if (isClosed && !resolvedAt) {
+    return (
+      <span className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded-full text-xs whitespace-nowrap',
+        statusStyles.resolved,
+        className,
+      )}>
+        Resolved
+      </span>
+    )
+  }
 
   const { status, label } = getSlaStatus(slaDueAt, resolvedAt, priority, dateLogged)
 

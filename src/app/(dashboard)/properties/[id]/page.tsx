@@ -131,7 +131,7 @@ const displayStageMap: Record<string, string> = {
 }
 
 const getDisplayStage = (reason: string | null, status: string) => {
-  if (status === 'closed') return 'Completed'
+  if (status?.toLowerCase() === 'closed') return 'Completed'
   if (reason && displayStageMap[reason]) return displayStageMap[reason]
   return 'Created'
 }
@@ -304,7 +304,7 @@ export default function PropertyDetailPage() {
       .from('c1_tickets')
       .select('id', { count: 'exact', head: true })
       .eq('property_id', property.id)
-      .neq('status', 'closed')
+      .not('status', 'ilike', 'closed')
       .neq('archived', true)
 
     if (ticketCount && ticketCount > 0) {
@@ -323,8 +323,8 @@ export default function PropertyDetailPage() {
 
   // --- Ticket counts ---
 
-  const openTickets = tickets.filter((t) => t.status !== 'closed' && !t.archived)
-  const completedTickets = tickets.filter((t) => t.status === 'closed' || t.next_action_reason === 'completed')
+  const openTickets = tickets.filter((t) => t.status?.toLowerCase() !== 'closed' && !t.archived)
+  const completedTickets = tickets.filter((t) => t.status?.toLowerCase() === 'closed')
 
   // --- Loading / Not found ---
 

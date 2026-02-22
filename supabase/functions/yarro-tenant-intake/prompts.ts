@@ -532,39 +532,31 @@ There is at least one open ticket in the last 7 days for this property.
 The recent tickets are available in the context as \`recent_tickets\`.
 
 **First time this instruction fires** (no prior outbound about existing tickets in the conversation log):
-Mention the most recent ticket naturally and ask what their issue is. Example:
+Mention the most recent ticket and give three clear options. Example:
 
-"I can see there's already an open ticket for '{{
-  ($json.recent_tickets && $json.recent_tickets.length > 0)
-    ? $json.recent_tickets[0].description
-    : ''
-}}' at this property. Could you tell me what you're contacting about today? If it's about that same issue, just reply YES."
+"I can see there's an open ticket for '[most recent ticket description]' at this property.
 
-Keep it short and natural. The tenant may or may not know about the existing ticket.
-Also offer the option to get a progress update: "If you'd like an update on where things are, just say UPDATE."
+- Reply YES if you're contacting about the same issue
+- Reply NEW if this is a different issue
+- Reply UPDATE if you'd like a progress update on the existing one"
 
-**Second time this instruction fires** (the tenant has already described their issue in a previous message):
-You now have BOTH the tenant's issue description (from conversation history) AND the recent tickets. Compare them intelligently:
+Keep it short, clear, and natural. Always give all three options.
 
-- If the described issue is genuinely similar to an existing ticket (same category of problem, similar symptoms, same area of the property):
-  → "That sounds like it could be the same issue as your existing ticket. Reply YES if it is, or NO if it's something different."
-- If the described issue is clearly different from all existing tickets (e.g., plumbing vs electrical, different rooms, different symptoms):
-  → "Got it — that's a different issue from what's already logged. Reply NO and I'll get this new one set up for you."
-- If they ask for a progress update or status check:
-  → The backend will detect this and switch to "progress/status_summary". You do not need to handle this yourself.
-- If you're not sure:
-  → Ask one targeted clarifying question to determine similarity.
+**Second time this instruction fires** (the tenant replied with something other than YES/NEW/UPDATE):
+Compare their message with the recent tickets:
 
-The goal: only confirm duplicates when the issues are genuinely the same. Never ask about clearly unrelated tickets.
+- If clearly the same issue: "That sounds like the same issue. Reply YES to confirm, or NEW if it's different."
+- If clearly different: "That's a different issue. Reply NEW and I'll log it for you."
+- If unclear: Ask one short clarifying question.
 
 Metadata normally null.
 
-On later inbound messages, backend:
-- If YES, switches ai_instruction to "duplicate_yes_close".
-- If NO, moves stage to "issue" and ai_instruction = "collect_issue".
-- If they ask for progress/update/status, backend moves to "progress/status_summary".
-- If unclear, ai_instruction stays "ask_confirm_duplicate" and you compare again.
-- **Once the caller replies YES or NO and the stage moves on, you must NOT ask about duplicates again, even if recent_tickets is still present. Duplicate checking happens only during ai_instruction = "ask_confirm_duplicate".**
+On later inbound messages, backend routing:
+- YES → "duplicate_yes_close" (close as duplicate).
+- NO or NEW → stage moves to "issue", ai_instruction = "collect_issue".
+- UPDATE or progress-related words → "progress/status_summary".
+- Anything else → stays on "ask_confirm_duplicate" for you to compare.
+- **Once the caller replies and the stage moves on, do NOT revisit duplicates.**
 
 -------------------------------------------------
 ### ai_instruction = "duplicate_yes_close"

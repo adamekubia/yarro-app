@@ -437,6 +437,7 @@ export default function TicketsPage() {
           priority={ticket.priority}
           dateLogged={ticket.date_logged}
           archived={ticket.archived}
+          ticketStatus={ticket.status}
         />
       ),
       getValue: (ticket) => ticket.sla_due_at ? new Date(ticket.sla_due_at).getTime() : 0,
