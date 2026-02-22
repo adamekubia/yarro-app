@@ -177,6 +177,27 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createSupabaseClient();
 
+    // Resolve short ref to full UUID (legacy links used shortRef in Fillout URL)
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(parsed.ticket_id)) {
+      console.log(`[${FN}] Short ref detected: ${parsed.ticket_id}, resolving to full UUID`);
+      const { data: match } = await supabase
+        .from("c1_tickets")
+        .select("id")
+        .filter("id::text", "like", `${parsed.ticket_id}%`)
+        .limit(1)
+        .maybeSingle();
+      if (!match) {
+        await alertTelegram(FN, "Short ref resolution failed", `No ticket found for prefix: ${parsed.ticket_id}`);
+        return new Response(
+          JSON.stringify({ ok: false, error: `No ticket found for short ref: ${parsed.ticket_id}` }),
+          { status: 404, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      console.log(`[${FN}] Resolved ${parsed.ticket_id} → ${match.id}`);
+      parsed.ticket_id = match.id;
+    }
+
     // Dedup: skip if we already processed this exact Fillout submission
     if (parsed.fillout_submission_id) {
       const { data: existing } = await supabase
