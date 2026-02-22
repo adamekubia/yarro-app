@@ -18,6 +18,9 @@ import {
   User,
   Search,
   Plus,
+  Eye,
+  UserX,
+  Clock,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -130,6 +133,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [scheduledFilter, setScheduledFilter] = useState<ScheduledFilter>('week')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const [simpleCreateOpen, setSimpleCreateOpen] = useState(false)
   const supabase = createClient()
 
@@ -467,7 +471,19 @@ export default function DashboardPage() {
   const noContractorsCount = stats?.noContractorsLeft || 0
   const notCompletedCount = stats?.jobNotCompleted || 0
   const followUpCount = declinedCount + landlordNoResponseCount + notCompletedCount
-  const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
+  const totalAction = totalHandoffs + noContractorsCount + followUpCount
+
+  const searchSuggestions = searchQuery.trim().length > 1
+    ? allTickets
+        .filter((t) => {
+          const q = searchQuery.toLowerCase()
+          return (
+            t.issue_description?.toLowerCase().includes(q) ||
+            t.address?.toLowerCase().includes(q)
+          )
+        })
+        .slice(0, 6)
+    : []
 
   if (loading && !stats) {
     return (
@@ -496,19 +512,53 @@ export default function DashboardPage() {
             {/* Left: Search + Create CTA */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 z-10" />
                 <input
                   type="text"
-                  placeholder="Search tickets, landlords, tenants..."
+                  placeholder="Search tickets..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSearchDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowSearchDropdown(false), 150)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && searchQuery.trim()) {
                       router.push(`/tickets?search=${encodeURIComponent(searchQuery.trim())}`)
+                      setShowSearchDropdown(false)
                     }
                   }}
                   className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 placeholder:text-muted-foreground/40"
                 />
+                {showSearchDropdown && searchSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                    {searchSuggestions.map((ticket) => (
+                      <button
+                        key={ticket.id}
+                        onMouseDown={() => {
+                          router.push(`/tickets?id=${ticket.id}`)
+                          setSearchQuery('')
+                          setShowSearchDropdown(false)
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                          {ticket.address && <p className="text-xs text-muted-foreground/60 truncate">{ticket.address}</p>}
+                        </div>
+                        {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
+                      </button>
+                    ))}
+                    <button
+                      onMouseDown={() => {
+                        router.push(`/tickets?search=${encodeURIComponent(searchQuery.trim())}`)
+                        setShowSearchDropdown(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-border/50 hover:bg-muted/50 transition-colors text-sm text-primary"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      See all results for &quot;{searchQuery}&quot;
+                    </button>
+                  </div>
+                )}
               </div>
               <Button
                 onClick={() => setSimpleCreateOpen(true)}
@@ -565,11 +615,13 @@ export default function DashboardPage() {
 
               {/* LEFT: To-do */}
               {(() => {
-                const todoItems = [
-                  { key: 'handoff' as const, label: 'Needs review', count: totalHandoffs, color: 'bg-red-500' },
-                  { key: 'manager' as const, label: 'Manager approval', count: managerCount, color: 'bg-blue-500' },
-                  { key: 'noContractorsLeft' as const, label: 'No contractors', count: noContractorsCount, color: 'bg-orange-500' },
-                ]
+                const handoffPreview = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true).slice(0, 3)
+                const noContractorsPreview = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && (t.message_stage || '').toLowerCase() === 'no_contractors_left').slice(0, 3)
+                const followUpPreview = allTickets.filter((t) => {
+                  if (t.status?.toLowerCase() === 'closed') return false
+                  return t.landlord_declined === true || t.display_stage === 'Landlord No Response' || notCompletedIds.has(t.id)
+                }).slice(0, 3)
+                const hasEmergency = allTickets.some((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true && t.priority?.toLowerCase() === 'emergency')
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
@@ -581,35 +633,73 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <div className="space-y-1">
-                      {todoItems.map((item) => (
+                    <div className="space-y-3">
+
+                      {/* Needs review */}
+                      <div>
                         <button
-                          key={item.key}
-                          onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                          className="w-full flex items-center gap-3 px-2.5 py-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                          onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
+                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
                         >
-                          <div className={`h-3.5 w-3.5 rounded-sm flex-shrink-0 ${item.count > 0 ? item.color : 'bg-muted-foreground/15'}`} />
-                          <span className={`flex-1 text-sm ${item.count > 0 ? 'text-card-foreground font-medium' : 'text-muted-foreground/50'}`}>
-                            {item.label}
-                          </span>
-                          <span className={`text-xl font-bold tabular-nums ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>
-                            {item.count}
-                          </span>
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground/25'}`}>
+                            <Eye className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0 flex items-center gap-2">
+                            <span className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Needs review</span>
+                            {hasEmergency && (
+                              <span className="text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">Emergency</span>
+                            )}
+                          </div>
+                          <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
                         </button>
-                      ))}
-                      {/* Follow-up combined row: declined + no response + not completed */}
-                      <button
-                        onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
-                        className="w-full flex items-center gap-3 px-2.5 py-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className={`h-3.5 w-3.5 rounded-sm flex-shrink-0 ${followUpCount > 0 ? 'bg-amber-500' : 'bg-muted-foreground/15'}`} />
-                        <span className={`flex-1 text-sm ${followUpCount > 0 ? 'text-card-foreground font-medium' : 'text-muted-foreground/50'}`}>
-                          Follow-up needed
-                        </span>
-                        <span className={`text-xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>
-                          {followUpCount}
-                        </span>
-                      </button>
+                        {handoffPreview.map((ticket) => (
+                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
+                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
+                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* No contractors */}
+                      <div>
+                        <button
+                          onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
+                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${noContractorsCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground/25'}`}>
+                            <UserX className="h-5 w-5" />
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
+                          <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
+                        </button>
+                        {noContractorsPreview.map((ticket) => (
+                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
+                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
+                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Follow-up needed */}
+                      <div>
+                        <button
+                          onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
+                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${followUpCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-muted text-muted-foreground/25'}`}>
+                            <Clock className="h-5 w-5" />
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
+                          <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
+                        </button>
+                        {followUpPreview.map((ticket) => (
+                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
+                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
+                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+
                     </div>
                   </div>
                 )
@@ -654,7 +744,7 @@ export default function DashboardPage() {
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
                     <div className="flex items-start justify-between gap-2 mb-4">
-                      <h3 className="text-sm font-semibold text-card-foreground">Scheduled jobs</h3>
+                      <h3 className="text-base font-semibold text-card-foreground">Scheduled</h3>
                       <div className="flex items-center gap-1 flex-wrap justify-end">
                         {filterOptions.map((opt) => (
                           <button
@@ -679,7 +769,7 @@ export default function DashboardPage() {
                           <Link
                             key={ticket.id}
                             href={`/tickets?id=${ticket.id}`}
-                            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
                           >
                             <span className="flex-shrink-0 text-xs font-medium text-muted-foreground w-10">
                               {ticket.scheduled_date ? formatDate(ticket.scheduled_date) : '—'}
@@ -703,7 +793,7 @@ export default function DashboardPage() {
             {/* Bottom: Recent tickets — fixed height, secondary context */}
             <div className="flex-shrink-0 bg-card/60 rounded-xl border border-border/50 flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
-                <h3 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">Recent tickets</h3>
+                <h3 className="text-sm font-semibold text-card-foreground">Recent tickets</h3>
                 <Link href="/tickets">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
