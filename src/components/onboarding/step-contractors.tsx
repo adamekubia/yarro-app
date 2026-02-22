@@ -258,6 +258,27 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
         ]}
       />
 
+      {/* CSV Categories Tip */}
+      <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+        <Pencil className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-foreground">
+            Categories in CSV
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Use comma-separated values for multiple categories, e.g. <code className="text-xs bg-muted px-1 py-0.5 rounded">Plumber, General / Handyman</code>.
+            Categories must match exactly (case-insensitive):
+          </p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {CONTRACTOR_CATEGORIES.map((cat) => (
+              <span key={cat} className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-foreground text-xs">
+                {cat}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Service Area Assignment Explanation */}
       <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
         <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
