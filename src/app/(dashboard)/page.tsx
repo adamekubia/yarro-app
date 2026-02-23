@@ -331,6 +331,26 @@ export default function DashboardPage() {
     return Math.round((value / total) * 100)
   }
 
+  // Sort oldest-first so most urgent/overdue tickets surface at the top
+  const byAge = (a: TicketSummary, b: TicketSummary) =>
+    new Date(a.date_logged).getTime() - new Date(b.date_logged).getTime()
+
+  // Horizontal preview tile used inside action cards
+  const renderPreviewRow = (ticket: TicketSummary, accentClass: string) => (
+    <Link
+      key={ticket.id}
+      href={`/tickets?id=${ticket.id}`}
+      className="group flex items-center gap-2 px-2 py-1.5 mt-1 rounded-lg bg-muted/25 hover:bg-muted/50 transition-colors"
+    >
+      <div className={`w-0.5 h-7 rounded-full flex-shrink-0 ${accentClass}`} />
+      <div className="flex-1 min-w-0 ml-1">
+        <p className="text-xs font-medium text-card-foreground truncate leading-tight">{ticket.issue_description || 'No description'}</p>
+        <p className="text-[11px] text-muted-foreground truncate leading-tight">{ticket.address || '—'}</p>
+      </div>
+      <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+    </Link>
+  )
+
   const categoryData = allTickets.reduce(
     (acc, ticket) => {
       const cat = ticket.category || 'Other'
@@ -477,34 +497,69 @@ export default function DashboardPage() {
                         <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
                       </Link>
                     </div>
-                    <div className="space-y-1">
-                      {/* Primary actions */}
-                      {[
-                        { key: 'handoff' as const, label: 'Handoff Review', desc: 'AI needs your help', count: totalHandoffs, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                        { key: 'manager' as const, label: 'Manager Approval', desc: 'Check WhatsApp & approve', count: managerCount, icon: UserCheck, iconBg: 'bg-blue-500/15', iconColor: 'text-blue-500', countColor: 'text-blue-500' },
-                      ].map((item) => (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>
+                    <div className="flex flex-col gap-5">
+                      {/* Handoff Review section */}
+                      <div>
+                        <div className="flex items-center gap-3 px-2 py-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${totalHandoffs > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
+                                <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
+                          </Tooltip>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Handoff Review</p>
+                            <p className="text-xs text-muted-foreground">AI needs your help</p>
+                          </div>
+                          <span className={`text-lg font-bold tabular-nums ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`}>{totalHandoffs}</span>
+                          {totalHandoffs > 0 && (
                             <button
-                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                              onClick={() => showAwaitingTickets('handoff')}
+                              className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1"
                             >
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
-                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                                <p className="text-xs text-muted-foreground">{item.desc}</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
-                                {item.count}
-                              </span>
+                              See all
                             </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
+                          )}
+                        </div>
+                        {[...handoffTicketsList].sort(byAge).slice(0, 2).map(t => renderPreviewRow(t, 'bg-red-500'))}
+                        {totalHandoffs === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">All clear.</p>}
+                      </div>
 
+                      {/* Manager Approval section */}
+                      {(() => {
+                        const previews = allTickets.filter(t => t.next_action_reason === 'manager_approval').sort(byAge).slice(0, 2)
+                        return (
+                          <div>
+                            <div className="flex items-center gap-3 px-2 py-1.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${managerCount > 0 ? 'bg-blue-500/15' : 'bg-muted'}`}>
+                                    <UserCheck className={`h-4 w-4 ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/50'}`} />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
+                              </Tooltip>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium ${managerCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Manager Approval</p>
+                                <p className="text-xs text-muted-foreground">Check WhatsApp & approve</p>
+                              </div>
+                              <span className={`text-lg font-bold tabular-nums ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/40'}`}>{managerCount}</span>
+                              {managerCount > 0 && (
+                                <button
+                                  onClick={() => showAwaitingTickets('manager')}
+                                  className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1"
+                                >
+                                  See all
+                                </button>
+                              )}
+                            </div>
+                            {previews.map(t => renderPreviewRow(t, 'bg-blue-500'))}
+                            {managerCount === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">Nothing pending.</p>}
+                          </div>
+                        )
+                      })()}
                     </div>
                     </div>
 
@@ -513,34 +568,44 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-sm font-semibold text-card-foreground">Needs Follow Up</h3>
                       </div>
-                      <div className="space-y-1">
-                      {[
-                        { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                        { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
-                        { key: 'landlordNoResponse' as const, label: 'Landlord No Response', desc: 'Contact directly', count: landlordNoResponseCount, icon: Clock, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
-                        { key: 'notCompleted' as const, label: 'Job Not Completed', desc: 'Needs follow-up', count: notCompletedCount, icon: CircleX, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                      ].map((item) => (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
-                            >
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
-                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
+                      <div className="flex flex-col gap-5">
+                        {[
+                          { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', reason: 'no_contractors', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500', accent: 'bg-red-500' },
+                          { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', reason: 'landlord_declined', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500', accent: 'bg-orange-500' },
+                          { key: 'landlordNoResponse' as const, label: 'Landlord No Response', desc: 'Contact directly', reason: 'landlord_no_response', count: landlordNoResponseCount, icon: Clock, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500', accent: 'bg-orange-500' },
+                          { key: 'notCompleted' as const, label: 'Job Not Completed', desc: 'Needs follow-up', reason: 'job_not_completed', count: notCompletedCount, icon: CircleX, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500', accent: 'bg-red-500' },
+                        ].map((item) => {
+                          const previews = allTickets.filter(t => t.next_action_reason === item.reason).sort(byAge).slice(0, 2)
+                          return (
+                            <div key={item.key}>
+                              <div className="flex items-center gap-3 px-2 py-1.5">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
+                                      <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
+                                </Tooltip>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
+                                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                                </div>
+                                <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>{item.count}</span>
+                                {item.count > 0 && (
+                                  <button
+                                    onClick={() => showAwaitingTickets(item.key)}
+                                    className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1"
+                                  >
+                                    See all
+                                  </button>
+                                )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                                <p className="text-xs text-muted-foreground">{item.desc}</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
-                                {item.count}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
+                              {previews.map(t => renderPreviewRow(t, item.accent))}
+                              {item.count === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">Nothing pending.</p>}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   </>
