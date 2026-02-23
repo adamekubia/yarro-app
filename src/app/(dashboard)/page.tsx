@@ -10,17 +10,16 @@ import { StatusBadge } from '@/components/status-badge'
 import { KanbanBoard } from '@/components/kanban-board'
 import {
   Clock,
-  UserCheck,
   ArrowRight,
   Hourglass,
   CalendarClock,
   AlertTriangle,
-  XCircle,
+  Wrench,
+  X,
   LayoutDashboard,
   LayoutGrid,
   Columns3,
   Send,
-  CircleX,
   MessageSquare,
   Phone,
   User,
@@ -104,17 +103,16 @@ interface TicketSummary {
 }
 
 // Action card descriptions for tooltips
-const ACTION_DESCRIPTIONS = {
-  handoff: 'Tickets that need your manual review because the AI couldn\'t complete them automatically',
+const ACTION_DESCRIPTIONS: Record<string, string> = {
+  // To-do categories (wired to next_action field)
+  needs_attention: 'Tickets that need your direct attention — AI couldn\'t complete them and they require your decision',
+  assign_contractor: 'Tickets where all contractors declined or didn\'t respond — find and assign a new contractor',
+  follow_up: 'Tickets needing follow-up — landlord no response, declined quotes, or jobs not completed',
+  // Scheduled section (wired to next_action_reason field)
   contractor: 'Tickets waiting for a contractor to respond with a quote or availability',
-  manager: 'Tickets that need your decision or approval before proceeding',
-  landlord: 'Tickets waiting for landlord approval on the quoted price',
-  scheduled: 'Jobs that have been scheduled with a contractor and have a confirmed date',
-  declined: 'Tickets where the landlord declined the quoted price — these need follow-up',
-  landlordNoResponse: 'Landlord hasn\'t responded to the approval request after the follow-up — contact them directly',
-  noContractorsLeft: 'All contractors either declined or didn\'t respond — re-dispatch or find a new contractor',
   booking: 'Booking confirmation has been sent to the tenant — waiting for them to confirm a slot',
-  notCompleted: 'Contractor marked the job as not completed — needs follow-up action',
+  scheduled: 'Jobs that have been scheduled with a contractor and have a confirmed date',
+  landlord: 'Tickets waiting for landlord approval on the quoted price',
 }
 
 type ViewMode = 'stats' | 'board'
@@ -140,6 +138,7 @@ export default function DashboardPage() {
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const supabase = createClient()
 
   // Persist view mode
@@ -292,24 +291,22 @@ export default function DashboardPage() {
   }, [fetchData])
 
   const showAwaitingTickets = (type: string) => {
-    // All filtering uses next_action_reason from DB
-    const reasonMap: Record<string, string> = {
-      handoff: 'handoff_review',
-      manager: 'manager_approval',
-      noContractorsLeft: 'no_contractors',
-      declined: 'landlord_declined',
-      landlordNoResponse: 'landlord_no_response',
-      notCompleted: 'job_not_completed',
-      contractor: 'awaiting_contractor',
-      landlord: 'awaiting_landlord',
-      booking: 'awaiting_booking',
-      scheduled: 'scheduled',
-    }
+    let filtered: TicketSummary[]
 
-    const reason = reasonMap[type]
-    const filtered = reason
-      ? allTickets.filter((t) => t.next_action_reason === reason)
-      : []
+    // To-do categories filter directly by next_action
+    if (type === 'needs_attention' || type === 'assign_contractor' || type === 'follow_up') {
+      filtered = allTickets.filter((t) => t.next_action === type)
+    } else {
+      // Scheduled section filters by next_action_reason
+      const reasonMap: Record<string, string> = {
+        contractor: 'awaiting_contractor',
+        landlord: 'awaiting_landlord',
+        booking: 'awaiting_booking',
+        scheduled: 'scheduled',
+      }
+      const reason = reasonMap[type]
+      filtered = reason ? allTickets.filter((t) => t.next_action_reason === reason) : []
+    }
 
     setAwaitingTickets(filtered)
     setAwaitingType(type)
@@ -326,37 +323,29 @@ export default function DashboardPage() {
   const byAge = (a: TicketSummary, b: TicketSummary) =>
     new Date(a.date_logged).getTime() - new Date(b.date_logged).getTime()
 
-  // Horizontal preview tile used inside action cards
-  const renderPreviewRow = (ticket: TicketSummary, accentClass: string) => (
-    <Link
-      key={ticket.id}
-      href={`/tickets?id=${ticket.id}`}
-      className="group flex items-center gap-2 px-2 py-1.5 mt-1 rounded-lg bg-muted/25 hover:bg-muted/50 transition-colors"
-    >
-      <div className={`w-0.5 h-7 rounded-full flex-shrink-0 ${accentClass}`} />
-      <div className="flex-1 min-w-0 ml-1">
-        <p className="text-xs font-medium text-card-foreground truncate leading-tight">{ticket.issue_description || 'No description'}</p>
-        <p className="text-[11px] text-muted-foreground truncate leading-tight">{ticket.address || '—'}</p>
-      </div>
-      <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-    </Link>
-  )
-
   const getSheetTitle = (type: string | null) => {
     switch (type) {
-      case 'handoff': return 'Handoff Review'
+      case 'needs_attention': return 'Needs Attention'
+      case 'assign_contractor': return 'Assign Contractors'
+      case 'follow_up': return 'Follow-up'
       case 'contractor': return 'Awaiting Contractor'
-      case 'manager': return 'Awaiting Manager'
       case 'landlord': return 'Awaiting Landlord'
       case 'scheduled': return 'Scheduled Jobs'
-      case 'declined': return 'Landlord Declined'
-      case 'landlordNoResponse': return 'Landlord No Response'
-      case 'noContractorsLeft': return 'No Contractors Available'
       case 'booking': return 'Awaiting Booking'
-      case 'notCompleted': return 'Job Not Completed'
       default: return ''
     }
   }
+
+  // Autocomplete results for global search in top bar
+  const searchResults = searchTerm.trim()
+    ? allTickets
+        .filter(
+          (t) =>
+            t.issue_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.address?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .slice(0, 8)
+    : []
 
   if (loading && !stats) {
     return (
@@ -381,7 +370,7 @@ export default function DashboardPage() {
 
         <div className="relative p-4 h-full flex flex-col gap-3">
           {/* Header */}
-          <div className="flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center justify-between flex-shrink-0 gap-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-2.5">
                 <LayoutDashboard className="h-7 w-7" />
@@ -392,6 +381,61 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Global search with autocomplete */}
+              <div className="relative">
+                <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm w-64 transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
+                  <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    placeholder="Search tickets…"
+                    className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {searchFocused && searchResults.length > 0 && (
+                  <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                    {searchResults.map((ticket) => (
+                      <Link
+                        key={ticket.id}
+                        href={`/tickets?id=${ticket.id}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                        </div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </Link>
+                    ))}
+                    <Link
+                      href="/tickets"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      View all results
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+              {/* Create Ticket CTA */}
+              <Link href="/tickets?create=true">
+                <InteractiveHoverButton text="Create" className="w-24 text-xs h-9" />
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"
@@ -444,127 +488,118 @@ export default function DashboardPage() {
           <div className="flex-1 min-h-0 flex flex-col gap-3">
             {/* Top section: two columns */}
             <div className="grid grid-cols-[7fr_3fr] gap-3">
-              {/* LEFT: Your To-Do */}
+              {/* LEFT: To-do */}
               {(() => {
-                const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
-                const totalHandoffs = handoffTicketsList.length + handoffConversations.length
-                const declinedCount = stats?.landlordDeclined || 0
-                const landlordNoResponseCount = stats?.landlordNoResponse || 0
-                const managerCount = stats?.awaitingManager || 0
-                const noContractorsCount = stats?.noContractorsLeft || 0
-                const notCompletedCount = stats?.jobNotCompleted || 0
+                const needsAttentionTickets = allTickets.filter((t) => t.next_action === 'needs_attention').sort(byAge)
+                const assignContractorTickets = allTickets.filter((t) => t.next_action === 'assign_contractor').sort(byAge)
+                const followUpTickets = allTickets.filter((t) => t.next_action === 'follow_up').sort(byAge)
+                const totalAction = needsAttentionTickets.length + assignContractorTickets.length + followUpTickets.length
 
-                const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
+                const categories = [
+                  {
+                    key: 'needs_attention' as const,
+                    label: 'Needs attention',
+                    desc: 'Tickets requiring your direct input',
+                    tickets: needsAttentionTickets,
+                    icon: AlertTriangle,
+                    accent: 'bg-red-500',
+                    iconBg: 'bg-red-500/15',
+                    iconColor: 'text-red-500',
+                    countColor: 'text-red-500',
+                  },
+                  {
+                    key: 'assign_contractor' as const,
+                    label: 'Assign contractors',
+                    desc: 'Find and assign a contractor',
+                    tickets: assignContractorTickets,
+                    icon: Wrench,
+                    accent: 'bg-amber-500',
+                    iconBg: 'bg-amber-500/15',
+                    iconColor: 'text-amber-500',
+                    countColor: 'text-amber-500',
+                  },
+                  {
+                    key: 'follow_up' as const,
+                    label: 'Follow-up',
+                    desc: 'Landlord or job needs follow-up',
+                    tickets: followUpTickets,
+                    icon: Clock,
+                    accent: 'bg-orange-500',
+                    iconBg: 'bg-orange-500/15',
+                    iconColor: 'text-orange-500',
+                    countColor: 'text-orange-500',
+                  },
+                ]
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0">
                     {/* Card header */}
-                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
-                        {totalAction > 0 && (
-                          <span className="text-xs font-bold text-white bg-red-500 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalAction}</span>
-                        )}
+                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                      <div>
+                        <h2 className="text-xl font-bold text-card-foreground">To-do</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {totalAction > 0
+                            ? `${totalAction} item${totalAction !== 1 ? 's' : ''} need your attention`
+                            : 'All clear — nothing needs attention'}
+                        </p>
                       </div>
-                      <Link href="/tickets?create=true">
-                        <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
-                      </Link>
+                      {totalAction > 0 && (
+                        <span className="text-sm font-bold text-white bg-red-500 rounded-full h-7 min-w-[28px] flex items-center justify-center px-2">
+                          {totalAction}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Scrollable categories */}
-                    <div className="flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 pr-1">
-
-                      {/* Handoff Review */}
-                      <div>
-                        <div className="flex items-center gap-3 px-2 py-1.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${totalHandoffs > 0 ? 'bg-red-500/15' : 'bg-muted'}`}>
-                                <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/50'}`} />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
-                          </Tooltip>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Handoff Review</p>
-                            <p className="text-xs text-muted-foreground">AI needs your help</p>
+                    {/* Categories */}
+                    <div className="flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 pr-1">
+                      {categories.map((cat) => (
+                        <div key={cat.key}>
+                          {/* Category header row */}
+                          <div className="flex items-center gap-3 px-2 py-1.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${cat.tickets.length > 0 ? cat.iconBg : 'bg-muted'}`}>
+                                  <cat.icon className={`h-4 w-4 ${cat.tickets.length > 0 ? cat.iconColor : 'text-muted-foreground/50'}`} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[cat.key]}</p></TooltipContent>
+                            </Tooltip>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${cat.tickets.length > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{cat.label}</p>
+                              <p className="text-xs text-muted-foreground">{cat.desc}</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${cat.tickets.length > 0 ? cat.countColor : 'text-muted-foreground/40'}`}>
+                              {cat.tickets.length}
+                            </span>
+                            {cat.tickets.length > 0 && (
+                              <button onClick={() => showAwaitingTickets(cat.key)} className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1">
+                                See all
+                              </button>
+                            )}
                           </div>
-                          <span className={`text-lg font-bold tabular-nums ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`}>{totalHandoffs}</span>
-                          {totalHandoffs > 0 && (
-                            <button onClick={() => showAwaitingTickets('handoff')} className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1">See all</button>
+                          {/* Preview tiles — up to 3, oldest first */}
+                          {cat.tickets.slice(0, 3).map((ticket) => (
+                            <Link
+                              key={ticket.id}
+                              href={`/tickets?id=${ticket.id}`}
+                              className="group flex items-center gap-2 px-2 py-1.5 mt-1 rounded-lg bg-muted/25 hover:bg-muted/50 transition-colors"
+                            >
+                              <div className={`w-0.5 h-6 rounded-full flex-shrink-0 ${cat.accent}`} />
+                              <div className="flex-1 min-w-0 ml-1">
+                                <p className="text-xs font-medium text-card-foreground truncate leading-tight">{ticket.issue_description || 'No description'}</p>
+                                <p className="text-[11px] text-muted-foreground truncate leading-tight">{ticket.address || '—'}</p>
+                              </div>
+                              {ticket.priority === 'emergency' && (
+                                <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded flex-shrink-0">EMERGENCY</span>
+                              )}
+                              <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </Link>
+                          ))}
+                          {cat.tickets.length === 0 && (
+                            <p className="text-xs text-muted-foreground/50 px-2 py-0.5">Nothing here.</p>
                           )}
                         </div>
-                        {[...handoffTicketsList].sort(byAge).slice(0, 2).map(t => renderPreviewRow(t, 'bg-red-500'))}
-                        {totalHandoffs === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">All clear.</p>}
-                      </div>
-
-                      {/* Manager Approval */}
-                      {(() => {
-                        const previews = allTickets.filter(t => t.next_action_reason === 'manager_approval').sort(byAge).slice(0, 2)
-                        return (
-                          <div>
-                            <div className="flex items-center gap-3 px-2 py-1.5">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${managerCount > 0 ? 'bg-blue-500/15' : 'bg-muted'}`}>
-                                    <UserCheck className={`h-4 w-4 ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/50'}`} />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
-                              </Tooltip>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${managerCount > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>Manager Approval</p>
-                                <p className="text-xs text-muted-foreground">Check WhatsApp & approve</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${managerCount > 0 ? 'text-blue-500' : 'text-muted-foreground/40'}`}>{managerCount}</span>
-                              {managerCount > 0 && (
-                                <button onClick={() => showAwaitingTickets('manager')} className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1">See all</button>
-                              )}
-                            </div>
-                            {previews.map(t => renderPreviewRow(t, 'bg-blue-500'))}
-                            {managerCount === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">Nothing pending.</p>}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Divider: Needs Follow Up */}
-                      <div className="border-t border-border -mx-1 pt-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2">Needs Follow Up</p>
-                      </div>
-
-                      {[
-                        { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', reason: 'no_contractors', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500', accent: 'bg-red-500' },
-                        { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', reason: 'landlord_declined', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500', accent: 'bg-orange-500' },
-                        { key: 'landlordNoResponse' as const, label: 'Landlord No Response', desc: 'Contact directly', reason: 'landlord_no_response', count: landlordNoResponseCount, icon: Clock, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500', accent: 'bg-orange-500' },
-                        { key: 'notCompleted' as const, label: 'Job Not Completed', desc: 'Needs follow-up', reason: 'job_not_completed', count: notCompletedCount, icon: CircleX, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500', accent: 'bg-red-500' },
-                      ].map((item) => {
-                        const previews = allTickets.filter(t => t.next_action_reason === item.reason).sort(byAge).slice(0, 2)
-                        return (
-                          <div key={item.key}>
-                            <div className="flex items-center gap-3 px-2 py-1.5">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
-                                    <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                              </Tooltip>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                                <p className="text-xs text-muted-foreground">{item.desc}</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>{item.count}</span>
-                              {item.count > 0 && (
-                                <button onClick={() => showAwaitingTickets(item.key)} className="text-xs text-primary hover:text-primary/80 font-medium transition-colors ml-1">See all</button>
-                              )}
-                            </div>
-                            {previews.map(t => renderPreviewRow(t, item.accent))}
-                            {item.count === 0 && <p className="text-xs text-muted-foreground/50 px-2 py-0.5">Nothing pending.</p>}
-                          </div>
-                        )
-                      })}
-
+                      ))}
                     </div>
                   </div>
                 )
@@ -614,73 +649,50 @@ export default function DashboardPage() {
               })()}
             </div>
 
-            {/* Bottom: Recent Tickets — full width */}
-            {(() => {
-              const filteredTickets = searchTerm.trim()
-                ? allTickets
-                    .filter(t =>
-                      t.issue_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      t.address?.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .slice(0, 20)
-                : recentTickets
-              return (
-                <div className="flex-1 min-h-0 bg-card rounded-xl border border-border flex flex-col">
-                  <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-shrink-0">
-                    <h3 className="text-sm font-semibold text-card-foreground flex-shrink-0">Recent Tickets</h3>
-                    {/* Search bar */}
-                    <div className="relative flex-1 max-w-xs">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search tickets…"
-                        className="h-7 w-full pl-8 pr-3 text-xs rounded-md border border-border bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/60"
-                      />
-                    </div>
-                    <Link href="/tickets" className="ml-auto flex-shrink-0">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-                        View all
-                        <ArrowRight className="ml-1 h-3 w-3" />
-                      </Button>
-                    </Link>
+            {/* Bottom: Recent Tickets — full width, no scroll */}
+            <div className="flex-shrink-0 bg-card rounded-xl border border-border flex flex-col">
+              <div className="flex items-center px-4 py-2 border-b border-border">
+                <h3 className="text-sm font-semibold text-card-foreground flex-1">Recent Tickets</h3>
+                <Link href="/tickets">
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+                    View all
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="divide-y divide-border/50">
+                {recentTickets.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No tickets found for this period
                   </div>
-                  <div className="divide-y divide-border flex-1 overflow-y-auto">
-                    {filteredTickets.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-muted-foreground">
-                        {searchTerm.trim() ? 'No tickets match your search' : 'No tickets found for this period'}
+                ) : (
+                  recentTickets.map((ticket) => (
+                    <Link
+                      key={ticket.id}
+                      href={`/tickets?id=${ticket.id}`}
+                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-all duration-200"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-card-foreground truncate">
+                          {ticket.issue_description || 'No description'}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {ticket.address}
+                        </p>
                       </div>
-                    ) : (
-                      filteredTickets.map((ticket) => (
-                        <Link
-                          key={ticket.id}
-                          href={`/tickets?id=${ticket.id}`}
-                          className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-all duration-200"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-card-foreground truncate">
-                              {ticket.issue_description || 'No description'}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {ticket.address}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            {ticket.display_stage && (
-                              <StatusBadge status={ticket.display_stage} />
-                            )}
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {formatDate(ticket.date_logged)}
-                            </span>
-                          </div>
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )
-            })()}
+                      <div className="flex items-center gap-2 ml-3">
+                        {ticket.display_stage && (
+                          <StatusBadge status={ticket.display_stage} />
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(ticket.date_logged)}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
           )}
         </div>
