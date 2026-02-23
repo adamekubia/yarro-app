@@ -615,17 +615,69 @@ export default function DashboardPage() {
 
               {/* LEFT: To-do */}
               {(() => {
-                const handoffPreview = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true).slice(0, 3)
-                const noContractorsPreview = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && (t.message_stage || '').toLowerCase() === 'no_contractors_left').slice(0, 3)
-                const followUpPreview = allTickets.filter((t) => {
-                  if (t.status?.toLowerCase() === 'closed') return false
-                  return t.landlord_declined === true || t.display_stage === 'Landlord No Response' || notCompletedIds.has(t.id)
-                }).slice(0, 3)
+                // Sort oldest first — urgency leads (oldest = most overdue)
+                const byAge = (a: TicketSummary, b: TicketSummary) =>
+                  new Date(a.date_logged).getTime() - new Date(b.date_logged).getTime()
+
+                const handoffPreview = allTickets
+                  .filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
+                  .sort(byAge).slice(0, 3)
+
+                const noContractorsPreview = allTickets
+                  .filter((t) => t.status?.toLowerCase() !== 'closed' && (t.message_stage || '').toLowerCase() === 'no_contractors_left')
+                  .sort(byAge).slice(0, 3)
+
+                const followUpPreview = allTickets
+                  .filter((t) => {
+                    if (t.status?.toLowerCase() === 'closed') return false
+                    return t.landlord_declined === true || t.display_stage === 'Landlord No Response' || notCompletedIds.has(t.id)
+                  })
+                  .sort(byAge).slice(0, 3)
+
                 const hasEmergency = allTickets.some((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true && t.priority?.toLowerCase() === 'emergency')
+
+                // Reusable horizontal preview row — plain function, not a component
+                const renderPreviewRow = (
+                  tickets: TicketSummary[],
+                  emptyText: string,
+                  tagColor: string,
+                  onSeeAll: () => void
+                ) => (
+                  <div className="flex flex-wrap items-stretch gap-2 min-h-[48px]">
+                    {tickets.length === 0 ? (
+                      <p className="text-xs text-muted-foreground/40 flex-1 flex items-center">{emptyText}</p>
+                    ) : (
+                      tickets.map((ticket) => (
+                        <Link
+                          key={ticket.id}
+                          href={`/tickets?id=${ticket.id}`}
+                          className="flex-1 min-w-[120px] flex flex-col justify-between px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group"
+                        >
+                          <span className={`text-[10px] font-semibold mb-0.5 ${tagColor}`}>
+                            {ticket.display_stage || 'Open'}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">
+                              {ticket.issue_description?.substring(0, 50) || 'No description'}
+                            </p>
+                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
+                          </div>
+                        </Link>
+                      ))
+                    )}
+                    <button
+                      onClick={onSeeAll}
+                      className="flex-shrink-0 self-center ml-auto flex items-center gap-1 text-xs text-muted-foreground/45 hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-muted/40"
+                    >
+                      See all
+                      <ArrowRight className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                )
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
-                    <div className="flex items-center gap-3 mb-6">
+                    <div className="flex items-center gap-3 mb-5">
                       <h2 className="text-2xl font-bold text-card-foreground tracking-tight">To-do</h2>
                       {totalAction > 0 && (
                         <span className="text-sm font-bold text-white bg-red-500 rounded-full h-6 min-w-[24px] flex items-center justify-center px-2">
@@ -633,10 +685,12 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <div className="space-y-3">
+
+                    {/* Categories — gap-5 ensures identical spacing between sections regardless of preview count */}
+                    <div className="flex flex-col gap-5">
 
                       {/* Needs review */}
-                      <div>
+                      <div className="flex flex-col gap-2">
                         <button
                           onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
                           className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
@@ -652,21 +706,11 @@ export default function DashboardPage() {
                           </div>
                           <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
                         </button>
-                        {handoffPreview.length === 0 ? (
-                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">All clear.</p>
-                        ) : (
-                          handoffPreview.map((ticket) => (
-                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
-                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
-                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
-                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
-                            </Link>
-                          ))
-                        )}
+                        {renderPreviewRow(handoffPreview, 'All clear.', 'text-blue-600 dark:text-blue-400', () => showAwaitingTickets('handoff'))}
                       </div>
 
                       {/* No contractors */}
-                      <div>
+                      <div className="flex flex-col gap-2">
                         <button
                           onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
                           className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
@@ -677,21 +721,11 @@ export default function DashboardPage() {
                           <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
                           <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
                         </button>
-                        {noContractorsPreview.length === 0 ? (
-                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">All clear.</p>
-                        ) : (
-                          noContractorsPreview.map((ticket) => (
-                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
-                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
-                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
-                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
-                            </Link>
-                          ))
-                        )}
+                        {renderPreviewRow(noContractorsPreview, 'All clear.', 'text-amber-600 dark:text-amber-400', () => showAwaitingTickets('noContractorsLeft'))}
                       </div>
 
                       {/* Follow-up needed */}
-                      <div>
+                      <div className="flex flex-col gap-2">
                         <button
                           onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
                           className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
@@ -702,17 +736,7 @@ export default function DashboardPage() {
                           <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
                           <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
                         </button>
-                        {followUpPreview.length === 0 ? (
-                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">Nothing pending.</p>
-                        ) : (
-                          followUpPreview.map((ticket) => (
-                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
-                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
-                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
-                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
-                            </Link>
-                          ))
-                        )}
+                        {renderPreviewRow(followUpPreview, 'Nothing pending.', 'text-rose-600 dark:text-rose-400', () => router.push('/tickets'))}
                       </div>
 
                     </div>
