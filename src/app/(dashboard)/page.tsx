@@ -611,7 +611,7 @@ export default function DashboardPage() {
           /* Dashboard — Stats view */
           <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-y-auto">
             {/* Top row: 2 cards side by side */}
-            <div className="grid grid-cols-1 sm:grid-cols-[70%_30%] gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[7fr_3fr] gap-4">
 
               {/* LEFT: To-do */}
               {(() => {
@@ -636,42 +636,34 @@ export default function DashboardPage() {
 
                 const hasEmergency = allTickets.some((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true && t.priority?.toLowerCase() === 'emergency')
 
-                // Reusable horizontal preview row — plain function, not a component
+                // Compact preview tiles — 3-column grid, accent bar on left, chevron on hover only
                 const renderPreviewRow = (
                   tickets: TicketSummary[],
                   emptyText: string,
-                  tagColor: string,
-                  onSeeAll: () => void
+                  accentColor: string,
                 ) => (
-                  <div className="flex flex-wrap items-stretch gap-2 min-h-[48px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-h-[56px]">
                     {tickets.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/40 flex-1 flex items-center">{emptyText}</p>
+                      <p className="sm:col-span-3 text-xs text-muted-foreground/40 flex items-center">{emptyText}</p>
                     ) : (
                       tickets.map((ticket) => (
                         <Link
                           key={ticket.id}
                           href={`/tickets?id=${ticket.id}`}
-                          className="flex-1 min-w-[120px] flex flex-col justify-between px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group"
+                          className={`flex items-center gap-2 px-3 py-3 rounded-lg bg-muted/25 hover:bg-muted/50 border-l-2 ${accentColor} transition-colors group`}
                         >
-                          <span className={`text-[10px] font-semibold mb-0.5 ${tagColor}`}>
-                            {ticket.display_stage || 'Open'}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">
-                              {ticket.issue_description?.substring(0, 50) || 'No description'}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-card-foreground/80 group-hover:text-card-foreground truncate leading-snug">
+                              {ticket.issue_description?.substring(0, 55) || 'No description'}
                             </p>
-                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
+                            {ticket.address && (
+                              <p className="text-[10px] text-muted-foreground/45 truncate mt-0.5">{ticket.address}</p>
+                            )}
                           </div>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </Link>
                       ))
                     )}
-                    <button
-                      onClick={onSeeAll}
-                      className="flex-shrink-0 self-center ml-auto flex items-center gap-1 text-xs text-muted-foreground/45 hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-muted/40"
-                    >
-                      See all
-                      <ArrowRight className="h-2.5 w-2.5" />
-                    </button>
                   </div>
                 )
 
@@ -686,57 +678,81 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Categories — gap-5 ensures identical spacing between sections regardless of preview count */}
+                    {/* Categories — gap-5 is structural: identical spacing regardless of whether tiles exist */}
                     <div className="flex flex-col gap-5">
 
                       {/* Needs review */}
                       <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
-                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                        >
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground/25'}`}>
-                            <Eye className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0 flex items-center gap-2">
-                            <span className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Needs review</span>
-                            {hasEmergency && (
-                              <span className="text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">Emergency</span>
-                            )}
-                          </div>
-                          <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
-                        </button>
-                        {renderPreviewRow(handoffPreview, 'All clear.', 'text-blue-600 dark:text-blue-400', () => showAwaitingTickets('handoff'))}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
+                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground/25'}`}>
+                              <Eye className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <span className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Needs review</span>
+                              {hasEmergency && (
+                                <span className="text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">Emergency</span>
+                              )}
+                            </div>
+                            <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
+                          </button>
+                          <button
+                            onClick={() => showAwaitingTickets('handoff')}
+                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
+                          >
+                            See all <ArrowRight className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                        {renderPreviewRow(handoffPreview, 'All clear.', 'border-blue-400/50')}
                       </div>
 
                       {/* No contractors */}
                       <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
-                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                        >
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${noContractorsCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground/25'}`}>
-                            <UserX className="h-5 w-5" />
-                          </div>
-                          <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
-                          <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
-                        </button>
-                        {renderPreviewRow(noContractorsPreview, 'All clear.', 'text-amber-600 dark:text-amber-400', () => showAwaitingTickets('noContractorsLeft'))}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
+                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${noContractorsCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground/25'}`}>
+                              <UserX className="h-5 w-5" />
+                            </div>
+                            <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
+                            <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
+                          </button>
+                          <button
+                            onClick={() => showAwaitingTickets('noContractorsLeft')}
+                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
+                          >
+                            See all <ArrowRight className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                        {renderPreviewRow(noContractorsPreview, 'All clear.', 'border-amber-400/50')}
                       </div>
 
                       {/* Follow-up needed */}
                       <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
-                          className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                        >
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${followUpCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-muted text-muted-foreground/25'}`}>
-                            <Clock className="h-5 w-5" />
-                          </div>
-                          <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
-                          <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
-                        </button>
-                        {renderPreviewRow(followUpPreview, 'Nothing pending.', 'text-rose-600 dark:text-rose-400', () => router.push('/tickets'))}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
+                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${followUpCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-muted text-muted-foreground/25'}`}>
+                              <Clock className="h-5 w-5" />
+                            </div>
+                            <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
+                            <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
+                          </button>
+                          <button
+                            onClick={() => router.push('/tickets')}
+                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
+                          >
+                            See all <ArrowRight className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                        {renderPreviewRow(followUpPreview, 'Nothing pending.', 'border-rose-400/50')}
                       </div>
 
                     </div>
@@ -782,8 +798,8 @@ export default function DashboardPage() {
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
-                    <div className="flex items-start justify-between gap-2 mb-4">
-                      <h3 className="text-base font-semibold text-card-foreground">Scheduled</h3>
+                    <div className="flex items-start justify-between gap-2 mb-5">
+                      <h3 className="text-lg font-semibold text-card-foreground">Scheduled</h3>
                       <div className="flex items-center gap-1 flex-wrap justify-end">
                         {filterOptions.map((opt) => (
                           <button
@@ -832,7 +848,7 @@ export default function DashboardPage() {
             {/* Bottom: Recent tickets — secondary context */}
             <div className="bg-card/60 rounded-xl border border-border/50 flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
-                <h3 className="text-sm font-semibold text-card-foreground">Recent tickets</h3>
+                <h3 className="text-base font-semibold text-card-foreground">Recent tickets</h3>
                 <Link href="/tickets">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
