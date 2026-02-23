@@ -609,9 +609,9 @@ export default function DashboardPage() {
             </div>
           ) : (
           /* Dashboard — Stats view */
-          <div className="flex-1 min-h-0 flex flex-col gap-4">
+          <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-y-auto">
             {/* Top row: 2 cards side by side */}
-            <div className="grid grid-cols-1 sm:grid-cols-[70%_30%] gap-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-[70%_30%] gap-4">
 
               {/* LEFT: To-do */}
               {(() => {
@@ -624,7 +624,7 @@ export default function DashboardPage() {
                 const hasEmergency = allTickets.some((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true && t.priority?.toLowerCase() === 'emergency')
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
+                  <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
                       <h2 className="text-2xl font-bold text-card-foreground tracking-tight">To-do</h2>
                       {totalAction > 0 && (
@@ -652,12 +652,17 @@ export default function DashboardPage() {
                           </div>
                           <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
                         </button>
-                        {handoffPreview.map((ticket) => (
-                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
-                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
-                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
-                          </Link>
-                        ))}
+                        {handoffPreview.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">All clear.</p>
+                        ) : (
+                          handoffPreview.map((ticket) => (
+                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
+                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
+                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
+                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
+                            </Link>
+                          ))
+                        )}
                       </div>
 
                       {/* No contractors */}
@@ -672,12 +677,17 @@ export default function DashboardPage() {
                           <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
                           <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
                         </button>
-                        {noContractorsPreview.map((ticket) => (
-                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
-                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
-                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
-                          </Link>
-                        ))}
+                        {noContractorsPreview.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">All clear.</p>
+                        ) : (
+                          noContractorsPreview.map((ticket) => (
+                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
+                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
+                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
+                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
+                            </Link>
+                          ))
+                        )}
                       </div>
 
                       {/* Follow-up needed */}
@@ -692,12 +702,17 @@ export default function DashboardPage() {
                           <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
                           <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
                         </button>
-                        {followUpPreview.map((ticket) => (
-                          <Link key={ticket.id} href={`/tickets?id=${ticket.id}`} className="flex items-center gap-2 pl-16 pr-2 py-1 rounded-lg hover:bg-muted/40 transition-colors group">
-                            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground truncate flex-1">{ticket.issue_description?.substring(0, 55) || 'No description'}</span>
-                            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/30 flex-shrink-0" />
-                          </Link>
-                        ))}
+                        {followUpPreview.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/40 ml-14 mt-1">Nothing pending.</p>
+                        ) : (
+                          followUpPreview.map((ticket) => (
+                            <Link key={ticket.id} href={`/tickets?id=${ticket.id}`}
+                              className="flex items-center gap-3 ml-14 mr-1 mt-1.5 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-border/60 transition-colors group">
+                              <p className="text-xs font-medium text-card-foreground/75 group-hover:text-card-foreground truncate flex-1">{ticket.issue_description?.substring(0, 65) || 'No description'}</p>
+                              <ArrowRight className="h-3 w-3 text-muted-foreground/35 group-hover:text-muted-foreground/70 flex-shrink-0 transition-colors" />
+                            </Link>
+                          ))
+                        )}
                       </div>
 
                     </div>
@@ -742,7 +757,7 @@ export default function DashboardPage() {
                 ]
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
+                  <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
                     <div className="flex items-start justify-between gap-2 mb-4">
                       <h3 className="text-base font-semibold text-card-foreground">Scheduled</h3>
                       <div className="flex items-center gap-1 flex-wrap justify-end">
@@ -761,7 +776,7 @@ export default function DashboardPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="space-y-1 flex-1 overflow-y-auto min-h-0">
+                    <div className="space-y-1">
                       {scheduledFiltered.length === 0 ? (
                         <p className="text-sm text-muted-foreground/60 pt-3 pb-2">No scheduled jobs for this period</p>
                       ) : (
@@ -769,7 +784,7 @@ export default function DashboardPage() {
                           <Link
                             key={ticket.id}
                             href={`/tickets?id=${ticket.id}`}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
                           >
                             <span className="flex-shrink-0 text-xs font-medium text-muted-foreground w-10">
                               {ticket.scheduled_date ? formatDate(ticket.scheduled_date) : '—'}
@@ -790,8 +805,8 @@ export default function DashboardPage() {
               })()}
             </div>
 
-            {/* Bottom: Recent tickets — fixed height, secondary context */}
-            <div className="flex-shrink-0 bg-card/60 rounded-xl border border-border/50 flex flex-col">
+            {/* Bottom: Recent tickets — secondary context */}
+            <div className="bg-card/60 rounded-xl border border-border/50 flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
                 <h3 className="text-sm font-semibold text-card-foreground">Recent tickets</h3>
                 <Link href="/tickets">
