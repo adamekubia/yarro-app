@@ -463,7 +463,7 @@ export default function DashboardPage() {
           /* Dashboard — Top cards + full-width recent tickets */
           <div className="flex-1 min-h-0 flex flex-col gap-3">
             {/* Top section: two columns */}
-            <div className="grid grid-cols-[7fr_3fr] gap-3 items-start">
+            <div className="grid grid-cols-[7fr_3fr] gap-3 flex-[3] min-h-0">
               {/* LEFT: To-do — section header + 3 premium cards */}
               {(() => {
                 const needsAttentionTickets = allTickets.filter((t) => t.next_action === 'needs_attention').sort(byAge)
@@ -505,10 +505,11 @@ export default function DashboardPage() {
                 ]
 
                 return (
-                  <div className="flex flex-col gap-3">
-                    {/* Section header — title above the 3 cards */}
-                    <div className="flex items-center justify-between px-1">
-                      <h2 className="text-xl font-bold text-card-foreground">To-do</h2>
+                  <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-6 h-full">
+
+                    {/* Card header */}
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-bold text-card-foreground whitespace-nowrap">To-do</h2>
                       {totalAction > 0 && (
                         <span className="text-sm font-bold text-white bg-red-500 rounded-full h-7 min-w-[28px] flex items-center justify-center px-2">
                           {totalAction}
@@ -516,38 +517,36 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {/* 3 equal-width premium cards */}
-                    <div className="grid grid-cols-3 gap-3">
+                    {/* 3 internal lanes */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-border/60 gap-y-6 lg:gap-y-0 flex-1 min-h-0">
                       {categories.map((cat) => (
-                        <div key={cat.key} className="bg-card rounded-xl border border-border p-6 flex flex-col aspect-square">
+                        <div key={cat.key} className="flex flex-col min-w-0 lg:px-6 lg:first:pl-0 lg:last:pr-0">
 
-                          {/* TOP: icon + label + large count */}
-                          <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${cat.tickets.length > 0 ? cat.iconBg : 'bg-muted'}`}>
-                                    <cat.icon className={`h-3.5 w-3.5 ${cat.tickets.length > 0 ? cat.iconColor : 'text-muted-foreground/50'}`} />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[cat.key]}</p></TooltipContent>
-                              </Tooltip>
-                              <p className={`text-sm font-medium ${cat.tickets.length > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>
-                                {cat.label}
-                              </p>
-                            </div>
-                            <span className={`text-3xl font-bold tabular-nums ${cat.tickets.length > 0 ? cat.countColor : 'text-muted-foreground/30'}`}>
+                          {/* Lane header: icon + label + count */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${cat.tickets.length > 0 ? cat.iconBg : 'bg-muted'}`}>
+                                  <cat.icon className={`h-3.5 w-3.5 ${cat.tickets.length > 0 ? cat.iconColor : 'text-muted-foreground/50'}`} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[cat.key]}</p></TooltipContent>
+                            </Tooltip>
+                            <p className={`text-sm font-medium min-w-0 truncate ${cat.tickets.length > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>
+                              {cat.label}
+                            </p>
+                            <span className={`ml-auto flex-shrink-0 text-xl font-bold tabular-nums ${cat.tickets.length > 0 ? cat.countColor : 'text-muted-foreground/30'}`}>
                               {cat.tickets.length}
                             </span>
                           </div>
 
-                          {/* MIDDLE: up to 3 preview rows */}
-                          <div className="flex flex-col gap-1 flex-1">
+                          {/* Preview rows */}
+                          <div className="flex flex-col gap-2 flex-1">
                             {cat.tickets.slice(0, 3).map((ticket) => (
                               <Link
                                 key={ticket.id}
                                 href={`/tickets?id=${ticket.id}`}
-                                className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors"
+                                className="flex items-center gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/40 transition-colors"
                               >
                                 <div className={`w-0.5 h-5 rounded-full flex-shrink-0 ${cat.accent}`} />
                                 <div className="flex-1 min-w-0">
@@ -570,21 +569,24 @@ export default function DashboardPage() {
                             )}
                           </div>
 
-                          {/* BOTTOM: See all — always visible, muted when empty */}
-                          <button
-                            onClick={() => cat.tickets.length > 0 ? showAwaitingTickets(cat.key) : undefined}
-                            className={`mt-auto pt-3 text-xs font-medium flex items-center justify-end gap-1 transition-colors ${
-                              cat.tickets.length > 0
-                                ? 'text-primary hover:text-primary/80 cursor-pointer'
-                                : 'text-muted-foreground/40 cursor-default'
-                            }`}
-                          >
-                            See all <ArrowRight className="h-3 w-3" />
-                          </button>
+                          {/* See all footer — pinned to bottom */}
+                          {cat.tickets.length > 0 ? (
+                            <button
+                              onClick={() => showAwaitingTickets(cat.key)}
+                              className="mt-auto pt-3 text-xs font-medium flex items-center justify-end gap-1 text-primary hover:text-primary/80 cursor-pointer transition-colors"
+                            >
+                              See all <ArrowRight className="h-3 w-3" />
+                            </button>
+                          ) : (
+                            <span className="mt-auto pt-3 text-xs font-medium flex items-center justify-end gap-1 text-muted-foreground/40">
+                              See all <ArrowRight className="h-3 w-3" />
+                            </span>
+                          )}
 
                         </div>
                       ))}
                     </div>
+
                   </div>
                 )
               })()}
@@ -604,7 +606,7 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-4">
+                  <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-4 h-full">
                     {/* Header */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-semibold text-card-foreground">Scheduled</h3>
@@ -615,35 +617,42 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {groups.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/60 py-2">No jobs scheduled</p>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {groups.map(([date, tickets]) => (
-                          <div key={date}>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                              {date}
-                            </p>
-                            <div className="flex flex-col gap-0.5">
-                              {tickets.map((ticket) => (
-                                <Link
-                                  key={ticket.id}
-                                  href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-card-foreground truncate">
-                                      {ticket.issue_description || 'No description'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                  </div>
-                                </Link>
-                              ))}
+                    <div className="flex-1 flex flex-col min-h-0">
+                      {groups.length === 0 ? (
+                        <p className="text-xs text-muted-foreground/60 py-2">No jobs scheduled</p>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {groups.map(([date, tickets]) => (
+                            <div key={date}>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                                {date}
+                              </p>
+                              <div className="flex flex-col gap-1.5">
+                                {tickets.map((ticket) => (
+                                  <Link
+                                    key={ticket.id}
+                                    href={`/tickets?id=${ticket.id}`}
+                                    className="flex items-start gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-card-foreground truncate">
+                                        {ticket.issue_description || 'No description'}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                                    </div>
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                      {groups.length > 0 && (
+                        <p className="mt-auto pt-4 text-xs text-muted-foreground/40 text-center">
+                          No more scheduled jobs in this period
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )
               })()}
