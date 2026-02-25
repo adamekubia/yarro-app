@@ -311,10 +311,6 @@ export default function PropertyDetailPage() {
                   <p className="text-sm">{formatCurrency(property.auto_approve_limit)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Emergency Contact</p>
-                  <p className="text-sm">{property.emergency_access_contact || '—'}</p>
-                </div>
-                <div>
                   <p className="text-xs text-muted-foreground mb-1">Landlord</p>
                   {property.landlord_id ? (
                     <Link href={`/landlords/${property.landlord_id}`} className="text-sm font-medium hover:underline">{property.landlord_name}</Link>
@@ -322,13 +318,25 @@ export default function PropertyDetailPage() {
                     <p className="text-sm text-muted-foreground">Not assigned</p>
                   )}
                 </div>
-                {property.access_instructions && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
-                    <p className="text-sm">{property.access_instructions}</p>
-                  </div>
-                )}
               </div>
+
+              {/* Emergency & Access — below grid, above tenants/contractors */}
+              {(property.emergency_access_contact || property.access_instructions) && (
+                <div className="mt-8 space-y-4">
+                  {property.emergency_access_contact && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Emergency Contact</p>
+                      <p className="text-sm">{property.emergency_access_contact}</p>
+                    </div>
+                  )}
+                  {property.access_instructions && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
+                      <p className="text-sm">{property.access_instructions}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 

@@ -29,6 +29,7 @@ import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from 
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
 import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
 import { format } from 'date-fns'
+import { ChatHistory } from '@/components/chat-message'
 
 interface Property {
   id: string
@@ -619,34 +620,17 @@ export function TicketForm({
             </div>
           )}
           {showConversation && conversationLog.length > 0 && (
-            <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/30 p-3 space-y-2">
-              {conversationLog.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${(msg.direction === 'in' || msg.direction === 'inbound') ? 'justify-start' : 'justify-end'}`}
-                >
-                  {msg.label === 'HANDOFF' ? (
-                    <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
-                      — Handed off{msg.timestamp ? ` at ${format(new Date(msg.timestamp), 'HH:mm')}` : ''} —
-                    </div>
-                  ) : (
-                    <div
-                      className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
-                        (msg.direction === 'in' || msg.direction === 'inbound')
-                          ? 'bg-white dark:bg-zinc-800 border text-gray-900 dark:text-gray-100'
-                          : 'bg-primary/10 text-foreground'
-                      }`}
-                    >
-                      <div>{msg.message}</div>
-                      {msg.timestamp && (
-                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 text-right">
-                          {format(new Date(msg.timestamp), 'HH:mm')}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="max-h-64 overflow-y-auto rounded-xl bg-muted/30 p-4">
+              <ChatHistory
+                compact
+                messages={conversationLog
+                  .filter((msg) => msg.label !== 'HANDOFF')
+                  .map((msg) => ({
+                    role: (msg.direction === 'in' || msg.direction === 'inbound') ? 'tenant' : 'assistant',
+                    text: msg.message,
+                    timestamp: msg.timestamp,
+                  }))}
+              />
             </div>
           )}
         </div>
