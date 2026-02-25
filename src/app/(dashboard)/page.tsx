@@ -128,12 +128,12 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
   const actionable = todoItems.filter(i => i.action_type !== 'FOLLOW_UP')
 
   return (
-    <div className="bg-white dark:bg-card rounded-xl border border-border/60 p-6 flex flex-col gap-4 lg:flex-1 lg:min-h-0 min-w-0">
+    <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h2 className="text-xl font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
+          <h2 className="text-lg font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
           {actionable.length > 0 && (
             <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
               {actionable.length}
@@ -149,7 +149,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
       </div>
 
       {actionable.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center p-6">
           <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
         </div>
       ) : (
@@ -161,7 +161,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
               <Link
                 key={item.id}
                 href={`/tickets?id=${item.ticket_id}`}
-                className="flex items-center gap-3 py-3 transition-colors min-w-0 hover:bg-muted/30 rounded-lg px-2 -mx-2 group"
+                className="flex items-center gap-3 py-3 px-5 transition-colors min-w-0 hover:bg-muted/30 group"
               >
                 {/* Left: info */}
                 <div className="flex-1 min-w-0">
@@ -175,22 +175,20 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                    {item.action_context}
-                    <span className="ml-1.5">· {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-medium text-card-foreground bg-muted rounded-full px-2.5 py-0.5 leading-tight flex-shrink-0">
+                      {item.action_context}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground/60">{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+                  </div>
                 </div>
 
                 {/* Right: CTA button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-3 text-xs flex-shrink-0 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors"
+                <InteractiveHoverButton
+                  text={ctaText}
+                  className="w-24 text-xs h-7 flex-shrink-0"
                   tabIndex={-1}
-                >
-                  {ctaText}
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
+                />
               </Link>
             )
           })}
@@ -449,88 +447,86 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto lg:overflow-hidden">
-        <div className="relative p-4 h-full flex flex-col gap-3">
-          {/* Header — command bar: search left, controls right */}
-          <div className="flex items-center justify-between flex-shrink-0 gap-4">
-            {/* LEFT: hamburger (mobile only) + search */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 flex-shrink-0">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64 overflow-y-auto bg-card">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
-              <div className="relative w-full max-w-72 min-w-0">
-                <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                  <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                    placeholder="Search tickets…"
-                    className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-                {searchFocused && searchResults.length > 0 && (
-                  <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                    {searchResults.map((ticket) => (
-                      <Link
-                        key={ticket.id}
-                        href={`/tickets?id=${ticket.id}`}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                          <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                        </div>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                      </Link>
-                    ))}
-                    <Link
-                      href="/tickets"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                    >
-                      View all results
-                      <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
+    <div className="h-full flex flex-col overflow-hidden">
+        {/* Header bar — aligned with sidebar logo section border */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border/40 flex-shrink-0 gap-4">
+          {/* LEFT: hamburger (mobile only) + search */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 flex-shrink-0">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64 overflow-y-auto bg-card">
+                <Sidebar />
+              </SheetContent>
+            </Sheet>
+            <div className="relative w-full max-w-72 min-w-0">
+              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
+                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                  placeholder="Search tickets…"
+                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
               </div>
-            </div>{/* end left group */}
-            {/* RIGHT: Create ticket button */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/tickets?create=true">
-                <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
-              </Link>
+              {searchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                  {searchResults.map((ticket) => (
+                    <Link
+                      key={ticket.id}
+                      href={`/tickets?id=${ticket.id}`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                      </div>
+                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    </Link>
+                  ))}
+                  <Link
+                    href="/tickets"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    View all results
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
+          {/* RIGHT: Create ticket button */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link href="/tickets?create=true">
+              <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
+            </Link>
+          </div>
+        </div>
 
-          {/* Main Content */}
-          {/* Dashboard — To-do command centre + right column */}
-          <div className="lg:flex-1 lg:min-h-0 flex flex-col lg:flex-row gap-3">
+        {/* Main Content — panels below header line */}
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
             {/* To-do — primary left column */}
             <TodoPanel todoItems={todoItems} />
 
-          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
+          <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
               {/* RIGHT: Scheduled — chronological job list */}
               {(() => {
                 const scheduledTickets = allTickets
@@ -554,10 +550,10 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="rounded-xl p-4 flex flex-col gap-4 min-w-0 min-h-0 overflow-hidden">
+                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 min-h-0 overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h3 className="text-xl font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
+                    <div className="flex items-center gap-2 px-5 py-3 border-b border-border/40 flex-shrink-0">
+                      <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {scheduledTickets.length > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
@@ -573,7 +569,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 flex flex-col min-h-0 p-4">
                       {groups.length === 0 ? (
                         <div className="flex gap-3 items-center">
                           <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
@@ -620,9 +616,9 @@ export default function DashboardPage() {
               })()}
 
             {/* Recent activity */}
-            <div className="rounded-xl flex flex-col min-h-0 overflow-hidden lg:border-t lg:border-border/40">
-              <div className="flex items-center px-4 py-3 border-b border-border/40 min-w-0">
-                <h3 className="text-xl font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
+            <div className="rounded-xl border border-border/60 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
                 <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -667,7 +663,6 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          </div>
           </div>
         </div>
 
