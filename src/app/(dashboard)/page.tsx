@@ -236,66 +236,79 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
               <p className="text-sm text-muted-foreground">No items in this priority</p>
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              {visible.map(item => {
-                const isEmergency = item.priority === 'Emergency'
-                const isHandoff = item.action_type === 'NEEDS_ATTENTION'
-                const actionConfig = ACTION_ICON_MAP[item.action_type] || ACTION_ICON_MAP.FOLLOW_UP
-                const ActionIcon = isEmergency ? Flame : actionConfig.icon
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+              {(() => {
+                const needsAction = visible.filter(i => i.action_type !== 'FOLLOW_UP')
+                const inProgress = visible.filter(i => i.action_type === 'FOLLOW_UP')
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/tickets?id=${item.ticket_id}`}
-                    className={`flex items-start gap-2 py-2.5 px-2 -mx-2 rounded-lg transition-colors min-w-0 ${
-                      isEmergency
-                        ? 'bg-red-500/8 dark:bg-red-500/10 hover:bg-red-500/15'
-                        : 'hover:bg-muted/30'
-                    }`}
-                  >
-                    {/* Left accent bar */}
-                    <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${
-                      isEmergency ? 'bg-red-500' : isHandoff ? 'bg-amber-400' : BUCKET_STYLE[item.priority_bucket].dot
-                    }`} />
+                const renderItem = (item: TodoItem) => {
+                  const actionConfig = ACTION_ICON_MAP[item.action_type] || ACTION_ICON_MAP.FOLLOW_UP
+                  const ActionIcon = actionConfig.icon
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                        {isEmergency && (
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/15 rounded px-1 py-px leading-none flex-shrink-0">
-                            Emergency
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/tickets?id=${item.ticket_id}`}
+                      className="flex items-start gap-2 py-2.5 px-2 -mx-2 rounded-lg transition-colors min-w-0 hover:bg-muted/30"
+                    >
+                      {/* Left accent bar */}
+                      <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${BUCKET_STYLE[item.priority_bucket].dot}`} />
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                          {item.priority && <StatusBadge status={item.priority} size="sm" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
+                        <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                          <ActionIcon className={`h-3 w-3 flex-shrink-0 ${actionConfig.color}`} />
+                          <span className={`text-xs font-medium truncate ${actionConfig.label_color}`}>
+                            {item.action_label}
+                          </span>
+                          {item.action_context && (
+                            <span className="text-[11px] text-muted-foreground truncate">· {item.action_context}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: time + SLA */}
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                        <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                          {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
+                        </span>
+                        {item.sla_breached && (
+                          <span className="text-[10px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none whitespace-nowrap">
+                            Breach
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
-                      <div className="flex items-center gap-1 mt-0.5 min-w-0">
-                        <ActionIcon className={`h-3 w-3 flex-shrink-0 ${isEmergency ? 'text-red-500' : actionConfig.color}`} />
-                        <span className={`text-xs font-medium truncate ${
-                          isEmergency ? 'text-red-600 dark:text-red-400' : actionConfig.label_color
-                        }`}>
-                          {item.action_label}
-                        </span>
-                        {item.action_context && (
-                          <span className="text-[11px] text-muted-foreground truncate">· {item.action_context}</span>
-                        )}
-                      </div>
-                    </div>
+                    </Link>
+                  )
+                }
 
-                    {/* Right: time + SLA */}
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
-                      </span>
-                      {item.sla_breached && (
-                        <span className="text-[10px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none whitespace-nowrap">
-                          Breach
-                        </span>
-                      )}
-                    </div>
-                  </Link>
+                return (
+                  <>
+                    {needsAction.length > 0 && (
+                      <div className="flex flex-col divide-y divide-border/30">
+                        {needsAction.map(renderItem)}
+                      </div>
+                    )}
+                    {needsAction.length > 0 && inProgress.length > 0 && (
+                      <div className="flex items-center gap-2 py-2 my-1">
+                        <div className="flex-1 h-px bg-border/50" />
+                        <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">In progress</span>
+                        <div className="flex-1 h-px bg-border/50" />
+                      </div>
+                    )}
+                    {inProgress.length > 0 && (
+                      <div className="flex flex-col divide-y divide-border/30">
+                        {inProgress.map(renderItem)}
+                      </div>
+                    )}
+                  </>
                 )
-              })}
+              })()}
             </div>
           )}
         </>
