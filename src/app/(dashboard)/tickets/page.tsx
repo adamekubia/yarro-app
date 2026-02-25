@@ -95,6 +95,7 @@ export default function TicketsPage() {
 
   const selectedId = searchParams.get('id')
   const action = searchParams.get('action')
+  const defaultTab = searchParams.get('tab')
   const shouldCreate = searchParams.get('create')
 
   useEffect(() => {
@@ -118,13 +119,15 @@ export default function TicketsPage() {
         if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
           setHandoffTicketId(basicTicket.id)
           setCreateDrawerOpen(true)
-          router.replace(`/tickets?id=${selectedId}`)
           return
         }
       }
-      setModalOpen(true)
+      // Only open the detail modal if the create drawer isn't already open
+      if (!createDrawerOpen) {
+        setModalOpen(true)
+      }
     }
-  }, [selectedId, tickets, action])
+  }, [selectedId, tickets, action, createDrawerOpen])
 
   const fetchTickets = async () => {
     setLoading(true)
@@ -645,6 +648,7 @@ export default function TicketsPage() {
         open={modalOpen}
         onClose={handleCloseModal}
         onArchive={() => setArchiveDialogOpen(true)}
+        defaultTab={defaultTab || undefined}
         onReview={() => {
           if (selectedTicketBasic) {
             setHandoffTicketId(selectedTicketBasic.id)

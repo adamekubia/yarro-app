@@ -157,8 +157,11 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
           {actionable.map(item => {
             const ctaText = ACTION_CTA[item.action_label] || 'View'
             const isHandoff = item.next_action_reason === 'handoff_review'
+            const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
             const href = isHandoff
               ? `/tickets?id=${item.ticket_id}&action=complete`
+              : needsDispatchTab
+              ? `/tickets?id=${item.ticket_id}&tab=dispatch`
               : `/tickets?id=${item.ticket_id}`
 
             return (

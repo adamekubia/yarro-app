@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
@@ -436,6 +436,19 @@ function subEntryLabel(subs: SubEntry[]): string {
   return parts.join(' · ')
 }
 
+// ─── Phase → icon mapping (activity-tab style) ───
+
+const PHASE_ICONS: Record<string, typeof Cog> = {
+  Handoff: AlertTriangle,
+  'Ticket Created': Send,
+  'Contractor Quotes': Wrench,
+  'Quote Approval': UserCheck,
+  'Landlord Approval': Building2,
+  'Job Booking': CalendarCheck,
+  'Follow-up': MessageCircle,
+  Completion: CheckCircle2,
+}
+
 // ─── Component ───
 
 // ─── Re-dispatch contractor selector ───
@@ -580,136 +593,125 @@ export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatc
     )
   }
 
-  let lastPhase = ''
-
   return (
-    <div>
+    <div className="space-y-0">
       {entries.map((entry, index) => {
         const isLast = index === entries.length - 1
-        const showDivider = entry.phase !== lastPhase
-        lastPhase = entry.phase
-
         const isClickable = entry.chatMessages.length > 0
         const hasSubs = entry.subEntries.length > 0
         const isExpanded = expanded.has(entry.id)
 
+        const Icon = PHASE_ICONS[entry.phase] || Cog
+        const iconBg = entry.isEscalation
+          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+          : entry.isCompleted
+          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+          : 'bg-muted text-muted-foreground'
+
         return (
-          <div key={entry.id}>
-            {/* Phase divider */}
-            {showDivider && (
-              <div className={cn('flex items-center gap-3', index > 0 ? 'pt-4 pb-2' : 'pb-2')}>
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{entry.phase}</span>
-                <div className="h-px flex-1 bg-border" />
+          <div key={entry.id} className="flex gap-3">
+            {/* Icon circle + timeline line */}
+            <div className="flex flex-col items-center">
+              <div className={cn('h-7 w-7 rounded-full flex items-center justify-center shrink-0', iconBg)}>
+                <Icon className="h-3.5 w-3.5" />
               </div>
-            )}
+              {(!isLast || (hasSubs && isExpanded)) && <div className="w-px flex-1 bg-border" />}
+            </div>
 
-            {/* Entry row */}
-            <div className="flex gap-3">
-              {/* Dot + line */}
-              <div className="flex flex-col items-center">
-                <div className={cn(
-                  'rounded-full shrink-0 mt-1.5 h-2.5 w-2.5',
-                  entry.isEscalation ? 'bg-red-500' : entry.isCompleted ? 'bg-emerald-500' : 'bg-foreground/40',
-                )} />
-                {(!isLast || (hasSubs && isExpanded)) && <div className="w-px flex-1 bg-border/40 mt-1" />}
-              </div>
-
-              {/* Content */}
-              <div className={cn('min-w-0 flex-1', !isLast || (hasSubs && isExpanded) ? 'pb-3' : 'pb-1')}>
-                {/* Main row — click for overlay */}
-                <button
-                  onClick={() => isClickable && setOverlay({ title: entry.label, messages: entry.chatMessages })}
-                  disabled={!isClickable}
-                  className={cn(
-                    'w-full text-left',
-                    isClickable && 'hover:bg-muted/30 -mx-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer',
-                    !isClickable && 'py-0.5 cursor-default',
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{entry.label}</p>
-                        {entry.amount && (
-                          <span className="text-xs font-medium text-foreground/70">{entry.amount}</span>
-                        )}
-                        <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium capitalize', STATUS_STYLES[entry.status] || STATUS_STYLES.pending)}>
-                          {entry.status}
-                        </span>
-                      </div>
-                      {entry.sublabel && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{entry.sublabel}</p>
+            {/* Content */}
+            <div className={cn('min-w-0 flex-1 pb-4')}>
+              {/* Main row — click for message overlay */}
+              <button
+                onClick={() => isClickable && setOverlay({ title: entry.label, messages: entry.chatMessages })}
+                disabled={!isClickable}
+                className={cn(
+                  'w-full text-left',
+                  isClickable && 'hover:bg-muted/30 -mx-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer',
+                  !isClickable && 'py-0.5 cursor-default',
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium">{entry.label}</p>
+                      {entry.amount && (
+                        <span className="text-xs font-medium text-foreground/70">{entry.amount}</span>
                       )}
+                      <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium capitalize', STATUS_STYLES[entry.status] || STATUS_STYLES.pending)}>
+                        {entry.status}
+                      </span>
                     </div>
-                    {isClickable && (
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
+                    {entry.sublabel && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{entry.sublabel}</p>
                     )}
                   </div>
+                  {isClickable && (
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
+                  )}
+                </div>
+              </button>
+
+              {/* Sub-entry toggle */}
+              {hasSubs && (
+                <button
+                  onClick={() => toggleExpand(entry.id)}
+                  className="flex items-center gap-1 mt-1 ml-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {isExpanded
+                    ? <ChevronDown className="h-3 w-3" />
+                    : <ChevronRight className="h-3 w-3" />
+                  }
+                  <span>{subEntryLabel(entry.subEntries)}</span>
                 </button>
+              )}
 
-                {/* Sub-entry toggle */}
-                {hasSubs && (
-                  <button
-                    onClick={() => toggleExpand(entry.id)}
-                    className="flex items-center gap-1 mt-1 ml-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {isExpanded
-                      ? <ChevronDown className="h-3 w-3" />
-                      : <ChevronRight className="h-3 w-3" />
-                    }
-                    <span>{subEntryLabel(entry.subEntries)}</span>
-                  </button>
-                )}
+              {/* Re-dispatch action */}
+              {entry.isRedispatchable && ticketId && (
+                <RedispatchAction ticketId={ticketId} onDispatched={() => onRedispatched?.()} />
+              )}
 
-                {/* Re-dispatch action */}
-                {entry.isRedispatchable && ticketId && (
-                  <RedispatchAction ticketId={ticketId} onDispatched={() => onRedispatched?.()} />
-                )}
-
-                {/* Expanded sub-entries */}
-                {hasSubs && isExpanded && (
-                  <div className="mt-2 ml-1 space-y-1.5">
-                    {entry.subEntries.map(sub => {
-                      const subClickable = sub.chatMessages.length > 0
-                      return (
-                        <button
-                          key={sub.id}
-                          onClick={() => subClickable && setOverlay({ title: sub.label, messages: sub.chatMessages })}
-                          disabled={!subClickable}
-                          className={cn(
-                            'w-full text-left rounded-md px-2.5 py-2 transition-colors',
-                            sub.variant === 'warning'
-                              ? 'border border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10'
-                              : 'border border-border/50 bg-muted/20 hover:bg-muted/40',
-                            !subClickable && 'cursor-default',
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {sub.variant === 'warning' && (
-                                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">⚠</span>
-                              )}
-                              <span className={cn(
-                                'text-xs',
-                                sub.variant === 'warning' ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
-                              )}>
-                                {sub.label}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-muted-foreground">
-                                {format(new Date(sub.timestamp), 'dd MMM, HH:mm')}
-                              </span>
-                              {subClickable && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-                            </div>
+              {/* Expanded sub-entries */}
+              {hasSubs && isExpanded && (
+                <div className="mt-2 ml-1 space-y-1.5">
+                  {entry.subEntries.map(sub => {
+                    const subClickable = sub.chatMessages.length > 0
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => subClickable && setOverlay({ title: sub.label, messages: sub.chatMessages })}
+                        disabled={!subClickable}
+                        className={cn(
+                          'w-full text-left rounded-md px-2.5 py-2 transition-colors',
+                          sub.variant === 'warning'
+                            ? 'border border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10'
+                            : 'border border-border/50 bg-muted/20 hover:bg-muted/40',
+                          !subClickable && 'cursor-default',
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {sub.variant === 'warning' && (
+                              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">⚠</span>
+                            )}
+                            <span className={cn(
+                              'text-xs',
+                              sub.variant === 'warning' ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
+                            )}>
+                              {sub.label}
+                            </span>
                           </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(sub.timestamp), 'dd MMM, HH:mm')}
+                            </span>
+                            {subClickable && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )
