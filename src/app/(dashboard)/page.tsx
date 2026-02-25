@@ -16,6 +16,11 @@ import {
   User,
   Search,
   Menu,
+  Flame,
+  ClipboardCheck,
+  Hourglass,
+  CalendarCheck,
+  UserX,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -100,10 +105,12 @@ interface TodoItem {
   ticket_id: string
   issue_summary: string
   property_label: string
+  action_type: string
   action_label: string
   action_context: string | null
   waiting_since: string
   priority_bucket: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'
+  priority: string | null
   sla_breached: boolean
 }
 
@@ -130,16 +137,25 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   landlord: 'Tickets waiting for landlord approval on the quoted price',
 }
 
+// Visual config per action type
+const ACTION_ICON_MAP: Record<string, { icon: React.ElementType; color: string; bg: string; label_color: string }> = {
+  NEEDS_ATTENTION: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', label_color: 'text-amber-600 dark:text-amber-400' },
+  ASSIGN_CONTRACTOR: { icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-500/10', label_color: 'text-blue-600 dark:text-blue-400' },
+  AWAITING_APPROVAL: { icon: ClipboardCheck, color: 'text-violet-500', bg: 'bg-violet-500/10', label_color: 'text-violet-600 dark:text-violet-400' },
+  CONTRACTOR_UNRESPONSIVE: { icon: UserX, color: 'text-orange-500', bg: 'bg-orange-500/10', label_color: 'text-orange-600 dark:text-orange-400' },
+  FOLLOW_UP: { icon: Hourglass, color: 'text-muted-foreground', bg: 'bg-muted/40', label_color: 'text-muted-foreground' },
+}
+
 function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
   type Bucket = TodoItem['priority_bucket']
 
   const BUCKETS: Bucket[] = ['URGENT', 'HIGH', 'NORMAL', 'LOW']
 
-  const PRIORITY_ACCENT: Record<Bucket, string> = {
-    URGENT: 'bg-red-400',
-    HIGH:   'bg-orange-400',
-    NORMAL: 'bg-yellow-400',
-    LOW:    'bg-green-400',
+  const BUCKET_STYLE: Record<Bucket, { dot: string; tab_active: string }> = {
+    URGENT: { dot: 'bg-red-500', tab_active: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' },
+    HIGH:   { dot: 'bg-orange-400', tab_active: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30' },
+    NORMAL: { dot: 'bg-yellow-400', tab_active: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30' },
+    LOW:    { dot: 'bg-green-400', tab_active: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30' },
   }
 
   // Full counts from entire RPC result
@@ -193,20 +209,25 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
       ) : (
         <>
           {/* Tab row */}
-          <div className="flex items-center gap-0.5 -mt-2">
-            {BUCKETS.map(bucket => (
-              <button
-                key={bucket}
-                onClick={() => setActiveBucket(bucket)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                  activeBucket === bucket
-                    ? 'bg-muted/30 text-card-foreground border border-border/60'
-                    : 'text-muted-foreground hover:bg-muted/20 border border-transparent'
-                }`}
-              >
-                {bucket} <span className="tabular-nums">({counts[bucket]})</span>
-              </button>
-            ))}
+          <div className="flex items-center gap-1 -mt-2">
+            {BUCKETS.map(bucket => {
+              const isActive = activeBucket === bucket
+              const hasItems = counts[bucket] > 0
+              return (
+                <button
+                  key={bucket}
+                  onClick={() => setActiveBucket(bucket)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                    isActive
+                      ? `${BUCKET_STYLE[bucket].tab_active} border`
+                      : 'text-muted-foreground hover:bg-muted/20 border border-transparent'
+                  } ${!hasItems ? 'opacity-40' : ''}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${BUCKET_STYLE[bucket].dot}`} />
+                  {bucket} <span className="tabular-nums">({counts[bucket]})</span>
+                </button>
+              )
+            })}
           </div>
 
           {/* List */}
@@ -215,36 +236,73 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
               <p className="text-sm text-muted-foreground">No items in this priority</p>
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              {visible.map(item => (
-                <Link
-                  key={item.id}
-                  href={`/tickets?id=${item.ticket_id}`}
-                  className="flex items-start gap-3 py-3 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors min-w-0"
-                >
-                  <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${PRIORITY_ACCENT[item.priority_bucket]}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                      <span className="text-xs text-primary font-medium truncate">{item.action_label}</span>
-                      {item.action_context && (
-                        <span className="text-xs text-muted-foreground truncate">· {item.action_context}</span>
+            <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1">
+              {visible.map(item => {
+                const isEmergency = item.priority === 'Emergency'
+                const isHandoff = item.action_type === 'NEEDS_ATTENTION'
+                const actionConfig = ACTION_ICON_MAP[item.action_type] || ACTION_ICON_MAP.FOLLOW_UP
+                const ActionIcon = isEmergency ? Flame : actionConfig.icon
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/tickets?id=${item.ticket_id}`}
+                    className={`flex items-start gap-3 py-3 px-3 rounded-xl transition-all min-w-0 border ${
+                      isEmergency
+                        ? 'bg-red-500/8 dark:bg-red-500/10 border-red-500/30 hover:bg-red-500/15 hover:border-red-500/50'
+                        : isHandoff
+                          ? 'bg-amber-500/5 dark:bg-amber-500/8 border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/40'
+                          : 'bg-transparent border-border/40 hover:bg-muted/30 hover:border-border/60'
+                    }`}
+                  >
+                    {/* Action type icon */}
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 ${
+                      isEmergency ? 'bg-red-500/15' : actionConfig.bg
+                    }`}>
+                      <ActionIcon className={`h-4 w-4 ${isEmergency ? 'text-red-500' : actionConfig.color}`} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className={`text-sm font-medium truncate ${
+                          isEmergency ? 'text-red-700 dark:text-red-300' : 'text-card-foreground'
+                        }`}>
+                          {item.property_label}
+                        </p>
+                        {isEmergency && (
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 dark:text-red-400 bg-red-500/15 rounded px-1.5 py-0.5 leading-none flex-shrink-0">
+                            Emergency
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                      <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                        <span className={`text-xs font-semibold truncate ${
+                          isEmergency ? 'text-red-600 dark:text-red-400' : actionConfig.label_color
+                        }`}>
+                          {item.action_label}
+                        </span>
+                        {item.action_context && (
+                          <span className="text-[11px] text-muted-foreground truncate">· {item.action_context}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: time + SLA */}
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 mt-0.5">
+                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
+                      </span>
+                      {item.sla_breached && (
+                        <span className="text-[10px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none whitespace-nowrap">
+                          Breach
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
-                    </span>
-                    {item.sla_breached && (
-                      <span className="text-[11px] font-medium text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none">
-                        Breach
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </div>
           )}
         </>
