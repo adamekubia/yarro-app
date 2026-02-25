@@ -6,21 +6,14 @@ import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import {
-  Clock,
   ArrowRight,
   AlertTriangle,
-  Wrench,
   X,
   MessageSquare,
   Phone,
   User,
   Search,
   Menu,
-  Flame,
-  ClipboardCheck,
-  Hourglass,
-  CalendarCheck,
-  UserX,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -43,12 +36,6 @@ import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { formatDistanceToNow } from 'date-fns'
 
 interface DashboardStats {
@@ -108,6 +95,7 @@ interface TodoItem {
   action_type: string
   action_label: string
   action_context: string | null
+  next_action_reason: string | null
   waiting_since: string
   priority_bucket: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'
   priority: string | null
@@ -124,73 +112,31 @@ interface RecentEvent {
   occurred_at: string
 }
 
-// Action card descriptions for tooltips
-const ACTION_DESCRIPTIONS: Record<string, string> = {
-  // To-do categories (wired to next_action field)
-  needs_attention: 'Tickets that need your direct attention — AI couldn\'t complete them and they require your decision',
-  assign_contractor: 'Tickets where all contractors declined or didn\'t respond — find and assign a new contractor',
-  follow_up: 'Tickets needing follow-up — landlord no response, declined quotes, or jobs not completed',
-  // Scheduled section (wired to next_action_reason field)
-  contractor: 'Tickets waiting for a contractor to respond with a quote or availability',
-  booking: 'Booking confirmation has been sent to the tenant — waiting for them to confirm a slot',
-  scheduled: 'Jobs that have been scheduled with a contractor and have a confirmed date',
-  landlord: 'Tickets waiting for landlord approval on the quoted price',
-}
-
-// Visual config per action type
-const ACTION_ICON_MAP: Record<string, { icon: React.ElementType; color: string; bg: string; label_color: string }> = {
-  NEEDS_ATTENTION: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', label_color: 'text-amber-600 dark:text-amber-400' },
-  ASSIGN_CONTRACTOR: { icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-500/10', label_color: 'text-blue-600 dark:text-blue-400' },
-  AWAITING_APPROVAL: { icon: ClipboardCheck, color: 'text-violet-500', bg: 'bg-violet-500/10', label_color: 'text-violet-600 dark:text-violet-400' },
-  CONTRACTOR_UNRESPONSIVE: { icon: UserX, color: 'text-orange-500', bg: 'bg-orange-500/10', label_color: 'text-orange-600 dark:text-orange-400' },
-  FOLLOW_UP: { icon: Hourglass, color: 'text-muted-foreground', bg: 'bg-muted/40', label_color: 'text-muted-foreground' },
+// CTA button text per action type
+const ACTION_CTA: Record<string, string> = {
+  'Needs attention': 'Review',
+  'Landlord declined': 'Review',
+  'Job not completed': 'Review',
+  'Assign contractor': 'Assign',
+  'Review quote': 'Approve',
+  'Awaiting landlord': 'Follow up',
+  'Contractor unresponsive': 'Redispatch',
 }
 
 function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
-  type Bucket = TodoItem['priority_bucket']
-
-  const BUCKETS: Bucket[] = ['URGENT', 'HIGH', 'NORMAL', 'LOW']
-
-  const BUCKET_STYLE: Record<Bucket, { dot: string; tab_active: string }> = {
-    URGENT: { dot: 'bg-red-500', tab_active: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' },
-    HIGH:   { dot: 'bg-orange-400', tab_active: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30' },
-    NORMAL: { dot: 'bg-yellow-400', tab_active: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30' },
-    LOW:    { dot: 'bg-green-400', tab_active: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30' },
-  }
-
-  // Full counts from entire RPC result
-  const counts: Record<Bucket, number> = {
-    URGENT: todoItems.filter(i => i.priority_bucket === 'URGENT').length,
-    HIGH:   todoItems.filter(i => i.priority_bucket === 'HIGH').length,
-    NORMAL: todoItems.filter(i => i.priority_bucket === 'NORMAL').length,
-    LOW:    todoItems.filter(i => i.priority_bucket === 'LOW').length,
-  }
-
-  // Default: URGENT if any exist, else first non-empty bucket, else 'URGENT'
-  const defaultBucket: Bucket = BUCKETS.find(b => counts[b] > 0) ?? 'URGENT'
-  const [activeBucket, setActiveBucket] = useState<Bucket>(defaultBucket)
-
-  // Auto-select first non-empty bucket when current bucket empties (e.g. after data loads)
-  const firstNonEmpty = BUCKETS.find(b => counts[b] > 0) ?? 'URGENT'
-  useEffect(() => {
-    if (todoItems.length === 0) return
-    if (counts[activeBucket] > 0) return
-    if (firstNonEmpty !== activeBucket) setActiveBucket(firstNonEmpty)
-  }, [todoItems.length, activeBucket, counts.URGENT, counts.HIGH, counts.NORMAL, counts.LOW])
-
-  // Filter by active bucket — no re-sort, backend order preserved
-  const visible = todoItems.filter(i => i.priority_bucket === activeBucket)
+  // Only actionable items — exclude FOLLOW_UP (awaiting contractor, booking, scheduled)
+  const actionable = todoItems.filter(i => i.action_type !== 'FOLLOW_UP')
 
   return (
-    <div className="bg-white dark:bg-card rounded-xl border border-border/60 p-8 flex flex-col gap-6 lg:flex-1 lg:min-h-0 min-w-0">
+    <div className="bg-white dark:bg-card rounded-xl border border-border/60 p-6 flex flex-col gap-4 lg:flex-1 lg:min-h-0 min-w-0">
 
-      {/* Card header */}
+      {/* Header */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h2 className="text-[28px] font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
-          {todoItems.length > 0 && (
-            <span className="text-sm font-bold text-primary-foreground bg-primary rounded-full h-7 min-w-[28px] flex items-center justify-center px-2">
-              {todoItems.length}
+          <h2 className="text-xl font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
+          {actionable.length > 0 && (
+            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+              {actionable.length}
             </span>
           )}
         </div>
@@ -202,116 +148,53 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
         </Link>
       </div>
 
-      {todoItems.length === 0 ? (
+      {actionable.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">All clear</p>
+          <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
         </div>
       ) : (
-        <>
-          {/* Tab row */}
-          <div className="flex items-center gap-1 -mt-2">
-            {BUCKETS.map(bucket => {
-              const isActive = activeBucket === bucket
-              const hasItems = counts[bucket] > 0
-              return (
-                <button
-                  key={bucket}
-                  onClick={() => setActiveBucket(bucket)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    isActive
-                      ? `${BUCKET_STYLE[bucket].tab_active} border`
-                      : 'text-muted-foreground hover:bg-muted/20 border border-transparent'
-                  } ${!hasItems ? 'opacity-40' : ''}`}
+        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          {actionable.map(item => {
+            const ctaText = ACTION_CTA[item.action_label] || 'View'
+
+            return (
+              <Link
+                key={item.id}
+                href={`/tickets?id=${item.ticket_id}`}
+                className="flex items-center gap-3 py-3 transition-colors min-w-0 hover:bg-muted/30 rounded-lg px-2 -mx-2 group"
+              >
+                {/* Left: info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                    {item.priority && <StatusBadge status={item.priority} size="sm" />}
+                    {item.sla_breached && (
+                      <span className="text-[9px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-1.5 py-px leading-none flex-shrink-0">
+                        SLA
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                    {item.action_context}
+                    <span className="ml-1.5">· {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+                  </p>
+                </div>
+
+                {/* Right: CTA button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-xs flex-shrink-0 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors"
+                  tabIndex={-1}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${BUCKET_STYLE[bucket].dot}`} />
-                  {bucket} <span className="tabular-nums">({counts[bucket]})</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* List */}
-          {visible.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">No items in this priority</p>
-            </div>
-          ) : (
-            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              {(() => {
-                const needsAction = visible.filter(i => i.action_type !== 'FOLLOW_UP')
-                const inProgress = visible.filter(i => i.action_type === 'FOLLOW_UP')
-
-                const renderItem = (item: TodoItem) => {
-                  const actionConfig = ACTION_ICON_MAP[item.action_type] || ACTION_ICON_MAP.FOLLOW_UP
-                  const ActionIcon = actionConfig.icon
-
-                  return (
-                    <Link
-                      key={item.id}
-                      href={`/tickets?id=${item.ticket_id}`}
-                      className="flex items-start gap-2 py-2.5 px-2 -mx-2 rounded-lg transition-colors min-w-0 hover:bg-muted/30"
-                    >
-                      {/* Left accent bar */}
-                      <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${BUCKET_STYLE[item.priority_bucket].dot}`} />
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                          {item.priority && <StatusBadge status={item.priority} size="sm" />}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
-                        <div className="flex items-center gap-1 mt-0.5 min-w-0">
-                          <ActionIcon className={`h-3 w-3 flex-shrink-0 ${actionConfig.color}`} />
-                          <span className={`text-xs font-medium truncate ${actionConfig.label_color}`}>
-                            {item.action_label}
-                          </span>
-                          {item.action_context && (
-                            <span className="text-[11px] text-muted-foreground truncate">· {item.action_context}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: time + SLA */}
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                        <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                          {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
-                        </span>
-                        {item.sla_breached && (
-                          <span className="text-[10px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none whitespace-nowrap">
-                            Breach
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                }
-
-                return (
-                  <>
-                    {needsAction.length > 0 && (
-                      <div className="flex flex-col divide-y divide-border/30">
-                        {needsAction.map(renderItem)}
-                      </div>
-                    )}
-                    {needsAction.length > 0 && inProgress.length > 0 && (
-                      <div className="flex items-center gap-2 py-2 my-1">
-                        <div className="flex-1 h-px bg-border/50" />
-                        <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">In progress</span>
-                        <div className="flex-1 h-px bg-border/50" />
-                      </div>
-                    )}
-                    {inProgress.length > 0 && (
-                      <div className="flex flex-col divide-y divide-border/30">
-                        {inProgress.map(renderItem)}
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
-            </div>
-          )}
-        </>
+                  {ctaText}
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </Link>
+            )
+          })}
+        </div>
       )}
 
     </div>
@@ -566,8 +449,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="h-full overflow-y-auto lg:overflow-hidden">
+    <div className="h-full overflow-y-auto lg:overflow-hidden">
         <div className="relative p-4 h-full flex flex-col gap-3">
           {/* Header — command bar: search left, controls right */}
           <div className="flex items-center justify-between flex-shrink-0 gap-4">
@@ -988,6 +870,5 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </TooltipProvider>
   )
 }
