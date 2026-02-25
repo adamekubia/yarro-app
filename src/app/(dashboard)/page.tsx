@@ -105,6 +105,7 @@ interface TodoItem {
 interface RecentEvent {
   event_type: string
   event_label: string
+  ticket_id: string | null
   actor_type: string | null
   actor_name: string | null
   property_label: string | null
@@ -123,16 +124,16 @@ const ACTION_CTA: Record<string, string> = {
   'Contractor unresponsive': 'Redispatch',
 }
 
-// Color-coded category badges per next_action_reason
-const REASON_BADGE: Record<string, { label: string; className: string }> = {
-  handoff_review:       { label: 'Handoff',           className: 'text-red-700 bg-red-500/15 border-red-500/25 dark:text-red-400' },
-  no_contractors:       { label: 'No contractors',    className: 'text-amber-700 bg-amber-500/15 border-amber-500/25 dark:text-amber-400' },
-  job_not_completed:    { label: 'Not completed',     className: 'text-purple-700 bg-purple-500/15 border-purple-500/25 dark:text-purple-400' },
-  landlord_declined:    { label: 'Landlord declined', className: 'text-orange-700 bg-orange-500/15 border-orange-500/25 dark:text-orange-400' },
-  landlord_no_response: { label: 'Landlord silent',   className: 'text-orange-700 bg-orange-500/15 border-orange-500/25 dark:text-orange-400' },
-  manager_approval:     { label: 'Needs approval',    className: 'text-blue-700 bg-blue-500/15 border-blue-500/25 dark:text-blue-400' },
-  awaiting_contractor:  { label: 'Awaiting reply',    className: 'text-sky-700 bg-sky-500/15 border-sky-500/25 dark:text-sky-400' },
-  awaiting_booking:     { label: 'Awaiting booking',  className: 'text-teal-700 bg-teal-500/15 border-teal-500/25 dark:text-teal-400' },
+// Dot + text badges per next_action_reason (distinct from StatusBadge pills)
+const REASON_BADGE: Record<string, { label: string; dot: string; text: string }> = {
+  handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
+  no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
+  job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
+  landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
+  landlord_no_response: { label: 'Landlord silent',   dot: 'bg-orange-400', text: 'text-orange-500 dark:text-orange-400' },
+  manager_approval:     { label: 'Needs approval',    dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400' },
+  awaiting_contractor:  { label: 'Awaiting reply',    dot: 'bg-sky-500',    text: 'text-sky-600 dark:text-sky-400' },
+  awaiting_booking:     { label: 'Awaiting booking',  dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400' },
 }
 
 function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
@@ -191,10 +192,11 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
                   <div className="flex items-center gap-2 mt-1">
                     {(() => {
-                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, className: 'text-muted-foreground bg-muted border-border/60' }
+                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
                       return (
-                        <span className={`text-xs font-semibold rounded-full px-2.5 py-0.5 leading-tight flex-shrink-0 border ${badge.className}`}>
-                          {badge.label}
+                        <span className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
                         </span>
                       )
                     })()}
@@ -289,7 +291,7 @@ export default function DashboardPage() {
       // Recent activity feed
       supabase.rpc('c1_get_recent_events' as never, {
         p_pm_id: propertyManager.id,
-        p_limit: 5,
+        p_limit: 15,
         p_cursor: null,
       } as never),
     ])
@@ -645,40 +647,46 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/30 overflow-hidden flex-1 min-h-0">
+              <div className="divide-y divide-border/30 overflow-y-auto flex-1 min-h-0">
                 {recentEvents.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-muted-foreground">
                     No recent activity
                   </div>
                 ) : (
-                  recentEvents.map((event, idx) => (
-                    <div
-                      key={`${event.event_type}-${event.occurred_at}-${idx}`}
-                      className="flex items-start justify-between px-4 py-3 gap-3 min-w-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-card-foreground truncate">{event.event_label}</p>
-                        {event.property_label && (
-                          <p className="text-xs text-muted-foreground truncate">{event.property_label}</p>
-                        )}
-                        {(event.actor_type || event.actor_name) && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {event.actor_type && (
-                              <span className="text-[11px] font-medium text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5 leading-none">
-                                {event.actor_type}
-                              </span>
-                            )}
-                            {event.actor_name && (
-                              <span className="text-xs text-muted-foreground truncate">{event.actor_name}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
+                  recentEvents.map((event, idx) => {
+                    const inner = (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-card-foreground truncate">{event.event_label}</p>
+                          {event.property_label && (
+                            <p className="text-xs text-muted-foreground truncate">{event.property_label}</p>
+                          )}
+                          {event.actor_name && (
+                            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{event.actor_name}</p>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
                         {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
                       </span>
-                    </div>
-                  ))
+                      </>
+                    )
+                    return event.ticket_id ? (
+                      <Link
+                        key={`${event.event_type}-${event.occurred_at}-${idx}`}
+                        href={`/tickets?id=${event.ticket_id}`}
+                        className="flex items-start justify-between px-4 py-2.5 gap-3 min-w-0 hover:bg-muted/30 transition-colors"
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div
+                        key={`${event.event_type}-${event.occurred_at}-${idx}`}
+                        className="flex items-start justify-between px-4 py-2.5 gap-3 min-w-0"
+                      >
+                        {inner}
+                      </div>
+                    )
+                  })
                 )}
               </div>
             </div>
