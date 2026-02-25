@@ -23,7 +23,9 @@ Deno.serve(async (req: Request) => {
     const phone = from.replace("whatsapp:", "").replace("+", "");
     if (!phone) return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
 
-    const displayBody = body || (numMedia > 0 ? "(media only)" : "(empty)");
+    const displayBody = body
+      || (interactiveData ? `(flow reply: ${interactiveData.slice(0, 300)})` : "")
+      || (numMedia > 0 ? "(media only)" : "(empty)");
     console.log(`[${FN}] Reply from ${phone}: ${displayBody.slice(0, 120)}`);
 
     const supabase = createSupabaseClient();
