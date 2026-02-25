@@ -166,7 +166,7 @@ export function Sidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <div className={cn(
-        'flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-200',
+        'flex flex-col h-full text-sidebar-foreground border-r border-sidebar-border transition-all duration-200',
         collapsed ? 'w-16' : 'w-64'
       )}>
         {/* Logo + Controls */}

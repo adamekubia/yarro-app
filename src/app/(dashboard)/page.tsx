@@ -1,33 +1,31 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
-import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
-import { KanbanBoard } from '@/components/kanban-board'
 import {
   Clock,
   ArrowRight,
   AlertTriangle,
   Wrench,
   X,
-  LayoutGrid,
-  Columns3,
   MessageSquare,
   Phone,
   User,
   Search,
+  Menu,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
   Sheet,
+  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Sidebar } from '@/components/sidebar'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +44,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { formatDistanceToNow } from 'date-fns'
 
 interface DashboardStats {
   totalTickets: number
@@ -96,6 +95,28 @@ interface TicketSummary {
   next_action_reason?: string | null
 }
 
+interface TodoItem {
+  id: string
+  ticket_id: string
+  issue_summary: string
+  property_label: string
+  action_label: string
+  action_context: string | null
+  waiting_since: string
+  priority_bucket: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'
+  sla_breached: boolean
+}
+
+interface RecentEvent {
+  event_type: string
+  event_label: string
+  actor_type: string | null
+  actor_name: string | null
+  property_label: string | null
+  metadata: unknown
+  occurred_at: string
+}
+
 // Action card descriptions for tooltips
 const ACTION_DESCRIPTIONS: Record<string, string> = {
   // To-do categories (wired to next_action field)
@@ -109,24 +130,140 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   landlord: 'Tickets waiting for landlord approval on the quoted price',
 }
 
-type ViewMode = 'stats' | 'board'
+function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
+  type Bucket = TodoItem['priority_bucket']
+
+  const BUCKETS: Bucket[] = ['URGENT', 'HIGH', 'NORMAL', 'LOW']
+
+  const PRIORITY_ACCENT: Record<Bucket, string> = {
+    URGENT: 'bg-red-400',
+    HIGH:   'bg-orange-400',
+    NORMAL: 'bg-yellow-400',
+    LOW:    'bg-green-400',
+  }
+
+  // Full counts from entire RPC result
+  const counts: Record<Bucket, number> = {
+    URGENT: todoItems.filter(i => i.priority_bucket === 'URGENT').length,
+    HIGH:   todoItems.filter(i => i.priority_bucket === 'HIGH').length,
+    NORMAL: todoItems.filter(i => i.priority_bucket === 'NORMAL').length,
+    LOW:    todoItems.filter(i => i.priority_bucket === 'LOW').length,
+  }
+
+  // Default: URGENT if any exist, else first non-empty bucket, else 'URGENT'
+  const defaultBucket: Bucket = BUCKETS.find(b => counts[b] > 0) ?? 'URGENT'
+  const [activeBucket, setActiveBucket] = useState<Bucket>(defaultBucket)
+
+  // Auto-select first non-empty bucket when current bucket empties (e.g. after data loads)
+  const firstNonEmpty = BUCKETS.find(b => counts[b] > 0) ?? 'URGENT'
+  useEffect(() => {
+    if (todoItems.length === 0) return
+    if (counts[activeBucket] > 0) return
+    if (firstNonEmpty !== activeBucket) setActiveBucket(firstNonEmpty)
+  }, [todoItems.length, activeBucket, counts.URGENT, counts.HIGH, counts.NORMAL, counts.LOW])
+
+  // Filter by active bucket — no re-sort, backend order preserved
+  const visible = todoItems.filter(i => i.priority_bucket === activeBucket)
+
+  return (
+    <div className="bg-white dark:bg-card rounded-xl border border-border/60 p-8 flex flex-col gap-6 lg:flex-1 lg:min-h-0 min-w-0">
+
+      {/* Card header */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <h2 className="text-[28px] font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
+          {todoItems.length > 0 && (
+            <span className="text-sm font-bold text-primary-foreground bg-primary rounded-full h-7 min-w-[28px] flex items-center justify-center px-2">
+              {todoItems.length}
+            </span>
+          )}
+        </div>
+        <Link href="/tickets" className="flex-shrink-0">
+          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+            View all
+            <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
+        </Link>
+      </div>
+
+      {todoItems.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">All clear</p>
+        </div>
+      ) : (
+        <>
+          {/* Tab row */}
+          <div className="flex items-center gap-0.5 -mt-2">
+            {BUCKETS.map(bucket => (
+              <button
+                key={bucket}
+                onClick={() => setActiveBucket(bucket)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                  activeBucket === bucket
+                    ? 'bg-muted/30 text-card-foreground border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/20 border border-transparent'
+                }`}
+              >
+                {bucket} <span className="tabular-nums">({counts[bucket]})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* List */}
+          {visible.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">No items in this priority</p>
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+              {visible.map(item => (
+                <Link
+                  key={item.id}
+                  href={`/tickets?id=${item.ticket_id}`}
+                  className="flex items-start gap-3 py-3 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors min-w-0"
+                >
+                  <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${PRIORITY_ACCENT[item.priority_bucket]}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                      <span className="text-xs text-primary font-medium truncate">{item.action_label}</span>
+                      {item.action_context && (
+                        <span className="text-xs text-muted-foreground truncate">· {item.action_context}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
+                    </span>
+                    {item.sla_breached && (
+                      <span className="text-[11px] font-medium text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 leading-none">
+                        Breach
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+    </div>
+  )
+}
 
 export default function DashboardPage() {
-  const router = useRouter()
   const { propertyManager } = usePM()
-  const { dateRange, setDateRange } = useDateRange()
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('dashboard-view') as ViewMode) || 'stats'
-    }
-    return 'stats'
-  })
+  const { dateRange } = useDateRange()
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [recentTickets, setRecentTickets] = useState<TicketSummary[]>([])
   const [allTickets, setAllTickets] = useState<TicketSummary[]>([])
   const [awaitingTickets, setAwaitingTickets] = useState<TicketSummary[]>([])
   const [awaitingType, setAwaitingType] = useState<string | null>(null)
   const [handoffConversations, setHandoffConversations] = useState<HandoffConversation[]>([])
+  const [todoItems, setTodoItems] = useState<TodoItem[]>([])
+  const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([])
   const [selectedHandoff, setSelectedHandoff] = useState<HandoffConversation | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
@@ -135,18 +272,12 @@ export default function DashboardPage() {
   const [searchFocused, setSearchFocused] = useState(false)
   const supabase = createClient()
 
-  // Persist view mode
-  const handleViewChange = (mode: ViewMode) => {
-    setViewMode(mode)
-    localStorage.setItem('dashboard-view', mode)
-  }
-
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -189,6 +320,14 @@ export default function DashboardPage() {
         .eq('handoff', true)
         .eq('status', 'open')
         .order('last_updated', { ascending: false }),
+      // Unified to-do queue — sorted by backend priority scoring
+      supabase.rpc('c1_get_dashboard_todo' as never, { p_pm_id: propertyManager.id } as never),
+      // Recent activity feed
+      supabase.rpc('c1_get_recent_events' as never, {
+        p_pm_id: propertyManager.id,
+        p_limit: 5,
+        p_cursor: null,
+      } as never),
     ])
 
     const tickets = ticketsRes.data
@@ -274,8 +413,13 @@ export default function DashboardPage() {
         next_action_reason: t.next_action_reason || null,
       }))
       setAllTickets(mappedTickets)
-      setRecentTickets(mappedTickets.slice(0, 5))
     }
+
+    const todoData = (todoRes.data as unknown as TodoItem[] | null) ?? []
+    setTodoItems(todoData)
+
+    const eventsPayload = (eventsRes.data as unknown as { events: RecentEvent[] } | null)
+    setRecentEvents(eventsPayload?.events ?? [])
 
     setLoading(false)
   }, [propertyManager, dateRange, supabase])
@@ -343,7 +487,7 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
+      <div className="p-4 h-full overflow-hidden">
         <div className="animate-pulse space-y-3">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="h-[168px] bg-muted rounded-xl" />
@@ -359,243 +503,101 @@ export default function DashboardPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
-        <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:hidden" />
-
+      <div className="h-full overflow-y-auto lg:overflow-hidden">
         <div className="relative p-4 h-full flex flex-col gap-3">
           {/* Header — command bar: search left, controls right */}
           <div className="flex items-center justify-between flex-shrink-0 gap-4">
-            {/* LEFT: global search — dominant element */}
-            <div className="relative w-72">
-              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  placeholder="Search tickets…"
-                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              {searchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  {searchResults.map((ticket) => (
+            {/* LEFT: hamburger (mobile only) + search */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 flex-shrink-0">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-64 overflow-y-auto bg-card">
+                  <Sidebar />
+                </SheetContent>
+              </Sheet>
+              <div className="relative w-full max-w-72 min-w-0">
+                <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
+                  <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    placeholder="Search tickets…"
+                    className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {searchFocused && searchResults.length > 0 && (
+                  <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                    {searchResults.map((ticket) => (
+                      <Link
+                        key={ticket.id}
+                        href={`/tickets?id=${ticket.id}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                        </div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </Link>
+                    ))}
                     <Link
-                      key={ticket.id}
-                      href={`/tickets?id=${ticket.id}`}
+                      href="/tickets"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                      </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      View all results
+                      <ArrowRight className="h-3 w-3" />
                     </Link>
-                  ))}
-                  <Link
-                    href="/tickets"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    View all results
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              )}
-            </div>
-            {/* RIGHT: controls */}
-            <div className="flex items-center gap-2">
-              <Link href="/tickets?create=true">
-                <InteractiveHoverButton text="Create" className="w-24 text-xs h-9" />
-              </Link>
-              {/* View Toggle */}
-              <div className="flex items-center bg-muted rounded-lg p-0.5">
-                <button
-                  onClick={() => handleViewChange('stats')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    viewMode === 'stats'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Stats
-                </button>
-                <button
-                  onClick={() => handleViewChange('board')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    viewMode === 'board'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Columns3 className="h-3.5 w-3.5" />
-                  Board
-                </button>
+                  </div>
+                )}
               </div>
-              <DateFilter value={dateRange} onChange={setDateRange} />
+            </div>{/* end left group */}
+            {/* RIGHT: Create ticket button */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link href="/tickets?create=true">
+                <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
+              </Link>
             </div>
           </div>
 
-          {/* Main Content - Stats or Board view */}
-          {viewMode === 'board' ? (
-            <div className="flex-1 min-h-0">
-              <KanbanBoard
-                tickets={allTickets}
-                onTicketClick={(id) => router.push(`/tickets?id=${id}`)}
-                onHandoffReview={(id) => router.push(`/tickets?id=${id}&action=complete`)}
-              />
-            </div>
-          ) : (
-          /* Dashboard — Top cards + full-width recent tickets */
-          <div className="flex-1 min-h-0 flex flex-col gap-3">
-            {/* Top section: two columns */}
-            <div className="grid grid-cols-[7fr_3fr] gap-3 flex-[3] min-h-0">
-              {/* LEFT: To-do — section header + 3 premium cards */}
-              {(() => {
-                const needsAttentionTickets = allTickets.filter((t) => t.next_action === 'needs_attention').sort(byAge)
-                const assignContractorTickets = allTickets.filter((t) => t.next_action === 'assign_contractor').sort(byAge)
-                const followUpTickets = allTickets.filter((t) => t.next_action === 'follow_up').sort(byAge)
-                const totalAction = needsAttentionTickets.length + assignContractorTickets.length + followUpTickets.length
+          {/* Main Content */}
+          {/* Dashboard — To-do command centre + right column */}
+          <div className="lg:flex-1 lg:min-h-0 flex flex-col lg:flex-row gap-3">
+            {/* To-do — primary left column */}
+            <TodoPanel todoItems={todoItems} />
 
-                const categories = [
-                  {
-                    key: 'needs_attention' as const,
-                    label: 'Needs attention',
-                    tickets: needsAttentionTickets,
-                    icon: AlertTriangle,
-                    accent: 'bg-red-500',
-                    iconBg: 'bg-red-500/15',
-                    iconColor: 'text-red-500',
-                    countColor: 'text-red-500',
-                  },
-                  {
-                    key: 'assign_contractor' as const,
-                    label: 'Assign contractors',
-                    tickets: assignContractorTickets,
-                    icon: Wrench,
-                    accent: 'bg-amber-500',
-                    iconBg: 'bg-amber-500/15',
-                    iconColor: 'text-amber-500',
-                    countColor: 'text-amber-500',
-                  },
-                  {
-                    key: 'follow_up' as const,
-                    label: 'Follow-up',
-                    tickets: followUpTickets,
-                    icon: Clock,
-                    accent: 'bg-orange-500',
-                    iconBg: 'bg-orange-500/15',
-                    iconColor: 'text-orange-500',
-                    countColor: 'text-orange-500',
-                  },
-                ]
-
-                return (
-                  <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-6 h-full">
-
-                    {/* Card header */}
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-bold text-card-foreground whitespace-nowrap">To-do</h2>
-                      {totalAction > 0 && (
-                        <span className="text-sm font-bold text-white bg-red-500 rounded-full h-7 min-w-[28px] flex items-center justify-center px-2">
-                          {totalAction}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 3 internal lanes */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-border/60 gap-y-6 lg:gap-y-0 flex-1 min-h-0">
-                      {categories.map((cat) => (
-                        <div key={cat.key} className="flex flex-col min-w-0 lg:px-6 lg:first:pl-0 lg:last:pr-0">
-
-                          {/* Lane header: icon + label + count */}
-                          <div className="flex items-center gap-2 mb-4">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 cursor-help ${cat.tickets.length > 0 ? cat.iconBg : 'bg-muted'}`}>
-                                  <cat.icon className={`h-3.5 w-3.5 ${cat.tickets.length > 0 ? cat.iconColor : 'text-muted-foreground/50'}`} />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[cat.key]}</p></TooltipContent>
-                            </Tooltip>
-                            <p className={`text-sm font-medium min-w-0 truncate ${cat.tickets.length > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>
-                              {cat.label}
-                            </p>
-                            <span className={`ml-auto flex-shrink-0 text-xl font-bold tabular-nums ${cat.tickets.length > 0 ? cat.countColor : 'text-muted-foreground/30'}`}>
-                              {cat.tickets.length}
-                            </span>
-                          </div>
-
-                          {/* Preview rows */}
-                          <div className="flex flex-col gap-2 flex-1">
-                            {cat.tickets.slice(0, 3).map((ticket) => (
-                              <Link
-                                key={ticket.id}
-                                href={`/tickets?id=${ticket.id}`}
-                                className="flex items-center gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/40 transition-colors"
-                              >
-                                <div className={`w-0.5 h-5 rounded-full flex-shrink-0 ${cat.accent}`} />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium text-card-foreground truncate leading-tight">
-                                    {ticket.issue_description || 'No description'}
-                                  </p>
-                                  <p className="text-[11px] text-muted-foreground truncate leading-tight">
-                                    {ticket.address || '—'}
-                                  </p>
-                                </div>
-                                {ticket.priority === 'emergency' && (
-                                  <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                    EMERGENCY
-                                  </span>
-                                )}
-                              </Link>
-                            ))}
-                            {cat.tickets.length === 0 && (
-                              <p className="text-xs text-muted-foreground/50 px-2 py-1">All clear.</p>
-                            )}
-                          </div>
-
-                          {/* See all footer — pinned to bottom */}
-                          {cat.tickets.length > 0 ? (
-                            <button
-                              onClick={() => showAwaitingTickets(cat.key)}
-                              className="mt-auto pt-3 text-xs font-medium flex items-center justify-end gap-1 text-primary hover:text-primary/80 cursor-pointer transition-colors"
-                            >
-                              See all <ArrowRight className="h-3 w-3" />
-                            </button>
-                          ) : (
-                            <span className="mt-auto pt-3 text-xs font-medium flex items-center justify-end gap-1 text-muted-foreground/40">
-                              See all <ArrowRight className="h-3 w-3" />
-                            </span>
-                          )}
-
-                        </div>
-                      ))}
-                    </div>
-
-                  </div>
-                )
-              })()}
-
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
               {/* RIGHT: Scheduled — chronological job list */}
               {(() => {
                 const scheduledTickets = allTickets
                   .filter((t) => t.next_action_reason === 'scheduled' && t.scheduled_date)
-                  .sort((a, b) => new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime())
+                  .sort((a, b) => {
+                    const ta = new Date(a.scheduled_date!).getTime()
+                    const tb = new Date(b.scheduled_date!).getTime()
+                    if (isNaN(ta) && isNaN(tb)) return 0
+                    if (isNaN(ta)) return 1
+                    if (isNaN(tb)) return -1
+                    return ta - tb
+                  })
+                  .slice(0, 5)
 
                 const byDate: Record<string, TicketSummary[]> = {}
                 for (const t of scheduledTickets) {
@@ -606,33 +608,52 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-4 h-full">
+                  <div className="rounded-xl p-4 flex flex-col gap-4 min-w-0 min-h-0 overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-card-foreground">Scheduled</h3>
-                      {scheduledTickets.length > 0 && (
-                        <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                          {scheduledTickets.length}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className="text-xl font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {scheduledTickets.length > 0 && (
+                          <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                            {scheduledTickets.length}
+                          </span>
+                        )}
+                        <Link href="/tickets">
+                          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+                            View all
+                            <ArrowRight className="ml-1 h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="flex-1 flex flex-col min-h-0">
                       {groups.length === 0 ? (
-                        <p className="text-xs text-muted-foreground/60 py-2">No jobs scheduled</p>
+                        <div className="flex gap-3 items-center">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground/40">—</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground/40">No scheduled jobs</p>
+                        </div>
                       ) : (
                         <div className="flex flex-col gap-4">
                           {groups.map(([date, tickets]) => (
-                            <div key={date}>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                {date}
-                              </p>
-                              <div className="flex flex-col gap-1.5">
+                            <div key={date} className="flex gap-3">
+                              {(() => {
+                                const [day, month] = date.split(' ')
+                                return (
+                                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/60 flex flex-col items-center justify-center">
+                                    <span className="text-[20px] font-semibold text-card-foreground leading-none">{day}</span>
+                                    <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground leading-none mt-0.5">{month}</span>
+                                  </div>
+                                )
+                              })()}
+                              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                                 {tickets.map((ticket) => (
                                   <Link
                                     key={ticket.id}
                                     href={`/tickets?id=${ticket.id}`}
-                                    className="flex items-start gap-2 py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+                                    className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
                                   >
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-card-foreground truncate">
@@ -647,63 +668,61 @@ export default function DashboardPage() {
                           ))}
                         </div>
                       )}
-                      {groups.length > 0 && (
-                        <p className="mt-auto pt-4 text-xs text-muted-foreground/40 text-center">
-                          No more scheduled jobs in this period
-                        </p>
-                      )}
                     </div>
                   </div>
                 )
               })()}
-            </div>
 
-            {/* Bottom: Recent Tickets — full width, no scroll */}
-            <div className="flex-shrink-0 bg-card rounded-xl border border-border flex flex-col">
-              <div className="flex items-center px-4 py-2 border-b border-border">
-                <h3 className="text-sm font-semibold text-card-foreground flex-1">Recent Tickets</h3>
-                <Link href="/tickets">
+            {/* Recent activity */}
+            <div className="rounded-xl flex flex-col min-h-0 overflow-hidden lg:border-t lg:border-border/40">
+              <div className="flex items-center px-4 py-3 border-b border-border/40 min-w-0">
+                <h3 className="text-xl font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
+                <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
                     <ArrowRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/50">
-                {recentTickets.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    No tickets found for this period
+              <div className="divide-y divide-border/30 overflow-hidden flex-1 min-h-0">
+                {recentEvents.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-muted-foreground">
+                    No recent activity
                   </div>
                 ) : (
-                  recentTickets.map((ticket) => (
-                    <Link
-                      key={ticket.id}
-                      href={`/tickets?id=${ticket.id}`}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-all duration-200"
+                  recentEvents.map((event, idx) => (
+                    <div
+                      key={`${event.event_type}-${event.occurred_at}-${idx}`}
+                      className="flex items-start justify-between px-4 py-3 gap-3 min-w-0"
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-card-foreground truncate">
-                          {ticket.issue_description || 'No description'}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {ticket.address}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 ml-3">
-                        {ticket.display_stage && (
-                          <StatusBadge status={ticket.display_stage} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-card-foreground truncate">{event.event_label}</p>
+                        {event.property_label && (
+                          <p className="text-xs text-muted-foreground truncate">{event.property_label}</p>
                         )}
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDate(ticket.date_logged)}
-                        </span>
+                        {(event.actor_type || event.actor_name) && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {event.actor_type && (
+                              <span className="text-[11px] font-medium text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5 leading-none">
+                                {event.actor_type}
+                              </span>
+                            )}
+                            {event.actor_name && (
+                              <span className="text-xs text-muted-foreground truncate">{event.actor_name}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </Link>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
+                        {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
+                      </span>
+                    </div>
                   ))
                 )}
               </div>
             </div>
           </div>
-          )}
+          </div>
         </div>
 
         {/* Awaiting Tickets Sheet */}

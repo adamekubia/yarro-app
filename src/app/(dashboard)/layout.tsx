@@ -91,8 +91,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
+    <div className="flex h-screen bg-white dark:bg-background">
+      <div className="hidden lg:flex">
+        <Sidebar />
+      </div>
       <main className="flex-1 overflow-auto">
         <DateRangeProvider>
           <ErrorBoundary>
