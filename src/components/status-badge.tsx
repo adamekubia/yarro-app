@@ -53,6 +53,11 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'awaiting booking':    { border: 'border-indigo-400 dark:border-indigo-500', text: 'text-indigo-600 dark:text-indigo-400' },
   'not completed':       { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
   'handoff':             { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
+  'no contractors':      { border: 'border-orange-400 dark:border-orange-500', text: 'text-orange-600 dark:text-orange-400' },
+  'landlord declined':   { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
+  'landlord no response':{ border: 'border-amber-400 dark:border-amber-500', text: 'text-amber-600 dark:text-amber-400' },
+  'dismissed':           { border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-500 dark:text-gray-400' },
+  'archived':            { border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-400 dark:text-gray-500' },
 
   // Conversation stages
   greeting:                { border: 'border-blue-400 dark:border-blue-500', text: 'text-blue-600 dark:text-blue-400' },
