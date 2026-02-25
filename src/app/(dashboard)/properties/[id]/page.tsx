@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
-import { StatusBadge } from '@/components/status-badge'
+import { PriorityDot } from '@/components/priority-dot'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -356,8 +356,8 @@ export default function PropertyDetailPage() {
                   <Link key={t.id} href={`/tenants/${t.id}`} className="flex items-center justify-between py-2 hover:bg-muted/30 -mx-3 px-3 rounded transition-colors">
                     <span className="text-sm font-medium">{t.full_name}</span>
                     <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                      <span className="capitalize">{(t.role_tag || 'tenant').replace(/_/g, ' ')}</span>
                       {t.phone && <span>{formatPhoneDisplay(t.phone)}</span>}
-                      <span className="capitalize w-14 text-right">{(t.role_tag || 'tenant').replace(/_/g, ' ')}</span>
                     </div>
                   </Link>
                 ))}
@@ -402,25 +402,28 @@ export default function PropertyDetailPage() {
             {tickets.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tickets</p>
             ) : (
-              <div className="space-y-1">
+              <div className="divide-y divide-border/50">
                 {tickets.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setSelectedTicketId(t.id)}
                     className={cn(
-                      "w-full text-left py-3 px-3 -mx-3 rounded-lg hover:bg-muted/30 transition-colors",
+                      "w-full text-left py-3 hover:bg-muted/30 -mx-3 px-3 transition-colors first:pt-0",
                       t.archived && "opacity-40"
                     )}
                   >
-                    <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {t.priority && <StatusBadge status={t.priority} />}
-                      <StatusBadge status={getDisplayStage(t.next_action_reason, t.status, t.archived)} />
+                    <div className="flex items-start gap-2">
+                      {t.priority && <PriorityDot priority={t.priority} className="mt-1.5 flex-shrink-0" />}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {getDisplayStage(t.next_action_reason, t.status, t.archived)}
+                          {' · '}
+                          {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          {t.category && <> · {t.category}</>}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      {t.category && <> · {t.category}</>}
-                    </p>
                   </button>
                 ))}
               </div>

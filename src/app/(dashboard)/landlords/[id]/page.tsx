@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
-import { StatusBadge } from '@/components/status-badge'
+import { PriorityDot } from '@/components/priority-dot'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
@@ -239,19 +239,22 @@ export default function LandlordDetailPage() {
             {tickets.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tickets</p>
             ) : (
-              <div className="space-y-1">
+              <div className="divide-y divide-border/50">
                 {tickets.map((t) => (
-                  <button key={t.id} onClick={() => setSelectedTicketId(t.id)} className={`w-full text-left py-3 px-3 -mx-3 rounded-lg hover:bg-muted/30 transition-colors ${t.archived ? 'opacity-40' : ''}`}>
-                    <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {t.priority && <StatusBadge status={t.priority} />}
-                      <StatusBadge status={getDisplayStage(t.next_action_reason, t.status, t.archived)} />
+                  <button key={t.id} onClick={() => setSelectedTicketId(t.id)} className={`w-full text-left py-3 hover:bg-muted/30 -mx-3 px-3 transition-colors first:pt-0 ${t.archived ? 'opacity-40' : ''}`}>
+                    <div className="flex items-start gap-2">
+                      {t.priority && <PriorityDot priority={t.priority} className="mt-1.5 flex-shrink-0" />}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {getDisplayStage(t.next_action_reason, t.status, t.archived)}
+                          {' · '}
+                          {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          {propertyAddressMap[t.property_id] && <> · {propertyAddressMap[t.property_id]}</>}
+                          {t.category && <> · {t.category}</>}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      {propertyAddressMap[t.property_id] && <> · {propertyAddressMap[t.property_id]}</>}
-                      {t.category && <> · {t.category}</>}
-                    </p>
                   </button>
                 ))}
               </div>
