@@ -121,7 +121,7 @@ export function Sidebar() {
 
   // Shared nav link renderer
   const NavLink = ({ href, label, icon: Icon, count }: { href: string; label: string; icon: React.ElementType; count?: number | null }) => {
-    const isActive = pathname === href
+    const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
 
     const link = (
       <Link

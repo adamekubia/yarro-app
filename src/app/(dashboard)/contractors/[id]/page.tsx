@@ -8,27 +8,20 @@ import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { StatusBadge } from '@/components/status-badge'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Wrench,
-  Phone,
-  Mail,
-  Building2,
-  Ticket,
   Pencil,
   Save,
   X,
@@ -327,40 +320,37 @@ export default function ContractorDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/contractors')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-muted-foreground" />
-                <h1 className="text-xl font-semibold">{contractor.contractor_name}</h1>
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <div className="flex gap-1">
-                  {categories.map((cat) => (
-                    <Badge key={cat} variant="outline" className="text-xs">
-                      {cat}
-                    </Badge>
-                  ))}
-                </div>
-                {contractor.contractor_phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5" />
-                    {formatPhoneDisplay(contractor.contractor_phone)}
-                  </span>
-                )}
-                <Badge variant={contractor.active ? 'default' : 'secondary'} className="text-xs">
-                  {contractor.active ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
+      <div className="flex-shrink-0 px-10 pt-8 pb-6 border-b">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <button
+              onClick={() => router.push('/contractors')}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Contractors
+            </button>
+            <h1 className="text-3xl font-bold tracking-tight">{contractor.contractor_name}</h1>
+            <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+              {categories.length > 0 && (
+                <>
+                  <span>{categories.join(', ')}</span>
+                  <span className="text-muted-foreground/40">·</span>
+                </>
+              )}
+              {contractor.contractor_phone && (
+                <>
+                  <span>{formatPhoneDisplay(contractor.contractor_phone)}</span>
+                  <span className="text-muted-foreground/40">·</span>
+                </>
+              )}
+              <span className={contractor.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+                {contractor.active ? 'Active' : 'Inactive'}
+              </span>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-6 flex-shrink-0">
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}>
@@ -392,321 +382,275 @@ export default function ContractorDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Details + Categories + Properties */}
+        <div className="overflow-y-auto flex-shrink-0 max-h-[55%]">
 
-          {/* Contact Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Contact Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Name</label>
+          {/* Contact Details */}
+          <div className="px-10 py-6 border-b">
+            {isEditing && editedData ? (
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1.5 block">Name</label>
+                  <Input
+                    value={editedData.contractor_name}
+                    onChange={(e) => updateField('contractor_name', e.target.value)}
+                    placeholder="ABC Plumbing"
+                    className={validationErrors.contractor_name ? 'border-destructive' : ''}
+                  />
+                  {validationErrors.contractor_name && (
+                    <p className="text-xs text-destructive mt-1">{validationErrors.contractor_name}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Phone</label>
                     <Input
-                      value={editedData.contractor_name}
-                      onChange={(e) => updateField('contractor_name', e.target.value)}
-                      placeholder="ABC Plumbing"
-                      className={validationErrors.contractor_name ? 'border-destructive' : ''}
+                      type="tel"
+                      value={editedData.contractor_phone}
+                      onChange={(e) => updateField('contractor_phone', e.target.value)}
+                      placeholder="07700 900123"
+                      className={validationErrors.contractor_phone ? 'border-destructive' : ''}
                     />
-                    {validationErrors.contractor_name && (
-                      <p className="text-xs text-destructive">{validationErrors.contractor_name}</p>
+                    {validationErrors.contractor_phone && (
+                      <p className="text-xs text-destructive mt-1">{validationErrors.contractor_phone}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Phone</label>
-                      <Input
-                        type="tel"
-                        value={editedData.contractor_phone}
-                        onChange={(e) => updateField('contractor_phone', e.target.value)}
-                        placeholder="07700 900123"
-                        className={validationErrors.contractor_phone ? 'border-destructive' : ''}
-                      />
-                      {validationErrors.contractor_phone && (
-                        <p className="text-xs text-destructive">{validationErrors.contractor_phone}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Email</label>
-                      <Input
-                        type="email"
-                        value={editedData.contractor_email || ''}
-                        onChange={(e) => updateField('contractor_email', e.target.value || null)}
-                        placeholder="contractor@email.com"
-                        className={validationErrors.contractor_email ? 'border-destructive' : ''}
-                      />
-                      {validationErrors.contractor_email && (
-                        <p className="text-xs text-destructive">{validationErrors.contractor_email}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium">Active</label>
-                    <Switch
-                      checked={editedData.active}
-                      onCheckedChange={(checked) => updateField('active', checked)}
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Email</label>
+                    <Input
+                      type="email"
+                      value={editedData.contractor_email || ''}
+                      onChange={(e) => updateField('contractor_email', e.target.value || null)}
+                      placeholder="contractor@email.com"
+                      className={validationErrors.contractor_email ? 'border-destructive' : ''}
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {editedData.active ? 'Active' : 'Inactive'}
-                    </span>
+                    {validationErrors.contractor_email && (
+                      <p className="text-xs text-destructive mt-1">{validationErrors.contractor_email}</p>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="text-sm font-medium mt-0.5">{contractor.contractor_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <p className="text-sm font-medium mt-0.5">
-                      <Badge variant={contractor.active ? 'default' : 'secondary'}>
-                        {contractor.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="text-sm font-medium mt-0.5 flex items-center gap-1">
-                      {contractor.contractor_phone ? (
-                        <>
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                          {formatPhoneDisplay(contractor.contractor_phone)}
-                        </>
-                      ) : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium mt-0.5 flex items-center gap-1">
-                      {contractor.contractor_email ? (
-                        <>
-                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                          {contractor.contractor_email}
-                        </>
-                      ) : '-'}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-muted-foreground">Active</label>
+                  <Switch
+                    checked={editedData.active}
+                    onCheckedChange={(checked) => updateField('active', checked)}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {editedData.active ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-x-10 gap-y-5">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                  <p className="text-sm">{contractor.contractor_phone ? formatPhoneDisplay(contractor.contractor_phone) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Email</p>
+                  <p className="text-sm">{contractor.contractor_email || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <p className={`text-sm ${contractor.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                    {contractor.active ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Categories Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wrench className="h-4 w-4" /> Categories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-3">
-                  {editedData.categories.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {editedData.categories.map((cat) => (
-                        <Badge key={cat} variant="secondary" className="gap-1 pr-1">
-                          {cat}
+          {/* Categories */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Categories</h2>
+            {isEditing && editedData ? (
+              <div className="space-y-3">
+                {editedData.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {editedData.categories.map((cat) => (
+                      <span key={cat} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
+                        {cat}
+                        <button
+                          type="button"
+                          onClick={() => handleCategoryToggle(cat)}
+                          className="hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border bg-background hover:bg-accent/50 transition-colors text-left ${
+                        validationErrors.category ? 'border-destructive' : 'border-input'
+                      }`}
+                    >
+                      <span className="text-muted-foreground">
+                        {editedData.categories.length === 0 ? 'Select categories...' : 'Add more...'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-1.5 max-h-64 overflow-y-auto" align="start">
+                    {CATEGORY_OPTIONS.map((opt) => {
+                      const isSelected = editedData.categories.includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleCategoryToggle(opt.value)}
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? 'bg-primary border-primary' : 'border-input'
+                          }`}>
+                            {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                          <span>{opt.label}</span>
+                        </button>
+                      )
+                    })}
+                  </PopoverContent>
+                </Popover>
+                {validationErrors.category && (
+                  <p className="text-xs text-destructive">{validationErrors.category}</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm">
+                {categories.length > 0 ? categories.join(', ') : <span className="text-muted-foreground">No categories assigned</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Properties */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              Properties
+              {assignedProperties.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{assignedProperties.length}</span>}
+            </h2>
+            {isEditing && editedData ? (
+              <div className="space-y-3">
+                {editedData.property_ids.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {editedData.property_ids.map((id) => {
+                      const prop = allProperties.find((p) => p.id === id)
+                      return prop ? (
+                        <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
+                          <span className="truncate max-w-[200px]">{prop.address}</span>
                           <button
                             type="button"
-                            onClick={() => handleCategoryToggle(cat)}
-                            className="hover:bg-muted rounded p-0.5"
+                            onClick={() => handlePropertyToggle(id)}
+                            className="hover:text-destructive transition-colors"
                           >
                             <X className="h-3 w-3" />
                           </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className={`flex items-center justify-between w-full h-9 px-3 text-sm rounded-md border bg-background hover:bg-accent/50 transition-colors text-left ${
-                          validationErrors.category ? 'border-destructive' : 'border-input'
-                        }`}
-                      >
-                        <span className="text-muted-foreground">
-                          {editedData.categories.length === 0 ? 'Select categories...' : 'Add more...'}
                         </span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-1.5 max-h-64 overflow-y-auto" align="start">
-                      {CATEGORY_OPTIONS.map((opt) => {
-                        const isSelected = editedData.categories.includes(opt.value)
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handleCategoryToggle(opt.value)}
-                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
-                          >
-                            <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-primary border-primary' : 'border-input'
-                            }`}>
-                              {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                            </div>
-                            <span>{opt.label}</span>
-                          </button>
-                        )
-                      })}
-                    </PopoverContent>
-                  </Popover>
-                  {validationErrors.category && (
-                    <p className="text-xs text-destructive">{validationErrors.category}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {categories.length > 0 ? categories.map((cat) => (
-                    <Badge key={cat} variant="outline">
-                      <Wrench className="h-3 w-3 mr-1" />
-                      {cat}
-                    </Badge>
-                  )) : (
-                    <p className="text-sm text-muted-foreground">No categories assigned</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Properties Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="h-4 w-4" /> Properties
-                <Badge variant="outline" className="ml-1">{assignedProperties.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-3">
-                  {editedData.property_ids.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {editedData.property_ids.map((id) => {
-                        const prop = allProperties.find((p) => p.id === id)
-                        return prop ? (
-                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                            <span className="truncate max-w-[200px]">{prop.address}</span>
-                            <button
-                              type="button"
-                              onClick={() => handlePropertyToggle(id)}
-                              className="hover:bg-muted rounded p-0.5"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ) : null
-                      })}
-                    </div>
-                  )}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center justify-between w-full h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left"
-                      >
-                        <span className="text-muted-foreground">
-                          {editedData.property_ids.length === 0 ? 'Select properties...' : 'Add more...'}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
-                      {allProperties.map((prop) => {
-                        const isSelected = editedData.property_ids.includes(prop.id)
-                        return (
-                          <button
-                            key={prop.id}
-                            type="button"
-                            onClick={() => handlePropertyToggle(prop.id)}
-                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
-                          >
-                            <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-primary border-primary' : 'border-input'
-                            }`}>
-                              {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                            </div>
-                            <span className="truncate">{prop.address}</span>
-                          </button>
-                        )
-                      })}
-                      {allProperties.length === 0 && (
-                        <p className="text-xs text-muted-foreground p-2">No properties available</p>
-                      )}
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              ) : assignedProperties.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No properties assigned</p>
-              ) : (
-                <div className="space-y-2">
-                  {assignedProperties.map((prop) => (
-                    <Link
-                      key={prop.id}
-                      href={`/properties/${prop.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="text-sm font-medium truncate">{prop.address}</p>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Tickets Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Ticket className="h-4 w-4" /> Tickets
-                {openTickets.length > 0 && (
-                  <Badge className="bg-primary text-xs ml-1">{openTickets.length} open</Badge>
+                      ) : null
+                    })}
+                  </div>
                 )}
-                {closedTickets.length > 0 && (
-                  <Badge variant="outline" className="text-xs ml-1">{closedTickets.length} closed</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tickets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tickets for this contractor</p>
-              ) : (
-                <div className="space-y-2">
-                  {tickets.map((t) => (
+                <Popover>
+                  <PopoverTrigger asChild>
                     <button
-                      key={t.id}
-                      onClick={() => setSelectedTicketId(t.id)}
-                      className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                      type="button"
+                      className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">
-                            {t.issue_title || t.issue_description || 'Maintenance request'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                          <span>{new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                          {t.category && <span>{t.category}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        {t.priority && <StatusBadge status={t.priority} />}
-                        <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
-                      </div>
+                      <span className="text-muted-foreground">
+                        {editedData.property_ids.length === 0 ? 'Select properties...' : 'Add more...'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
+                    {allProperties.map((prop) => {
+                      const isSelected = editedData.property_ids.includes(prop.id)
+                      return (
+                        <button
+                          key={prop.id}
+                          type="button"
+                          onClick={() => handlePropertyToggle(prop.id)}
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? 'bg-primary border-primary' : 'border-input'
+                          }`}>
+                            {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                          <span className="truncate">{prop.address}</span>
+                        </button>
+                      )
+                    })}
+                    {allProperties.length === 0 && (
+                      <p className="text-xs text-muted-foreground p-2">No properties available</p>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : assignedProperties.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No properties assigned</p>
+            ) : (
+              <div>
+                {assignedProperties.map((prop) => (
+                  <Link
+                    key={prop.id}
+                    href={`/properties/${prop.id}`}
+                    className="flex items-center py-2.5 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded transition-colors"
+                  >
+                    <span className="text-sm font-medium">{prop.address}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
+        {/* Tickets — fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col border-t">
+          <div className="flex-shrink-0 px-10 pt-5 pb-3 flex items-baseline gap-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tickets</h2>
+            {(openTickets.length > 0 || closedTickets.length > 0) && (
+              <span className="text-xs text-muted-foreground/60">
+                {openTickets.length > 0 && <>{openTickets.length} open</>}
+                {openTickets.length > 0 && closedTickets.length > 0 && <span className="mx-1">·</span>}
+                {closedTickets.length > 0 && <>{closedTickets.length} closed</>}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-10 pb-6">
+            {tickets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tickets for this contractor</p>
+            ) : (
+              <div>
+                {tickets.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTicketId(t.id)}
+                    className="w-full flex items-center justify-between py-3 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded text-left transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {t.issue_title || t.issue_description || 'Maintenance request'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {t.category && <> · {t.category}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      {t.priority && <StatusBadge status={t.priority} />}
+                      <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

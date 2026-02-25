@@ -9,7 +9,6 @@ import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { StatusBadge } from '@/components/status-badge'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -20,17 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Building2,
-  Contact,
-  Users,
-  Wrench,
-  Ticket,
   Phone,
   Mail,
   Pencil,
@@ -111,7 +104,7 @@ const toEditable = (p: PropertyDetail): PropertyEditable => ({
 })
 
 const formatCurrency = (amount: number | null) => {
-  if (amount === null || amount === undefined) return '-'
+  if (amount === null || amount === undefined) return '—'
   return `£${amount.toFixed(0)}`
 }
 
@@ -349,34 +342,35 @@ export default function PropertyDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/properties')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
-                <h1 className="text-xl font-semibold">{property.address}</h1>
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                {property.landlord_name && (
-                  <span className="flex items-center gap-1">
-                    <Contact className="h-3.5 w-3.5" />
-                    {property.landlord_name}
-                  </span>
-                )}
-                <span>{formatCurrency(property.auto_approve_limit)} auto-approve</span>
-                {openTickets.length > 0 && (
-                  <Badge className="bg-primary text-xs">{openTickets.length} open ticket{openTickets.length !== 1 ? 's' : ''}</Badge>
-                )}
-              </div>
+      <div className="flex-shrink-0 px-10 pt-8 pb-6 border-b">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <button
+              onClick={() => router.push('/properties')}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Properties
+            </button>
+            <h1 className="text-3xl font-bold tracking-tight">{property.address}</h1>
+            <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+              {property.landlord_name && (
+                <>
+                  <span>{property.landlord_name}</span>
+                  <span className="text-muted-foreground/40">·</span>
+                </>
+              )}
+              <span>{formatCurrency(property.auto_approve_limit)} auto-approve</span>
+              {openTickets.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>{openTickets.length} open ticket{openTickets.length !== 1 ? 's' : ''}</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-6 flex-shrink-0">
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}>
@@ -408,285 +402,224 @@ export default function PropertyDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="overflow-y-auto flex-shrink-0 max-h-[50%]">
-          <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Details + Related entities — scrollable, capped */}
+        <div className="overflow-y-auto flex-shrink-0 max-h-[55%]">
 
-          {/* Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Property Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Address</label>
+          {/* Property Details */}
+          <div className="px-10 py-6 border-b">
+            {isEditing && editedData ? (
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1.5 block">Address</label>
+                  <Input
+                    value={editedData.address}
+                    onChange={(e) => updateField('address', e.target.value)}
+                    placeholder="123 Main Street, Manchester, M1 1AA"
+                    className={validationErrors.address ? 'border-destructive' : ''}
+                  />
+                  {validationErrors.address && (
+                    <p className="text-xs text-destructive mt-1">{validationErrors.address}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Auto-Approve Limit</label>
                     <Input
-                      value={editedData.address}
-                      onChange={(e) => updateField('address', e.target.value)}
-                      placeholder="123 Main Street, Manchester, M1 1AA"
-                      className={validationErrors.address ? 'border-destructive' : ''}
+                      type="number"
+                      value={editedData.auto_approve_limit ?? ''}
+                      onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="500"
+                      className={validationErrors.auto_approve_limit ? 'border-destructive' : ''}
                     />
-                    {validationErrors.address && (
-                      <p className="text-xs text-destructive">{validationErrors.address}</p>
+                    {validationErrors.auto_approve_limit && (
+                      <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Auto-Approve Limit</label>
-                      <Input
-                        type="number"
-                        value={editedData.auto_approve_limit ?? ''}
-                        onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)}
-                        placeholder="500"
-                        className={validationErrors.auto_approve_limit ? 'border-destructive' : ''}
-                      />
-                      {validationErrors.auto_approve_limit && (
-                        <p className="text-xs text-destructive">{validationErrors.auto_approve_limit}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Emergency Contact</label>
-                      <Input
-                        value={editedData.emergency_access_contact || ''}
-                        onChange={(e) => updateField('emergency_access_contact', e.target.value || null)}
-                        placeholder="Name / Phone"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Access Instructions</label>
-                    <Textarea
-                      value={editedData.access_instructions || ''}
-                      onChange={(e) => updateField('access_instructions', e.target.value || null)}
-                      placeholder="Gate code, key safe number, entry instructions..."
-                      rows={3}
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Emergency Contact</label>
+                    <Input
+                      value={editedData.emergency_access_contact || ''}
+                      onChange={(e) => updateField('emergency_access_contact', e.target.value || null)}
+                      placeholder="Name / Phone"
                     />
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Address</p>
-                    <p className="text-sm font-medium mt-0.5">{property.address}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Auto-Approve Limit</p>
-                    <p className="text-sm font-medium mt-0.5">{formatCurrency(property.auto_approve_limit)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Emergency Contact</p>
-                    <p className="text-sm font-medium mt-0.5">{property.emergency_access_contact || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Access Instructions</p>
-                    <p className="text-sm font-medium mt-0.5">{property.access_instructions || '-'}</p>
-                  </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1.5 block">Access Instructions</label>
+                  <Textarea
+                    value={editedData.access_instructions || ''}
+                    onChange={(e) => updateField('access_instructions', e.target.value || null)}
+                    placeholder="Gate code, key safe number, entry instructions..."
+                    rows={2}
+                  />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-x-10 gap-y-5">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Auto-Approve Limit</p>
+                  <p className="text-sm">{formatCurrency(property.auto_approve_limit)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Emergency Contact</p>
+                  <p className="text-sm">{property.emergency_access_contact || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
+                  <p className="text-sm">{property.access_instructions || '—'}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Landlord Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Contact className="h-4 w-4" /> Landlord
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Select Landlord</label>
-                  <Select
-                    value={editedData.landlord_id || 'none'}
-                    onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select landlord..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No landlord</SelectItem>
-                      {landlordOptions.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Manage landlords from the{' '}
-                    <Link href="/landlords" className="text-primary hover:underline">Landlords page</Link>
-                  </p>
-                </div>
-              ) : property.landlord_id ? (
-                <Link
-                  href={`/landlords/${property.landlord_id}`}
-                  className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+          {/* Landlord */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Landlord</h2>
+            {isEditing && editedData ? (
+              <div>
+                <Select
+                  value={editedData.landlord_id || 'none'}
+                  onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}
                 >
-                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-background border">
-                    <Contact className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{property.landlord_name}</p>
-                    <div className="flex items-center gap-4 mt-0.5 text-sm text-muted-foreground">
-                      {property.landlord_phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {formatPhoneDisplay(property.landlord_phone)}
-                        </span>
-                      )}
-                      {property.landlord_email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {property.landlord_email}
-                        </span>
-                      )}
+                  <SelectTrigger className="max-w-sm">
+                    <SelectValue placeholder="Select landlord..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No landlord</SelectItem>
+                    {landlordOptions.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Manage landlords from the{' '}
+                  <Link href="/landlords" className="text-primary hover:underline">Landlords page</Link>
+                </p>
+              </div>
+            ) : property.landlord_id ? (
+              <Link href={`/landlords/${property.landlord_id}`} className="inline-flex items-center gap-6 group">
+                <span className="text-sm font-medium group-hover:underline">{property.landlord_name}</span>
+                {property.landlord_phone && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Phone className="h-3 w-3" />
+                    {formatPhoneDisplay(property.landlord_phone)}
+                  </span>
+                )}
+                {property.landlord_email && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Mail className="h-3 w-3" />
+                    {property.landlord_email}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">No landlord assigned</p>
+            )}
+          </div>
+
+          {/* Tenants */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              Tenants
+              {tenants.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{tenants.length}</span>}
+            </h2>
+            {tenants.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tenants assigned</p>
+            ) : (
+              <div>
+                {tenants.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/tenants/${t.id}`}
+                    className="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded transition-colors"
+                  >
+                    <span className="text-sm font-medium">{t.full_name}</span>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      {t.phone && <span>{formatPhoneDisplay(t.phone)}</span>}
+                      {t.email && <span className="hidden lg:inline">{t.email}</span>}
+                      <span className="capitalize text-xs w-16 text-right">{(t.role_tag || 'tenant').replace(/_/g, ' ')}</span>
                     </div>
-                  </div>
-                </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground">No landlord assigned</p>
-              )}
-            </CardContent>
-          </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Tenants Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" /> Tenants
-                <Badge variant="outline" className="ml-1">{tenants.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tenants.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tenants assigned to this property</p>
-              ) : (
-                <div className="space-y-2">
-                  {tenants.map((t) => (
-                    <Link
-                      key={t.id}
-                      href={`/tenants/${t.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{t.full_name}</p>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                          {t.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {formatPhoneDisplay(t.phone)}
-                            </span>
-                          )}
-                          {t.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {t.email}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs">{t.role_tag || 'tenant'}</Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Contractors Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wrench className="h-4 w-4" /> Contractors
-                <Badge variant="outline" className="ml-1">{contractors.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {contractors.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No contractors assigned to this property</p>
-              ) : (
-                <div className="space-y-2">
-                  {contractors.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/contractors/${c.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{c.contractor_name}</p>
-                        {c.contractor_phone && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatPhoneDisplay(c.contractor_phone)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
-                        {(c.categories || (c.category ? [c.category] : [])).map((cat) => (
-                          <Badge key={cat} variant="outline" className="text-xs">{cat}</Badge>
-                        ))}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+          {/* Contractors */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              Contractors
+              {contractors.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{contractors.length}</span>}
+            </h2>
+            {contractors.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No contractors assigned</p>
+            ) : (
+              <div>
+                {contractors.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/contractors/${c.id}`}
+                    className="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded transition-colors"
+                  >
+                    <span className="text-sm font-medium">{c.contractor_name}</span>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <span>{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
+                      {c.contractor_phone && <span>{formatPhoneDisplay(c.contractor_phone)}</span>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Tickets Card — fills remaining screen */}
-        <div className="flex-1 min-h-0 flex flex-col px-8 pb-6">
-          <Card className="flex-1 flex flex-col min-h-0">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Ticket className="h-4 w-4" /> Tickets
-                {openTickets.length > 0 && (
-                  <Badge className="bg-primary text-xs ml-1">{openTickets.length} open</Badge>
-                )}
-                {completedTickets.length > 0 && (
-                  <Badge variant="outline" className="text-xs ml-1">{completedTickets.length} completed</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto">
-              {tickets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tickets for this property</p>
-              ) : (
-                <div className="space-y-2">
-                  {tickets.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTicketId(t.id)}
-                      className={cn(
-                        "w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left",
-                        t.archived && "opacity-50"
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">
-                            {t.issue_title || t.issue_description || 'Maintenance request'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                          <span>{new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                          {t.category && <span>{t.category}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        {t.priority && <StatusBadge status={t.priority} />}
-                        <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Tickets — fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col border-t">
+          <div className="flex-shrink-0 px-10 pt-5 pb-3 flex items-baseline gap-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tickets</h2>
+            {(openTickets.length > 0 || completedTickets.length > 0) && (
+              <span className="text-xs text-muted-foreground/60">
+                {openTickets.length > 0 && <>{openTickets.length} open</>}
+                {openTickets.length > 0 && completedTickets.length > 0 && <span className="mx-1">·</span>}
+                {completedTickets.length > 0 && <>{completedTickets.length} completed</>}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-10 pb-6">
+            {tickets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tickets for this property</p>
+            ) : (
+              <div>
+                {tickets.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTicketId(t.id)}
+                    className={cn(
+                      "w-full flex items-center justify-between py-3 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded text-left transition-colors",
+                      t.archived && "opacity-40"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {t.issue_title || t.issue_description || 'Maintenance request'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {t.category && <> · {t.category}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      {t.priority && <StatusBadge status={t.priority} />}
+                      <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

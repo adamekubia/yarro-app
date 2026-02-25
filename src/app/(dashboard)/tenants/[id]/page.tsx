@@ -8,7 +8,6 @@ import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { StatusBadge } from '@/components/status-badge'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -18,18 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { TENANT_ROLES } from '@/lib/constants'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Building2,
-  Users,
-  Ticket,
-  Phone,
-  Mail,
   Pencil,
   Save,
   X,
@@ -310,39 +303,35 @@ export default function TenantDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/tenants')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-muted-foreground" />
-                <h1 className="text-xl font-semibold">{tenant.full_name || 'Unknown Tenant'}</h1>
-                <Badge variant="outline" className="capitalize">
-                  {(tenant.role_tag || 'tenant').replace(/_/g, ' ')}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                {property && (
-                  <span className="flex items-center gap-1">
-                    <Building2 className="h-3.5 w-3.5" />
-                    {property.address}
-                  </span>
-                )}
-                {tenant.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5" />
-                    {formatPhoneDisplay(tenant.phone)}
-                  </span>
-                )}
-              </div>
+      <div className="flex-shrink-0 px-10 pt-8 pb-6 border-b">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <button
+              onClick={() => router.push('/tenants')}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Tenants
+            </button>
+            <h1 className="text-3xl font-bold tracking-tight">{tenant.full_name || 'Unknown Tenant'}</h1>
+            <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+              <span className="capitalize">{(tenant.role_tag || 'tenant').replace(/_/g, ' ')}</span>
+              {property && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>{property.address}</span>
+                </>
+              )}
+              {tenant.phone && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>{formatPhoneDisplay(tenant.phone)}</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-6 flex-shrink-0">
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}>
@@ -374,59 +363,55 @@ export default function TenantDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Details + Property */}
+        <div className="overflow-y-auto flex-shrink-0 max-h-[45%]">
 
-          {/* Contact Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Contact Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Full Name</label>
+          {/* Contact Details */}
+          <div className="px-10 py-6 border-b">
+            {isEditing && editedData ? (
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1.5 block">Full Name</label>
+                  <Input
+                    value={editedData.full_name}
+                    onChange={(e) => updateField('full_name', e.target.value)}
+                    placeholder="John Smith"
+                    className={validationErrors.full_name ? 'border-destructive' : ''}
+                  />
+                  {validationErrors.full_name && (
+                    <p className="text-xs text-destructive mt-1">{validationErrors.full_name}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Phone</label>
                     <Input
-                      value={editedData.full_name}
-                      onChange={(e) => updateField('full_name', e.target.value)}
-                      placeholder="John Smith"
-                      className={validationErrors.full_name ? 'border-destructive' : ''}
+                      type="tel"
+                      value={editedData.phone}
+                      onChange={(e) => updateField('phone', e.target.value)}
+                      placeholder="07700 900123"
+                      className={validationErrors.phone ? 'border-destructive' : ''}
                     />
-                    {validationErrors.full_name && (
-                      <p className="text-xs text-destructive">{validationErrors.full_name}</p>
+                    {validationErrors.phone && (
+                      <p className="text-xs text-destructive mt-1">{validationErrors.phone}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Phone</label>
-                      <Input
-                        type="tel"
-                        value={editedData.phone}
-                        onChange={(e) => updateField('phone', e.target.value)}
-                        placeholder="07700 900123"
-                        className={validationErrors.phone ? 'border-destructive' : ''}
-                      />
-                      {validationErrors.phone && (
-                        <p className="text-xs text-destructive">{validationErrors.phone}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Email</label>
-                      <Input
-                        type="email"
-                        value={editedData.email || ''}
-                        onChange={(e) => updateField('email', e.target.value || null)}
-                        placeholder="tenant@email.com"
-                        className={validationErrors.email ? 'border-destructive' : ''}
-                      />
-                      {validationErrors.email && (
-                        <p className="text-xs text-destructive">{validationErrors.email}</p>
-                      )}
-                    </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Email</label>
+                    <Input
+                      type="email"
+                      value={editedData.email || ''}
+                      onChange={(e) => updateField('email', e.target.value || null)}
+                      placeholder="tenant@email.com"
+                      className={validationErrors.email ? 'border-destructive' : ''}
+                    />
+                    {validationErrors.email && (
+                      <p className="text-xs text-destructive mt-1">{validationErrors.email}</p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Role</label>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Role</label>
                     <Select
                       value={editedData.role_tag}
                       onValueChange={(v) => updateField('role_tag', v)}
@@ -444,132 +429,109 @@ export default function TenantDetailPage() {
                     </Select>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
-                    <p className="text-sm font-medium mt-0.5">{tenant.full_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Role</p>
-                    <p className="text-sm font-medium mt-0.5 capitalize">
-                      {(tenant.role_tag || 'tenant').replace(/_/g, ' ')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="text-sm font-medium mt-0.5">
-                      {tenant.phone ? formatPhoneDisplay(tenant.phone) : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium mt-0.5">{tenant.email || '-'}</p>
-                  </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-x-10 gap-y-5">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                  <p className="text-sm">{tenant.phone ? formatPhoneDisplay(tenant.phone) : '—'}</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Email</p>
+                  <p className="text-sm">{tenant.email || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Role</p>
+                  <p className="text-sm capitalize">{(tenant.role_tag || 'tenant').replace(/_/g, ' ')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Verified By</p>
+                  <p className="text-sm capitalize">{tenant.verified_by || '—'}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Property Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="h-4 w-4" /> Property
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing && editedData ? (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Select Property</label>
-                  <Select
-                    value={editedData.property_id || 'none'}
-                    onValueChange={(v) => updateField('property_id', v === 'none' ? null : v)}
-                  >
-                    <SelectTrigger className={validationErrors.property_id ? 'border-destructive' : ''}>
-                      <SelectValue placeholder="Select property..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No property</SelectItem>
-                      {allProperties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.address}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.property_id && (
-                    <p className="text-xs text-destructive">{validationErrors.property_id}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Manage properties from the{' '}
-                    <Link href="/properties" className="text-primary hover:underline">Properties page</Link>
-                  </p>
-                </div>
-              ) : property ? (
-                <Link
-                  href={`/properties/${property.id}`}
-                  className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+          {/* Property */}
+          <div className="px-10 py-5 border-b">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Property</h2>
+            {isEditing && editedData ? (
+              <div>
+                <Select
+                  value={editedData.property_id || 'none'}
+                  onValueChange={(v) => updateField('property_id', v === 'none' ? null : v)}
                 >
-                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-background border">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{property.address}</p>
-                  </div>
-                </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground">No property assigned</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Tickets Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Ticket className="h-4 w-4" /> Tickets
-                {openTickets.length > 0 && (
-                  <Badge className="bg-primary text-xs ml-1">{openTickets.length} open</Badge>
+                  <SelectTrigger className={`max-w-sm ${validationErrors.property_id ? 'border-destructive' : ''}`}>
+                    <SelectValue placeholder="Select property..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No property</SelectItem>
+                    {allProperties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.address}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.property_id && (
+                  <p className="text-xs text-destructive mt-1">{validationErrors.property_id}</p>
                 )}
-                {closedTickets.length > 0 && (
-                  <Badge variant="outline" className="text-xs ml-1">{closedTickets.length} closed</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tickets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tickets for this tenant</p>
-              ) : (
-                <div className="space-y-2">
-                  {tickets.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTicketId(t.id)}
-                      className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">
-                            {t.issue_title || t.issue_description || 'Maintenance request'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                          <span>{new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                          {t.category && <span>{t.category}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        {t.priority && <StatusBadge status={t.priority} />}
-                        <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Manage properties from the{' '}
+                  <Link href="/properties" className="text-primary hover:underline">Properties page</Link>
+                </p>
+              </div>
+            ) : property ? (
+              <Link href={`/properties/${property.id}`} className="text-sm font-medium hover:underline">
+                {property.address}
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">No property assigned</p>
+            )}
+          </div>
+        </div>
 
+        {/* Tickets — fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col border-t">
+          <div className="flex-shrink-0 px-10 pt-5 pb-3 flex items-baseline gap-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tickets</h2>
+            {(openTickets.length > 0 || closedTickets.length > 0) && (
+              <span className="text-xs text-muted-foreground/60">
+                {openTickets.length > 0 && <>{openTickets.length} open</>}
+                {openTickets.length > 0 && closedTickets.length > 0 && <span className="mx-1">·</span>}
+                {closedTickets.length > 0 && <>{closedTickets.length} closed</>}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-10 pb-6">
+            {tickets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tickets for this tenant</p>
+            ) : (
+              <div>
+                {tickets.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTicketId(t.id)}
+                    className="w-full flex items-center justify-between py-3 border-b border-border/40 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded text-left transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {t.issue_title || t.issue_description || 'Maintenance request'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {t.category && <> · {t.category}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      {t.priority && <StatusBadge status={t.priority} />}
+                      <StatusBadge status={getDisplayStage(t.next_action_reason, t.status)} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
