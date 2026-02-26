@@ -24,6 +24,7 @@ const TYPE_LABELS: Record<string, string> = {
   tenant_job_booked: 'Tenant Notified',
   pm_job_booked: 'Manager Notified',
   landlord_job_booked: 'Landlord Notified',
+  ll_job_booked: 'Landlord Notified',
   contractor_job_reminder: 'Day-of Reminder',
   contractor_completion_reminder: 'Completion Reminder',
   pm_completion_overdue: 'Completion Overdue',
@@ -37,7 +38,7 @@ const HANDOFF_LOG_TYPES = new Set(['pm_handoff'])
 const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_more_contractors'])
 const MANAGER_LOG_TYPES = new Set(['pm_quote'])
 const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved', 'landlord_declined'])
-const BOOKING_LOG_TYPES = new Set(['contractor_job_schedule', 'contractor_job_confirmed', 'tenant_job_booked', 'pm_job_booked', 'landlord_job_booked'])
+const BOOKING_LOG_TYPES = new Set(['contractor_job_schedule', 'contractor_job_confirmed', 'tenant_job_booked', 'pm_job_booked', 'landlord_job_booked', 'll_job_booked'])
 const FOLLOWUP_LOG_TYPES = new Set(['contractor_job_reminder', 'contractor_completion_reminder', 'pm_completion_overdue'])
 const COMPLETION_LOG_TYPES = new Set(['pm_job_completed', 'pm_job_not_completed', 'll_job_completed'])
 
