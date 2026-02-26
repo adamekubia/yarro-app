@@ -184,9 +184,82 @@ export default function RulesPage() {
     return TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > parseInt(reminderVal))
   }
 
+  // Reusable timing card
+  const TimingCard = ({
+    title,
+    description,
+    reminderLabel,
+    reminderDesc,
+    reminderValue,
+    reminderOnChange,
+    reminderOn,
+    onToggle,
+    reminderOptions: remOpts,
+    escalateDesc,
+    escalateValue,
+    escalateOnChange,
+    escalateOptions: escOpts,
+  }: {
+    title: string
+    description: string
+    reminderLabel: string
+    reminderDesc: string
+    reminderValue: string
+    reminderOnChange: (v: string) => void
+    reminderOn: boolean
+    onToggle: (on: boolean) => void
+    reminderOptions: { value: string; label: string }[]
+    escalateDesc: string
+    escalateValue: string
+    escalateOnChange: (v: string) => void
+    escalateOptions: { value: string; label: string }[]
+  }) => (
+    <div className="bg-card rounded-xl border p-5 flex flex-col">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-4">{description}</p>
+
+      <div className="space-y-3 flex-1">
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium">{reminderLabel}</span>
+            <Switch checked={reminderOn} onCheckedChange={onToggle} />
+          </div>
+          <Select value={reminderValue} onValueChange={reminderOnChange} disabled={!reminderOn}>
+            <SelectTrigger className={cn('w-full', !reminderOn && 'opacity-50')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {remOpts.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className={cn('text-[11px] text-muted-foreground mt-1', !reminderOn && 'opacity-50')}>{reminderDesc}</p>
+        </div>
+
+        <div className="border-t" />
+
+        <div>
+          <span className="text-xs font-medium block mb-1.5">Escalate to You</span>
+          <Select value={escalateValue} onValueChange={escalateOnChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {escOpts.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground mt-1">{escalateDesc}</p>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="h-full flex flex-col p-6">
-      <div className="mb-8 flex-shrink-0">
+    <div className="h-full flex flex-col p-6 px-8">
+      <div className="mb-6 flex-shrink-0">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">Rules & Preferences</h1>
@@ -194,217 +267,91 @@ export default function RulesPage() {
         <p className="text-sm text-muted-foreground mt-1">Configure how Yarro handles dispatching, approvals, and follow-ups.</p>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto pb-4 max-w-3xl">
+      <div className="flex-1 overflow-y-auto pb-4 space-y-6">
 
-        {/* ─── CONTRACTOR DISPATCH ─── */}
-        <section className="bg-card rounded-xl border p-6">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold">Contractor Dispatch</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">How Yarro contacts contractors when a job comes in.</p>
-          </div>
-
-          {/* Dispatch Mode */}
-          <div className="space-y-3">
-            <span className="text-sm font-medium">Dispatch Mode</span>
-            <div className="grid grid-cols-2 gap-3">
-              {(['sequential', 'broadcast'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => updateDraft({ dispatch_mode: mode })}
-                  className={cn(
-                    'rounded-xl border p-4 text-left transition-all',
-                    draft.dispatch_mode === mode
-                      ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/30'
-                  )}
-                >
-                  <span className="text-sm font-medium block">
-                    {mode === 'sequential' ? 'One at a time' : 'All at once'}
-                  </span>
-                  <span className="text-xs text-muted-foreground mt-0.5 block">
-                    {mode === 'sequential' ? 'Auto-advance on timeout' : 'Choose best quote'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t my-5" />
-
-          {/* Follow-up Reminder */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Follow-up Reminder</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Nudge contractor(s) if no response.</p>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <Select
-                value={draft.contractor_reminder}
-                onValueChange={(v) => updateDraft({ contractor_reminder: v })}
-                disabled={!draft.contractor_reminder_on}
+        {/* ─── DISPATCH MODE ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Dispatch Mode</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {(['sequential', 'broadcast'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => updateDraft({ dispatch_mode: mode })}
+                className={cn(
+                  'rounded-xl border p-5 text-left transition-all',
+                  draft.dispatch_mode === mode
+                    ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                    : 'border-border hover:border-muted-foreground/30'
+                )}
               >
-                <SelectTrigger className={cn('w-[140px]', !draft.contractor_reminder_on && 'opacity-50')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reminderOpts(draft.contractor_timeout, draft.contractor_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Switch checked={draft.contractor_reminder_on} onCheckedChange={(on) => handleToggle('contractor', on)} />
-            </div>
-          </div>
-
-          <div className="border-t my-5" />
-
-          {/* Escalate Timeout */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Escalate to You</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {draft.dispatch_mode === 'broadcast'
-                  ? 'Give up if no quotes received.'
-                  : 'Advance to next contractor.'}
-              </p>
-            </div>
-            <div className="flex-shrink-0">
-              <Select
-                value={draft.contractor_timeout}
-                onValueChange={(v) => updateDraft({ contractor_timeout: v })}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeoutOpts(draft.contractor_reminder, draft.contractor_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <span className="text-sm font-semibold block">
+                  {mode === 'sequential' ? 'One at a time' : 'All at once'}
+                </span>
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  {mode === 'sequential'
+                    ? 'Contact contractors sequentially. If one doesn\'t respond, auto-advance to the next.'
+                    : 'Message all assigned contractors at once and choose the best quote.'}
+                </span>
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* ─── LANDLORD APPROVAL ─── */}
-        <section className="bg-card rounded-xl border p-6">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold">Landlord Approval</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">How Yarro handles landlord approval for quotes above auto-approve limits.</p>
-          </div>
-
-          {/* Follow-up Reminder */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Follow-up Reminder</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Remind landlord if no response.</p>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <Select
-                value={draft.landlord_reminder}
-                onValueChange={(v) => updateDraft({ landlord_reminder: v })}
-                disabled={!draft.landlord_reminder_on}
-              >
-                <SelectTrigger className={cn('w-[140px]', !draft.landlord_reminder_on && 'opacity-50')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reminderOpts(draft.landlord_timeout, draft.landlord_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Switch checked={draft.landlord_reminder_on} onCheckedChange={(on) => handleToggle('landlord', on)} />
-            </div>
-          </div>
-
-          <div className="border-t my-5" />
-
-          {/* Escalate Timeout */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Escalate to You</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Alert you if landlord hasn&apos;t responded.</p>
-            </div>
-            <div className="flex-shrink-0">
-              <Select
-                value={draft.landlord_timeout}
-                onValueChange={(v) => updateDraft({ landlord_timeout: v })}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeoutOpts(draft.landlord_reminder, draft.landlord_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── JOB COMPLETION ─── */}
-        <section className="bg-card rounded-xl border p-6">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold">Job Completion</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">After a contractor is booked, ensure they submit an outcome form.</p>
-          </div>
-
-          {/* Outcome Form Reminder */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Outcome Form Reminder</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Nudge contractor to submit.</p>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <Select
-                value={draft.completion_reminder}
-                onValueChange={(v) => updateDraft({ completion_reminder: v })}
-                disabled={!draft.completion_reminder_on}
-              >
-                <SelectTrigger className={cn('w-[140px]', !draft.completion_reminder_on && 'opacity-50')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reminderOpts(draft.completion_timeout, draft.completion_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Switch checked={draft.completion_reminder_on} onCheckedChange={(on) => handleToggle('completion', on)} />
-            </div>
-          </div>
-
-          <div className="border-t my-5" />
-
-          {/* Escalate Timeout */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Escalate to You</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Alert you if no submission received.</p>
-            </div>
-            <div className="flex-shrink-0">
-              <Select
-                value={draft.completion_timeout}
-                onValueChange={(v) => updateDraft({ completion_timeout: v })}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeoutOpts(draft.completion_reminder, draft.completion_reminder_on).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {/* ─── TIMING & FOLLOW-UPS ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Timing & Follow-ups</h2>
+          <div className="grid grid-cols-3 gap-4">
+            <TimingCard
+              title="Contractors"
+              description="After dispatching a job"
+              reminderLabel="Follow-up Reminder"
+              reminderDesc="Nudge if no response."
+              reminderValue={draft.contractor_reminder}
+              reminderOnChange={(v) => updateDraft({ contractor_reminder: v })}
+              reminderOn={draft.contractor_reminder_on}
+              onToggle={(on) => handleToggle('contractor', on)}
+              reminderOptions={reminderOpts(draft.contractor_timeout, draft.contractor_reminder_on)}
+              escalateDesc={draft.dispatch_mode === 'broadcast' ? 'Give up if no quotes.' : 'Advance to next contractor.'}
+              escalateValue={draft.contractor_timeout}
+              escalateOnChange={(v) => updateDraft({ contractor_timeout: v })}
+              escalateOptions={timeoutOpts(draft.contractor_reminder, draft.contractor_reminder_on)}
+            />
+            <TimingCard
+              title="Landlords"
+              description="After requesting approval"
+              reminderLabel="Follow-up Reminder"
+              reminderDesc="Remind if no response."
+              reminderValue={draft.landlord_reminder}
+              reminderOnChange={(v) => updateDraft({ landlord_reminder: v })}
+              reminderOn={draft.landlord_reminder_on}
+              onToggle={(on) => handleToggle('landlord', on)}
+              reminderOptions={reminderOpts(draft.landlord_timeout, draft.landlord_reminder_on)}
+              escalateDesc="Alert you if no response."
+              escalateValue={draft.landlord_timeout}
+              escalateOnChange={(v) => updateDraft({ landlord_timeout: v })}
+              escalateOptions={timeoutOpts(draft.landlord_reminder, draft.landlord_reminder_on)}
+            />
+            <TimingCard
+              title="Job Completion"
+              description="After a job is booked"
+              reminderLabel="Outcome Form Reminder"
+              reminderDesc="Nudge contractor to submit."
+              reminderValue={draft.completion_reminder}
+              reminderOnChange={(v) => updateDraft({ completion_reminder: v })}
+              reminderOn={draft.completion_reminder_on}
+              onToggle={(on) => handleToggle('completion', on)}
+              reminderOptions={reminderOpts(draft.completion_timeout, draft.completion_reminder_on)}
+              escalateDesc="Alert you if not submitted."
+              escalateValue={draft.completion_timeout}
+              escalateOnChange={(v) => updateDraft({ completion_timeout: v })}
+              escalateOptions={timeoutOpts(draft.completion_reminder, draft.completion_reminder_on)}
+            />
           </div>
         </section>
       </div>
 
       {/* Save bar */}
-      <div className="flex-shrink-0 border-t pt-4 mt-2 flex items-center justify-end gap-3 max-w-3xl">
+      <div className="flex-shrink-0 border-t pt-4 mt-2 flex items-center justify-end gap-3">
         {isDirty && (
           <span className="text-xs text-muted-foreground">Unsaved changes</span>
         )}
