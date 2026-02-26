@@ -301,8 +301,8 @@ export default function PropertyDetailPage() {
             </div>
           ) : (
             <>
-              {/* Meta info grid — icon + label + value */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Meta info grid — 2x2 symmetric layout */}
+              <div className="grid grid-cols-2 gap-6">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -337,17 +337,15 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
 
-                {property.access_instructions && (
-                  <div className="flex items-start gap-3 col-span-2 lg:col-span-3">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Access Instructions</p>
-                      <p className="text-[15px] mt-0.5">{property.access_instructions}</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Access Instructions</p>
+                    <p className="text-[15px] mt-0.5">{property.access_instructions || <span className="text-muted-foreground/50 font-normal">None</span>}</p>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -400,7 +398,7 @@ export default function PropertyDetailPage() {
         </div>
 
         {/* Right: Tickets */}
-        <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
+        <div className="w-[480px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
             <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || completedTickets.length > 0) && (

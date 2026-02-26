@@ -126,82 +126,152 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
     })
   }
 
-  // ─── Contractors: one row per contractor, reminders nested ───
-  if (messages) {
-    const contractors = getContractors(messages.contractors)
-    for (const c of contractors) {
-      const rawStatus = getContractorStatus(c)
-      const status = rawStatus === 'approved' ? 'approved' : rawStatus === 'replied' ? 'quoted' : rawStatus === 'sent' ? 'sent' : 'pending'
-      const myLogs = contractorLogs.filter(e => e.recipient_phone === c.phone)
+  // ─── Contractors: build dispatch rounds from outbound log (source of truth) ───
+  // Each contractor_dispatch in the log = a separate timeline entry.
+  // This correctly shows re-dispatches as separate rounds even for the same contractor.
+  {
+    // Sort + deduplicate contractor events (system sends duplicates within ms)
+    const sortedContractorEvents = [...contractorLogs].sort(
+      (a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+    )
+    const dedupedEvents: OutboundLogEntry[] = []
+    for (const event of sortedContractorEvents) {
+      const isDup = dedupedEvents.some(
+        (e) =>
+          e.message_type === event.message_type &&
+          e.recipient_phone === event.recipient_phone &&
+          Math.abs(new Date(e.sent_at).getTime() - new Date(event.sent_at).getTime()) < 2000
+      )
+      if (!isDup) dedupedEvents.push(event)
+    }
 
-      // Primary chat: dispatch + reply only
+    // Separate by type — only dispatches WITH a body are real (bodyless = failed flow triggers)
+    const dispatchRounds = dedupedEvents.filter((e) => e.message_type === 'contractor_dispatch' && e.body)
+    const reminderEvents = dedupedEvents.filter((e) => e.message_type === 'contractor_reminder')
+    const noContractorEvents = dedupedEvents.filter((e) => e.message_type === 'no_more_contractors')
+
+    // Known contractors from messages (for name/status/quote matching)
+    const knownContractors = messages ? getContractors(messages.contractors) : []
+
+    // Build one timeline entry per dispatch round
+    for (let di = 0; di < dispatchRounds.length; di++) {
+      const dispatch = dispatchRounds[di]
+      const dispatchTime = new Date(dispatch.sent_at).getTime()
+      const nextDispatchTime =
+        di + 1 < dispatchRounds.length ? new Date(dispatchRounds[di + 1].sent_at).getTime() : Infinity
+
+      // Reminders within this round's window
+      const roundReminders = reminderEvents.filter((e) => {
+        const t = new Date(e.sent_at).getTime()
+        return t > dispatchTime && t < nextDispatchTime
+      })
+
+      // Did this round end with no_more_contractors?
+      const roundTimedOut = noContractorEvents.some((e) => {
+        const t = new Date(e.sent_at).getTime()
+        return t > dispatchTime && t < nextDispatchTime
+      })
+
+      // Match to a known contractor in messages:
+      // Priority 1: timestamp match (sent_at within 5 sec — this is the current/latest round)
+      // Priority 2: phone match where contractor's sent_at is AFTER this dispatch (historical round, data was overwritten by redispatch)
+      let matched = knownContractors.find(
+        (c) => c.sent_at && Math.abs(new Date(c.sent_at).getTime() - dispatchTime) < 5000
+      ) || null
+      if (!matched) {
+        matched = knownContractors.find(
+          (c) =>
+            c.phone === dispatch.recipient_phone &&
+            c.sent_at &&
+            new Date(c.sent_at).getTime() > dispatchTime
+        ) || null
+      }
+
+      // Only show reply/quote data for the contractor's CURRENT round (timestamp-matched)
+      const isCurrentRound = !!(
+        matched?.sent_at && Math.abs(new Date(matched.sent_at).getTime() - dispatchTime) < 5000
+      )
+
+      // Chat messages
       const chatMsgs: ChatMsg[] = []
-      const dispatchLog = myLogs.find(e => e.message_type === 'contractor_dispatch')
-      const dispatchBody = dispatchLog?.body || c.body
-      if (dispatchBody) chatMsgs.push({ role: 'assistant', text: dispatchBody, timestamp: dispatchLog?.sent_at || c.sent_at, allowHtml: true })
-      if (c.reply_text) {
+      if (dispatch.body) {
+        chatMsgs.push({ role: 'assistant', text: dispatch.body, timestamp: dispatch.sent_at, allowHtml: true })
+      }
+      if (isCurrentRound && matched?.reply_text) {
         chatMsgs.push({
-          role: 'contractor', text: c.reply_text, timestamp: c.replied_at,
-          meta: c.quote_amount ? { quote: formatAmount(c.quote_amount), approved: c.manager_decision === 'approved' } : undefined,
+          role: 'contractor',
+          text: matched.reply_text,
+          timestamp: matched.replied_at,
+          meta: matched.quote_amount
+            ? { quote: formatAmount(matched.quote_amount), approved: matched.manager_decision === 'approved' }
+            : undefined,
         })
       }
 
-      // Sub-entries: reminders
-      const reminderLogs = myLogs.filter(e => e.message_type === 'contractor_reminder')
-      const subEntries: SubEntry[] = reminderLogs.map((r, i) => ({
-        id: `${c.id}-reminder-${i}`,
+      // Sub-entries: reminders for this round only
+      const subEntries: SubEntry[] = roundReminders.map((r, i) => ({
+        id: `dispatch-${di}-reminder-${i}`,
         label: 'Reminder sent',
         timestamp: r.sent_at,
         variant: 'reminder' as const,
         chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
       }))
 
-      // Sublabel: category + sent time + quote notes
+      // Status for THIS round (not the contractor's overall status)
+      let status: string
+      if (roundTimedOut) {
+        status = 'declined' // this round ended with no_more_contractors
+      } else if (isCurrentRound && matched) {
+        const rawStatus = getContractorStatus(matched)
+        status = rawStatus === 'approved' ? 'approved' : rawStatus === 'replied' ? 'quoted' : rawStatus === 'sent' ? 'sent' : 'pending'
+      } else {
+        status = 'sent'
+      }
+
+      // Label
+      const name = matched?.name || 'Contractor Dispatched'
       const parts: string[] = []
-      if (c.category) parts.push(c.category)
-      if (c.sent_at) parts.push(format(new Date(c.sent_at), 'dd MMM, HH:mm'))
-      if (c.quote_notes) parts.push(c.quote_notes)
+      if (matched?.category) parts.push(matched.category)
+      parts.push(format(new Date(dispatch.sent_at), 'dd MMM, HH:mm'))
+      if (isCurrentRound && matched?.quote_notes) parts.push(matched.quote_notes)
 
       entries.push({
-        id: `contractor-${c.id}`,
+        id: `dispatch-round-${di}`,
         phase: 'Contractor Quotes',
-        label: c.name,
+        label: name,
         sublabel: parts.join(' · '),
         status,
-        amount: c.quote_amount ? formatAmount(c.quote_amount) : undefined,
-        timestamp: c.sent_at || '',
+        amount: isCurrentRound && matched?.quote_amount ? formatAmount(matched.quote_amount) : undefined,
+        timestamp: dispatch.sent_at,
         isEscalation: false,
         chatMessages: chatMsgs,
         subEntries,
       })
     }
-  }
 
-  // No contractors available — only show redispatch on last entry if no contractor dispatched after it
-  const noContractorEntries = contractorLogs.filter(e => e.message_type === 'no_more_contractors')
-  const latestContractorDispatchTime = messages
-    ? Math.max(...getContractors(messages.contractors).filter(c => c.sent_at).map(c => new Date(c.sent_at!).getTime()), 0)
-    : 0
+    // No contractors available entries — redispatch button only on latest if no dispatch followed it
+    const latestDispatchTime =
+      dispatchRounds.length > 0 ? new Date(dispatchRounds[dispatchRounds.length - 1].sent_at).getTime() : 0
 
-  for (let i = 0; i < noContractorEntries.length; i++) {
-    const entry = noContractorEntries[i]
-    const isLastNoContractor = i === noContractorEntries.length - 1
-    const entryTime = new Date(entry.sent_at).getTime()
-    // Only show redispatch button on the last "No Contractors" entry AND only if no contractor was dispatched after it
-    const canRedispatch = isLastNoContractor && entryTime > latestContractorDispatchTime
+    for (let i = 0; i < noContractorEvents.length; i++) {
+      const entry = noContractorEvents[i]
+      const isLast = i === noContractorEvents.length - 1
+      const entryTime = new Date(entry.sent_at).getTime()
+      const canRedispatch = isLast && entryTime > latestDispatchTime
 
-    entries.push({
-      id: entry.id,
-      phase: 'Contractor Quotes',
-      label: 'No Contractors Available',
-      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
-      status: 'escalation',
-      timestamp: entry.sent_at,
-      isEscalation: true,
-      isRedispatchable: canRedispatch,
-      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
-      subEntries: [],
-    })
+      entries.push({
+        id: entry.id,
+        phase: 'Contractor Quotes',
+        label: 'No Contractors Available',
+        sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+        status: 'escalation',
+        timestamp: entry.sent_at,
+        isEscalation: true,
+        isRedispatchable: canRedispatch,
+        chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+        subEntries: [],
+      })
+    }
   }
 
   // ─── Manager: one row, no sub-entries ───

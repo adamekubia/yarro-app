@@ -340,7 +340,7 @@ export default function ContractorDetailPage() {
         </div>
 
         {/* Right: Tickets */}
-        <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
+        <div className="w-[480px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
             <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || closedTickets.length > 0) && (
