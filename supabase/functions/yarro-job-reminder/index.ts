@@ -28,9 +28,9 @@ async function sendReminder(
     messageType: "contractor_job_reminder",
     templateSid: TEMPLATES.contractor_job_reminder,
     variables: {
-      "1": reminder.formatted_window || "",
-      "2": reminder.property_address || "",
-      "3": reminder.access_text || "",
+      "1": reminder.formatted_window || "Time not available",
+      "2": reminder.property_address || "Address not available",
+      "3": reminder.access_text || "No access instructions",
       "4": shortRef(reminder.ticket_id),
       "5": reminder.ticket_id,
     },

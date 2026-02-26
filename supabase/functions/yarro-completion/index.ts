@@ -268,13 +268,13 @@ Deno.serve(async (req: Request) => {
 
     if (rpcResult.should_notify) {
       const ticketId = rpcResult.ticket_id || parsed.ticket_id;
-      const addr = rpcResult.property_address || "";
-      const contrName = rpcResult.contractor_name || "";
-      const contrPhone = rpcResult.contractor_phone || "";
-      const issue = rpcResult.issue_description || "";
+      const addr = rpcResult.property_address || "Address not available";
+      const contrName = rpcResult.contractor_name || "Contractor";
+      const contrPhone = rpcResult.contractor_phone || "N/A";
+      const issue = rpcResult.issue_description || "Maintenance issue";
       const mgrPhone = rpcResult.manager_phone;
       const llPhone = rpcResult.landlord_phone;
-      const reason = rpcResult.reason || parsed.reason || "";
+      const reason = rpcResult.reason || parsed.reason || "No reason given";
 
       if (rpcResult.completed) {
         // ── Completed: notify PM + Landlord in parallel ──
@@ -291,7 +291,7 @@ Deno.serve(async (req: Request) => {
               variables: {
                 "1": shortRef(ticketId),
                 "2": addr,
-                "3": `${contrName} / ${contrPhone}`,
+                "3": contrPhone !== "N/A" ? `${contrName} / ${contrPhone}` : contrName,
                 "4": issue,
               },
             });
@@ -310,7 +310,7 @@ Deno.serve(async (req: Request) => {
               variables: {
                 "1": shortRef(ticketId),
                 "2": addr,
-                "3": `${contrName} / ${contrPhone}`,
+                "3": contrPhone !== "N/A" ? `${contrName} / ${contrPhone}` : contrName,
                 "4": issue,
               },
             });

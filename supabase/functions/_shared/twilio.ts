@@ -21,13 +21,20 @@ export async function sendWhatsApp(
 ): Promise<TwilioResult> {
   const cleanVars: Record<string, string> = {};
   for (const [key, value] of Object.entries(variables)) {
+    let cleaned: string;
     if (value === null || value === undefined) {
-      console.warn(`[twilio] Variable "${key}" was ${value}, coercing to ""`);
-      cleanVars[key] = "";
+      console.warn(`[twilio] Variable "${key}" was ${value}, defaulting to "-"`);
+      cleaned = "-";
     } else {
       // Strip newlines + control chars — Twilio Content API rejects them with HTTP 400
-      cleanVars[key] = String(value).replace(/[\r\n\t]+/g, " ").trim();
+      cleaned = String(value).replace(/[\r\n\t]+/g, " ").trim();
     }
+    // Twilio Content API rejects empty string variables with HTTP 400
+    if (!cleaned) {
+      console.warn(`[twilio] Variable "${key}" was empty after sanitization, defaulting to "-"`);
+      cleaned = "-";
+    }
+    cleanVars[key] = cleaned;
   }
 
   const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID")?.trim();

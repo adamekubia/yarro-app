@@ -101,9 +101,9 @@ async function handleFinalizeJob(
       messageType: "contractor_job_schedule",
       templateSid: TEMPLATES.contractor_job_schedule,
       variables: {
-        "1": contractor.quote || "",
-        "2": property.address || "",
-        "3": ticket.issue_description || "",
+        "1": contractor.quote || "N/A",
+        "2": property.address || "Address not available",
+        "3": ticket.issue_description || "Maintenance issue",
         "4": availText,
         "5": filloutUrl,
       },
@@ -140,10 +140,10 @@ async function handleFinalizeJob(
         messageType: "pm_landlord_approved",
         templateSid: TEMPLATES.pm_landlord_approved,
         variables: {
-          "1": property.address || "",
-          "2": ticket.issue_description || "",
-          "3": landlord.name || "",
-          "4": contractor.name || "",
+          "1": property.address || "Address not available",
+          "2": ticket.issue_description || "Maintenance issue",
+          "3": landlord.name || "Landlord",
+          "4": contractor.name || "Contractor",
           "5": contractor.total || "£0",
           "6": contractor.quote || "£0",
           "7": contractor.markup || "£0",
@@ -174,9 +174,9 @@ async function handleFinalizeJob(
         templateSid: TEMPLATES.landlord_declined,
         variables: {
           "1": shortRef(ticketId),
-          "2": property.address || "",
-          "3": ticket.issue_description || "",
-          "4": contractor.total || "",
+          "2": property.address || "Address not available",
+          "3": ticket.issue_description || "Maintenance issue",
+          "4": contractor.total || "N/A",
         },
       });
     }
@@ -348,9 +348,9 @@ async function handleFilloutScheduling(
   });
 
   // Extract context for SMS
-  const addr = ctx.property?.address || "";
-  const contrName = ctx.contractor?.contractor_name || "";
-  const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "";
+  const addr = ctx.property?.address || "Address not available";
+  const contrName = ctx.contractor?.contractor_name || "Contractor";
+  const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "Maintenance issue";
   const mgrPhone = ctx.manager?.phone;
   const llPhone = ctx.property?.landlord_phone;
   const updatePhone = ctx.update_contact_phone;

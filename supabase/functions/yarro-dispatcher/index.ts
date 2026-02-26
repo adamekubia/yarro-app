@@ -27,9 +27,9 @@ async function handleContractorSms(
     : "No photos or videos provided";
 
   const variables: Record<string, string> = {
-    "1": manager.business_name || "",
-    "2": contractor.property_address || "",
-    "3": contractor.issue_description || "",
+    "1": manager.business_name || "Your property manager",
+    "2": contractor.property_address || "Address not available",
+    "3": contractor.issue_description || "Maintenance issue reported",
     "4": mediaSummary,
   };
 
@@ -89,10 +89,10 @@ async function handlePmSms(
     messageType: "pm_quote",
     templateSid: TEMPLATES.pm_quote,
     variables: {
-      "1": contractor.property_address || "",
-      "2": contractor.issue_description || "",
-      "3": `${contractor.name || ""} - ${contractor.category || ""}`,
-      "4": contractor.quote_amount || "",
+      "1": contractor.property_address || "Address not available",
+      "2": contractor.issue_description || "Maintenance issue reported",
+      "3": `${contractor.name || "Contractor"} - ${contractor.category || "General"}`,
+      "4": contractor.quote_amount || "N/A",
       "5": contractor.quote_notes || "N/A",
     },
   });
@@ -182,10 +182,10 @@ async function handleLandlordSms(
     messageType: "landlord_quote",
     templateSid: TEMPLATES.landlord_quote,
     variables: {
-      "1": prepData.property_address || "",
-      "2": prepData.contractor_name || "",
-      "3": prepData.total_cost || "",
-      "4": prepData.issue || "",
+      "1": prepData.property_address || "Address not available",
+      "2": prepData.contractor_name || "Contractor",
+      "3": prepData.total_cost || "N/A",
+      "4": prepData.issue || "Maintenance issue",
       "5": prepData.quote_notes || "N/A",
     },
   });
@@ -234,9 +234,9 @@ async function handleNoMoreContractors(
     messageType: "no_more_contractors",
     templateSid: TEMPLATES.no_more_contractors,
     variables: {
-      "1": shortRef(String(ticket.id || "")),
-      "2": ticket.issue_description || "",
-      "3": property.address || "",
+      "1": shortRef(String(ticket.id || "unknown")),
+      "2": ticket.issue_description || "Maintenance issue reported",
+      "3": property.address || "Address not available",
     },
   });
 

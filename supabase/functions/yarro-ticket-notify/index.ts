@@ -9,7 +9,7 @@ const FN = "yarro-ticket-notify";
 // ─── Helper: Format caller info string ───────────────────────────────────
 function formatCallerInfo(ctx: Record<string, any>): string {
   const name = ctx.caller_name || ctx.tenant_name || "Unknown";
-  const phone = ctx.caller_phone || ctx.tenant_phone || "";
+  const phone = ctx.caller_phone || ctx.tenant_phone || "N/A";
   const role = ctx.caller_role || ctx.reporter_role || "tenant";
   const roleCapitalized = role.charAt(0).toUpperCase() + role.slice(1);
   return `${name} (+${phone}, Role - ${roleCapitalized})`;
@@ -17,7 +17,7 @@ function formatCallerInfo(ctx: Record<string, any>): string {
 
 function formatCallerInfoHandoff(ctx: Record<string, any>): string {
   const name = ctx.caller_name || ctx.tenant_name || "Unknown";
-  const phone = ctx.caller_phone || ctx.tenant_phone || "";
+  const phone = ctx.caller_phone || ctx.tenant_phone || "N/A";
   const role = ctx.caller_role || ctx.reporter_role || "tenant";
   const tag = ctx.caller_tag || "";
   const roleCapitalized = role.charAt(0).toUpperCase() + role.slice(1);
@@ -70,11 +70,11 @@ async function handleIntake(
         variables: {
           "1": shortRef(ticketId),
           "2": ctx.label || "Handoff",
-          "3": ctx.property_address || "",
+          "3": ctx.property_address || "Address not available",
           "4": formatCallerInfoHandoff(ctx),
           "5": ctx.tenant_name || "Tenant not matched",
-          "6": ctx.issue_description || "",
-          "7": ctx.priority || "",
+          "6": ctx.issue_description || "Issue details unavailable",
+          "7": ctx.priority || "Standard",
         },
       });
       results.push({ type: "pm_handoff", sent: r.ok, error: r.error });
@@ -112,11 +112,11 @@ async function handleIntake(
           templateSid: TEMPLATES.ticket_created,
           variables: {
             "1": shortRef(ticketId),
-            "2": ctx.property_address || "",
+            "2": ctx.property_address || "Address not available",
             "3": formatCallerInfo(ctx),
             "4": formatTenantInfo(ctx),
-            "5": ctx.issue_description || "",
-            "6": ctx.priority || "",
+            "5": ctx.issue_description || "Maintenance issue reported",
+            "6": ctx.priority || "Standard",
           },
         });
         results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
@@ -133,11 +133,11 @@ async function handleIntake(
           templateSid: TEMPLATES.ticket_created,
           variables: {
             "1": shortRef(ticketId),
-            "2": ctx.property_address || "",
+            "2": ctx.property_address || "Address not available",
             "3": formatCallerInfo(ctx),
             "4": formatTenantInfo(ctx),
-            "5": ctx.issue_description || "",
-            "6": ctx.priority || "",
+            "5": ctx.issue_description || "Maintenance issue reported",
+            "6": ctx.priority || "Standard",
           },
         });
         results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
@@ -220,11 +220,11 @@ async function handleManualLandlord(
     templateSid: TEMPLATES.ticket_created,
     variables: {
       "1": shortRef(ticketId),
-      "2": ctx.property_address || "",
-      "3": ctx.business_name || "",
+      "2": ctx.property_address || "Address not available",
+      "3": ctx.business_name || "Your property manager",
       "4": ctx.tenant_name || "N/A",
-      "5": ctx.issue_description || "",
-      "6": ctx.priority || "",
+      "5": ctx.issue_description || "Maintenance issue reported",
+      "6": ctx.priority || "Standard",
     },
   });
 
