@@ -282,9 +282,9 @@ export default function PropertyDetailPage() {
       {/* Two-column content */}
       <div className="flex-1 min-h-0 flex">
         {/* Left: Details */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-hidden px-8 py-6 flex flex-col">
           {isEditing && editedData ? (
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1 overflow-y-auto min-h-0">
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block">Address</label>
                 <Input value={editedData.address} onChange={(e) => updateField('address', e.target.value)} placeholder="123 Main Street, Manchester, M1 1AA" className={validationErrors.address ? 'border-destructive' : ''} />
@@ -317,9 +317,9 @@ export default function PropertyDetailPage() {
               </div>
             </div>
           ) : (
-            <>
+            <div className="flex flex-col flex-1 min-h-0">
               {/* Meta info — 2-column aligned layout, 60/40 split */}
-              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -363,9 +363,9 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              <div className="border-t border-border/40 mt-8" />
+              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
 
-              <div className="mt-6">
+              <div className="mt-6 flex-shrink-0">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Tenants
                   {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
@@ -388,15 +388,15 @@ export default function PropertyDetailPage() {
               </div>
 
               {/* Contractors */}
-              <div className="mt-8">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+              <div className="mt-8 flex-1 min-h-0 flex flex-col">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
                   Contractors
                   {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
                 </h3>
                 {contractors.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No contractors assigned</p>
                 ) : (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 overflow-y-auto min-h-0">
                     {contractors.map((c) => (
                       <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
                         <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
@@ -409,7 +409,7 @@ export default function PropertyDetailPage() {
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {/* Edit-mode tenants/contractors */}
