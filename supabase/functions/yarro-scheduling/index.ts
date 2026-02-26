@@ -116,7 +116,7 @@ async function handleFinalizeJob(
     const { error: patchError } = await supabase
       .from("c1_tickets")
       .update({
-        status: "Job Sent",
+        status: "open",
         contractor_id: contractor.id,
         contractor_quote: quoteNum,
         final_amount: totalNum,
@@ -288,15 +288,14 @@ async function handleFilloutScheduling(
   const formattedWindow = formatSchedulingWindow(startIso, endIso || startIso);
   const scheduledIso = new Date(startIso).toISOString();
 
-  // Dedup: reject if ticket already scheduled or further in the flow
-  const ALREADY_BOOKED = ["Job Scheduled", "Completed", "Closed"];
+  // Dedup: reject if ticket already has a scheduled date or is closed
   const { data: currentTicket } = await supabase
     .from("c1_tickets")
-    .select("status, scheduled_date")
+    .select("status, scheduled_date, job_stage")
     .eq("id", ticketId)
     .maybeSingle();
 
-  if (currentTicket && ALREADY_BOOKED.includes(currentTicket.status)) {
+  if (currentTicket && (currentTicket.status === 'closed' || currentTicket.scheduled_date)) {
     console.log(`[${FN}] Ticket ${ticketId} already has status "${currentTicket.status}", rejecting duplicate booking`);
     return new Response(
       JSON.stringify({ ok: true, duplicate: true, ticket_id: ticketId, current_status: currentTicket.status }),
@@ -323,7 +322,7 @@ async function handleFilloutScheduling(
   const { error: patchError } = await supabase
     .from("c1_tickets")
     .update({
-      status: "Job Scheduled",
+      status: "open",
       scheduled_date: scheduledIso,
       job_stage: "Booked",
     })
