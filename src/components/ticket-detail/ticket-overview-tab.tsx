@@ -63,8 +63,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
       const matched = contractors.find(c => c.id === basic.contractor_id)
       if (matched?.quote_notes) return matched.quote_notes
     }
-    const withNotes = contractors.find(c => c.quote_notes)
-    return withNotes?.quote_notes || null
+    return null
   })()
 
   const markup = (() => {

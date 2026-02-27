@@ -23,6 +23,13 @@ const EVENT_LABELS: Record<string, string> = {
   LANDLORD_NOTIFIED: 'Landlord notified',
   JOB_COMPLETED: 'Job completed',
   JOB_SCHEDULED: 'Job scheduled',
+  TICKET_ON_HOLD: 'Ticket put on hold',
+  TICKET_RESUMED: 'Ticket resumed',
+  TICKET_ARCHIVED: 'Ticket archived',
+  QUOTE_APPROVED: 'Quote approved',
+  QUOTE_DECLINED: 'Quote declined',
+  LANDLORD_APPROVED: 'Landlord approved',
+  LANDLORD_DECLINED: 'Landlord declined',
 }
 
 function formatEventDetail(entry: LedgerEntry): string | null {

@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Combobox } from '@/components/ui/combobox'
 import { toast } from 'sonner'
 
@@ -646,6 +647,119 @@ function RedispatchAction({ ticketId, onDispatched }: { ticketId: string; onDisp
   )
 }
 
+// ─── Dispatch Action Bar ───
+
+interface DispatchActionBarProps {
+  nextActionReason: string | null | undefined
+  messages: MessageData | null
+  ticketId: string
+  onActionTaken?: () => void
+}
+
+function DispatchActionBar({ nextActionReason, messages, ticketId, onActionTaken }: DispatchActionBarProps) {
+  const [markup, setMarkup] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [confirmDecline, setConfirmDecline] = useState(false)
+  const supabase = createClient()
+
+  if (nextActionReason !== 'manager_approval') return null
+  if (!messages) return null
+
+  const manager = messages.manager && typeof messages.manager === 'object' && !Array.isArray(messages.manager)
+    ? messages.manager as Record<string, unknown>
+    : null
+  if (!manager || manager.approval != null) return null
+
+  // Find the contractor under review
+  const contractors = Array.isArray(messages.contractors) ? messages.contractors as Record<string, unknown>[] : []
+  const reviewingId = manager.reviewing_contractor_id as string | undefined
+  const repliedContractor = reviewingId
+    ? contractors.find(c => c.id === reviewingId)
+    : contractors
+        .filter(c => c.status === 'replied')
+        .sort((a, b) => new Date(b.replied_at as string).getTime() - new Date(a.replied_at as string).getTime())[0]
+
+  const contractorName = (repliedContractor?.name as string) || 'Contractor'
+  const quoteAmount = repliedContractor?.quote_amount as string | undefined
+  const category = repliedContractor?.category as string | undefined
+
+  const handleDecision = async (approved: boolean) => {
+    setLoading(true)
+    const { data, error } = await supabase.rpc('c1_manager_decision_from_app' as never, {
+      p_ticket_id: ticketId,
+      p_approved: approved,
+      p_markup: approved && markup.trim() ? markup.trim() : null,
+    } as never)
+    setLoading(false)
+
+    const result = data as unknown as { ok: boolean; error?: string } | null
+    if (error || !result?.ok) {
+      toast.error('Action failed', { description: (result as Record<string, unknown>)?.error as string || error?.message || 'Unknown error' })
+      return
+    }
+
+    if (approved) {
+      toast.success('Quote approved', { description: 'Landlord will be notified' })
+    } else {
+      toast.success('Quote declined', { description: 'Trying next contractor' })
+    }
+    setConfirmDecline(false)
+    onActionTaken?.()
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Quote awaiting your approval</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          <span className="font-medium text-foreground">{contractorName}</span>
+          {quoteAmount && <> quoted <span className="font-medium text-foreground">{formatAmount(quoteAmount)}</span></>}
+          {category && <> for {category}</>}
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs text-muted-foreground">Markup for tenant (optional)</label>
+        <div className="relative max-w-[200px]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">£</span>
+          <Input
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={markup}
+            onChange={(e) => setMarkup(e.target.value.replace(/[^0-9.]/g, ''))}
+            className="pl-7 h-8 text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {confirmDecline ? (
+          <>
+            <span className="text-xs text-muted-foreground">Decline this quote?</span>
+            <Button variant="destructive" size="sm" disabled={loading} onClick={() => handleDecision(false)}>
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+              Yes, decline
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDecline(false)}>Cancel</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDecline(true)}>
+              <XCircle className="h-3.5 w-3.5 mr-1" />
+              Decline
+            </Button>
+            <Button size="sm" disabled={loading} onClick={() => handleDecision(true)}>
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+              Approve
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Component ───
 
 interface TicketDispatchTabProps {
@@ -653,9 +767,11 @@ interface TicketDispatchTabProps {
   outboundLog: OutboundLogEntry[]
   ticketId?: string
   onRedispatched?: () => void
+  nextActionReason?: string | null
+  onActionTaken?: () => void
 }
 
-export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched }: TicketDispatchTabProps) {
+export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched, nextActionReason, onActionTaken }: TicketDispatchTabProps) {
   const [overlay, setOverlay] = useState<{ title: string; messages: ChatMsg[] } | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const entries = useMemo(() => buildEntries(messages, outboundLog), [messages, outboundLog])
@@ -684,6 +800,14 @@ export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatc
 
   return (
     <div className="space-y-0">
+      {ticketId && (
+        <DispatchActionBar
+          nextActionReason={nextActionReason}
+          messages={messages}
+          ticketId={ticketId}
+          onActionTaken={onActionTaken}
+        />
+      )}
       {entries.map((entry, index) => {
         const isLast = index === entries.length - 1
         const isClickable = entry.chatMessages.length > 0
