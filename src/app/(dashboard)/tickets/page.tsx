@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal } from 'lucide-react'
+import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
@@ -52,6 +52,7 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  on_hold?: boolean | null
   next_action?: string | null
   next_action_reason?: string | null
   sla_due_at?: string | null
@@ -161,6 +162,7 @@ export default function TicketsPage() {
         contractor_id,
         conversation_id,
         archived,
+        on_hold,
         images,
         next_action,
         next_action_reason,
@@ -303,6 +305,13 @@ export default function TicketsPage() {
     fetchTickets()
   }
 
+  const handleToggleHold = async (ticket: TicketRow) => {
+    const newHold = !ticket.on_hold
+    await supabase.rpc('c1_toggle_hold', { p_ticket_id: ticket.id, p_on_hold: newHold })
+    toast.success(newHold ? 'Ticket paused' : 'Ticket resumed')
+    fetchTickets()
+  }
+
   const handleArchive = async () => {
     if (!selectedTicketBasic) return
 
@@ -386,9 +395,8 @@ export default function TicketsPage() {
       key: 'issue_description',
       header: 'Issue',
       sortable: true,
-      width: '30%',
       render: (ticket) => (
-        <div className="min-w-0">
+        <div className="min-w-0 max-w-[300px]">
           <p className="font-medium truncate">{ticket.issue_description || 'No description'}</p>
           <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
         </div>
@@ -446,21 +454,38 @@ export default function TicketsPage() {
     {
       key: 'actions',
       header: '',
-      width: '110px',
-      render: (ticket) => (
-        ticket.handoff && ticket.status === 'open' && !ticket.archived ? (
-          <InteractiveHoverButton
-            text="Review"
-            className="w-24 text-xs h-7"
-            onClick={(e) => {
-              e.stopPropagation()
-              setSelectedTicketBasic(ticket)
-              setHandoffTicketId(ticket.id)
-              setCreateDrawerOpen(true)
-            }}
-          />
-        ) : null
-      ),
+      width: '80px',
+      render: (ticket) => {
+        const isOpen = ticket.status === 'open' && !ticket.archived
+        const isHandoff = ticket.handoff && isOpen
+        return (
+          <div className="flex items-center gap-1 justify-end">
+            {isOpen && !isHandoff && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title={ticket.on_hold ? 'Resume' : 'Hold'}
+                onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
+              >
+                {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+            {isHandoff && (
+              <InteractiveHoverButton
+                text="Review"
+                className="w-20 text-xs h-7"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedTicketBasic(ticket)
+                  setHandoffTicketId(ticket.id)
+                  setCreateDrawerOpen(true)
+                }}
+              />
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -535,9 +560,9 @@ export default function TicketsPage() {
   }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
 
   return (
-    <div className="p-8 flex flex-col h-full overflow-hidden">
+    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-3">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <Ticket className="h-5 w-5" />
