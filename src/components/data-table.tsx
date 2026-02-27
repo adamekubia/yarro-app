@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, ReactNode } from 'react'
+import { useState, useMemo, ReactNode } from 'react'
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Eye, Loader2 } from 'lucide-react'
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type Column<T> = {
@@ -37,6 +37,9 @@ type DataTableProps<T> = {
   maxHeight?: string
   fillHeight?: boolean
   headerExtra?: ReactNode
+  showHeader?: boolean      // default true — set false to hide column headers (e.g. 2nd+ sections)
+  hideToolbar?: boolean     // default false — set true to hide search + headerExtra bar
+  disableBodyScroll?: boolean // default false — set true for overflow-visible (inside parent scroller)
 }
 
 export function DataTable<T>({
@@ -53,14 +56,13 @@ export function DataTable<T>({
   maxHeight = 'calc(100vh - 280px)',
   fillHeight = false,
   headerExtra,
+  showHeader = true,
+  hideToolbar = false,
+  disableBodyScroll = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [navigatingId, setNavigatingId] = useState<string | null>(null)
-
-  // Reset navigating state when data changes (came back to page)
-  useEffect(() => { setNavigatingId(null) }, [data])
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -135,60 +137,64 @@ export function DataTable<T>({
   return (
     <div className={cn("rounded-xl", fillHeight && "flex flex-col h-full")}>
       {/* Search + Filters */}
-      <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10"
-            />
+      {!hideToolbar && (
+        <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-10"
+              />
+            </div>
+            {headerExtra}
           </div>
-          {headerExtra}
         </div>
-      </div>
+      )}
 
       {/* Table */}
       <div
-        className={cn("overflow-auto", fillHeight && "flex-1 min-h-0")}
-        style={fillHeight ? undefined : { maxHeight }}
+        className={cn(disableBodyScroll ? "overflow-visible" : "overflow-auto", fillHeight && "flex-1 min-h-0")}
+        style={!disableBodyScroll && !fillHeight ? { maxHeight } : undefined}
       >
         <Table>
-          <TableHeader className="[&_tr]:border-0">
-            <TableRow className="hover:bg-transparent">
-              {columns.map((col) => (
-                <TableHead
-                  key={col.key}
-                  style={{ width: col.width }}
-                  className={cn(
-                    'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
-                    col.sortable && 'cursor-pointer select-none hover:text-foreground'
-                  )}
-                  onClick={() => col.sortable && handleSort(col.key)}
-                >
-                  <div className="flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && (
-                      <span className="ml-1">
-                        {sortKey === col.key ? (
-                          sortDir === 'asc' ? (
-                            <ArrowUp className="h-3 w-3" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-40" />
-                        )}
-                      </span>
+          {showHeader && (
+            <TableHeader className="[&_tr]:border-0">
+              <TableRow className="hover:bg-transparent">
+                {columns.map((col) => (
+                  <TableHead
+                    key={col.key}
+                    style={{ width: col.width }}
+                    className={cn(
+                      'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
+                      col.sortable && 'cursor-pointer select-none hover:text-foreground'
                     )}
-                  </div>
-                </TableHead>
-              ))}
-              {onViewClick && <TableHead className="w-12" />}
-            </TableRow>
-          </TableHeader>
+                    onClick={() => col.sortable && handleSort(col.key)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {col.header}
+                      {col.sortable && (
+                        <span className="ml-1">
+                          {sortKey === col.key ? (
+                            sortDir === 'asc' ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
+                ))}
+                {onViewClick && <TableHead className="w-12" />}
+              </TableRow>
+            </TableHeader>
+          )}
           <TableBody className="[&_tr]:border-0">
             {filteredData.length === 0 ? (
               <TableRow>
@@ -200,48 +206,38 @@ export function DataTable<T>({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((row) => {
-                const rowId = getRowId(row)
-                const isNavigating = navigatingId === rowId
-                return (
-                  <TableRow
-                    key={rowId}
-                    className={cn(
-                      'group transition-colors',
-                      onRowClick && 'cursor-pointer hover:bg-muted/40 active:bg-muted/60',
-                      isNavigating && 'bg-primary/5',
-                      getRowClassName?.(row)
-                    )}
-                    onClick={() => {
-                      if (onRowClick) {
-                        setNavigatingId(rowId)
-                        onRowClick(row)
-                      }
-                    }}
-                  >
-                    {columns.map((col) => (
-                      <TableCell key={col.key} className="py-3">
-                        {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
-                      </TableCell>
-                    ))}
-                    {onViewClick && (
-                      <TableCell className="py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onViewClick(row)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                )
-              })
+              filteredData.map((row) => (
+                <TableRow
+                  key={getRowId(row)}
+                  className={cn(
+                    'group',
+                    onRowClick && 'cursor-pointer hover:bg-muted/40',
+                    getRowClassName?.(row)
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {columns.map((col) => (
+                    <TableCell key={col.key} className="py-3">
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
+                    </TableCell>
+                  ))}
+                  {onViewClick && (
+                    <TableCell className="py-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewClick(row)
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
