@@ -8,7 +8,7 @@ export const TEMPLATES = {
   handoff: "HX7dbca3663f1864cec8c0ad3fd8933ad7",              // 2b_pm_handoff_ticket
 
   // ─── OOH Emergency (yarro-ticket-notify) ───
-  ooh_emergency_dispatch: "HX0c8ef46673849e93859e8ff0bc97fb3a",  // 20_ooh_emergency_dispatch
+  ooh_emergency_dispatch: "HXf417fee316a93526eedd11634208910a",  // 20_2_ooh_emergency_dispatch
 
   // ─── Contractor Dispatch (yarro-dispatcher) ───
   contractor_quote: "HXa0110e2b69a0abe9352d47cd38e7b9ca",     // 3_5_contractor_quote
