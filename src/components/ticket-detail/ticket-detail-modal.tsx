@@ -115,23 +115,33 @@ export function TicketDetailModal({
                   {context.property_address || 'Unknown Property'}
                 </DialogTitle>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {displayStage && <StatusBadge status={displayStage} size="md" />}
-                  {context.priority && <StatusBadge status={context.priority} size="md" />}
-                  {isOOH && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7 px-2.5"
+                  {/* OOH: combined status + mark complete pill */}
+                  {isOOH ? (
+                    <button
                       onClick={handleMarkComplete}
                       disabled={closingTicket}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50 ${
+                        oohOutcome === 'resolved' ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
+                        : oohOutcome === 'unresolved' ? 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400'
+                        : oohOutcome === 'in_progress' ? 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400'
+                        : 'border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400'
+                      }`}
                     >
                       {closingTicket ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <><CheckCircle2 className="h-3 w-3 mr-1" />Complete</>
+                        <>
+                          {displayStage || 'OOH Dispatched'}
+                          <span className="opacity-40">·</span>
+                          <span className="text-xs">Mark Complete</span>
+                          <CheckCircle2 className="h-3 w-3" />
+                        </>
                       )}
-                    </Button>
+                    </button>
+                  ) : (
+                    displayStage && <StatusBadge status={displayStage} size="md" />
                   )}
+                  {context.priority && <StatusBadge status={context.priority} size="md" />}
                   {isHandoff && onReview && (
                     <InteractiveHoverButton
                       text="Review"
@@ -160,6 +170,11 @@ export function TicketDetailModal({
               <p className="text-sm text-muted-foreground line-clamp-1">
                 {context.issue_description || 'No description'}
               </p>
+              {isOOH && (
+                <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                  Handled out-of-hours — review the contact&apos;s response below, then mark as complete.
+                </p>
+              )}
             </div>
           ) : (
             <DialogTitle>Ticket</DialogTitle>
