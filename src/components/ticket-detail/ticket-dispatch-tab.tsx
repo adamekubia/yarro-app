@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle, Phone } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<string, string> = {
   pm_ticket_created: 'Manager Notified',
   ll_ticket_created: 'Landlord Notified',
   pm_handoff: 'Handoff — Manager Alerted',
+  ooh_emergency_dispatch: 'OOH Contact Dispatched',
   contractor_job_schedule: 'Contractor Booking Sent',
   contractor_job_confirmed: 'Contractor Confirmed Slot',
   landlord_declined: 'Landlord Declined',
@@ -36,6 +37,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TICKET_CREATED_LOG_TYPES = new Set(['pm_ticket_created', 'll_ticket_created'])
 const HANDOFF_LOG_TYPES = new Set(['pm_handoff'])
+const OOH_LOG_TYPES = new Set(['ooh_emergency_dispatch'])
 const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_more_contractors'])
 const MANAGER_LOG_TYPES = new Set(['pm_quote'])
 const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved', 'landlord_declined'])
@@ -88,6 +90,7 @@ const STATUS_STYLES: Record<string, string> = {
 function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[]): PurposeEntry[] {
   const entries: PurposeEntry[] = []
 
+  const oohLogs = outboundLog.filter(e => OOH_LOG_TYPES.has(e.message_type))
   const ticketCreatedLogs = outboundLog.filter(e => TICKET_CREATED_LOG_TYPES.has(e.message_type))
   const handoffLogs = outboundLog.filter(e => HANDOFF_LOG_TYPES.has(e.message_type))
   const contractorLogs = outboundLog.filter(e => CONTRACTOR_LOG_TYPES.has(e.message_type))
@@ -96,6 +99,21 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
   const bookingLogs = outboundLog.filter(e => BOOKING_LOG_TYPES.has(e.message_type))
   const completionLogs = outboundLog.filter(e => COMPLETION_LOG_TYPES.has(e.message_type))
   const followupLogs = outboundLog.filter(e => FOLLOWUP_LOG_TYPES.has(e.message_type))
+
+  // ─── OOH: emergency dispatched to OOH contact ───
+  for (const entry of oohLogs) {
+    entries.push({
+      id: entry.id,
+      phase: 'OOH Dispatch',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: 'sent',
+      timestamp: entry.sent_at,
+      isEscalation: false,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
 
   // ─── Handoff: PM alerted for handoff tickets (before Ticket Created) ───
   for (const entry of handoffLogs) {
@@ -529,6 +547,7 @@ function subEntryLabel(subs: SubEntry[]): string {
 // ─── Phase → icon mapping (activity-tab style) ───
 
 const PHASE_ICONS: Record<string, typeof Cog> = {
+  'OOH Dispatch': Phone,
   Handoff: AlertTriangle,
   'Ticket Created': Send,
   'Contractor Quotes': Wrench,

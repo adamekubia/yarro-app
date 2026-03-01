@@ -78,7 +78,7 @@ function formatStatus(status: string): string {
   return status
     .toLowerCase()
     .replace(/_/g, ' ')
-    .replace(/\b(pm|ll)\b/gi, (m) => m.toUpperCase()) // Keep PM, LL as uppercase acronyms
+    .replace(/\b(pm|ll|ooh|sla)\b/gi, (m) => m.toUpperCase()) // Keep PM, LL, OOH, SLA as uppercase acronyms
     .replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
