@@ -713,11 +713,16 @@ export default function RulesPage() {
                             </div>
                             {c.categories.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1.5">
-                                {c.categories.map((cat) => (
+                                {c.categories.slice(0, 4).map((cat) => (
                                   <span key={cat} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                                     {cat}
                                   </span>
                                 ))}
+                                {c.categories.length > 4 && (
+                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                    +{c.categories.length - 4} more
+                                  </span>
+                                )}
                               </div>
                             )}
                           </button>
