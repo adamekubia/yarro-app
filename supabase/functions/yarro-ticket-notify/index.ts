@@ -146,7 +146,7 @@ async function handleIntake(
                 "2": ctx.property_address || "Address not available",
                 "3": formatCallerInfo(ctx),
                 "4": formatTenantInfo(ctx),
-                "5": ctx.issue_description || "Maintenance issue reported",
+                "5": (ctx.issue_description || "Maintenance issue reported") + " (Sent to OOH contact)",
                 "6": ctx.priority || "Standard",
               },
             });
