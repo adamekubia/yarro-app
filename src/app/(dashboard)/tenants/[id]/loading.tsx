@@ -42,7 +42,7 @@ export default function TenantDetailLoading() {
             <div className="h-10 w-3/4 bg-muted rounded-lg" />
           </div>
         </div>
-        <div className="w-[540px] flex-shrink-0 border-l px-6 py-5 space-y-4">
+        <div className="w-[400px] flex-shrink-0 border-l px-6 py-5 space-y-4">
           <div className="h-4 w-16 bg-muted rounded" />
           <div className="space-y-3 pt-2">
             <div className="h-12 w-full bg-muted rounded-lg" />

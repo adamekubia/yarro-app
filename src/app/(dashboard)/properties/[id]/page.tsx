@@ -563,7 +563,7 @@ export default function PropertyDetailPage() {
         </div>
 
         {/* Right: Tickets */}
-        <div className="w-[420px] flex-shrink-0 border-l flex flex-col">
+        <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
             <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || completedTickets.length > 0) && (
