@@ -1,7 +1,7 @@
 'use client'
 
-import { format } from 'date-fns'
-import { Users, Wrench, MapPin, Crown } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { Users, Wrench, MapPin, Crown, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
@@ -102,6 +102,48 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
             </span>
           )}
         </div>
+      )}
+
+      {/* OOH Outcome */}
+      {basic.ooh_dispatched && (
+        <>
+          <DashedLine />
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Out-of-Hours</p>
+            <div className={`rounded-lg border p-3 ${
+              basic.ooh_outcome === 'resolved' ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20'
+              : basic.ooh_outcome === 'unresolved' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'
+              : basic.ooh_outcome === 'in_progress' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+              : 'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {basic.ooh_outcome === 'resolved' ? 'Handled by OOH contact'
+                  : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
+                  : basic.ooh_outcome === 'in_progress' ? 'In progress'
+                  : 'Dispatched — awaiting response'}
+                </span>
+              </div>
+              {basic.ooh_dispatched_at && (
+                <p className="text-xs text-muted-foreground">
+                  Dispatched {formatDistanceToNow(new Date(basic.ooh_dispatched_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.ooh_outcome_at && (
+                <p className="text-xs text-muted-foreground">
+                  Responded {formatDistanceToNow(new Date(basic.ooh_outcome_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.ooh_notes && (
+                <p className="text-sm mt-2">{basic.ooh_notes}</p>
+              )}
+              {basic.ooh_cost != null && basic.ooh_cost > 0 && (
+                <p className="text-sm mt-1 font-medium">&pound;{basic.ooh_cost.toFixed(2)}</p>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       <DashedLine />

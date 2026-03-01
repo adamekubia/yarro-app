@@ -84,6 +84,12 @@ export interface TicketBasic {
   on_hold: boolean | null
   sla_due_at: string | null
   resolved_at: string | null
+  ooh_dispatched: boolean | null
+  ooh_outcome: string | null
+  ooh_notes: string | null
+  ooh_cost: number | null
+  ooh_dispatched_at: string | null
+  ooh_outcome_at: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -383,6 +389,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id,
             archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
+            ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)
@@ -525,6 +532,10 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       on_hold: 'On Hold',
       pending_review: 'Needs Review',
       handoff_review: 'Handoff',
+      ooh_dispatched: 'OOH Dispatched',
+      ooh_resolved: 'OOH Resolved',
+      ooh_unresolved: 'OOH Unresolved',
+      ooh_in_progress: 'OOH In Progress',
       manager_approval: 'Awaiting Manager',
       no_contractors: 'No Contractors',
       landlord_declined: 'Landlord Declined',

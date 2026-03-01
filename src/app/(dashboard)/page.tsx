@@ -144,6 +144,9 @@ const ACTION_CTA: Record<string, string> = {
   'Awaiting landlord': 'Follow up',
   'Contractor unresponsive': 'Redispatch',
   'OOH dispatched': 'Review',
+  'OOH resolved': 'Close',
+  'OOH unresolved': 'Review',
+  'OOH in progress': 'View',
 }
 
 // Dot + text badges per next_action_reason (distinct from StatusBadge pills)
@@ -152,6 +155,9 @@ const REASON_BADGE: Record<string, { label: string; dot: string; text: string }>
   pending_review:       { label: 'Needs review',      dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
   handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
   ooh_dispatched:       { label: 'OOH Dispatched',    dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
+  ooh_resolved:         { label: 'OOH Resolved',      dot: 'bg-green-500',  text: 'text-green-600 dark:text-green-400' },
+  ooh_unresolved:       { label: 'OOH Unresolved',    dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
+  ooh_in_progress:      { label: 'OOH In Progress',   dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
   no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
   job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
   landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
@@ -376,6 +382,9 @@ export default function DashboardPage() {
         pending_review: 'Needs Review',
         handoff_review: 'Handoff',
         ooh_dispatched: 'OOH Dispatched',
+        ooh_resolved: 'OOH Resolved',
+        ooh_unresolved: 'OOH Unresolved',
+        ooh_in_progress: 'OOH In Progress',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',
         landlord_declined: 'Landlord Declined',

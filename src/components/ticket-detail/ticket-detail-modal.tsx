@@ -10,7 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, Pause, Play, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
+import { Archive, Pause, Play, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Phone, Clock, XCircle, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverviewTab } from './ticket-overview-tab'
@@ -59,8 +60,25 @@ export function TicketDetailModal({
   const isHandoff = context?.handoff && basic?.status === 'open' && !basic?.archived
   const isOnHold = basic?.on_hold === true
   const isOpen = basic?.status === 'open' && !basic?.archived
+  const isOOH = basic?.ooh_dispatched === true && isOpen
+  const oohOutcome = basic?.ooh_outcome || null
   // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
   const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
+
+  const [closingTicket, setClosingTicket] = useState(false)
+
+  const handleMarkComplete = async () => {
+    if (!ticketId) return
+    setClosingTicket(true)
+    const supabase = createClient()
+    await supabase
+      .from('c1_tickets')
+      .update({ status: 'closed', resolved_at: new Date().toISOString() })
+      .eq('id', ticketId)
+    setClosingTicket(false)
+    refetch()
+    onTicketUpdated?.()
+  }
 
   const handleToggleHold = async () => {
     if (!ticketId) return
@@ -167,6 +185,69 @@ export function TicketDetailModal({
                         The AI couldn&apos;t complete this ticket automatically. Review the conversation and dispatch manually.
                       </p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* OOH status banner */}
+              {isOOH && (
+                <div className={`p-3 mt-2 mb-1 rounded-lg border flex-shrink-0 ${
+                  oohOutcome === 'resolved'
+                    ? 'bg-green-500/10 dark:bg-green-500/15 border-green-300 dark:border-green-500/30'
+                    : oohOutcome === 'unresolved'
+                    ? 'bg-red-500/10 dark:bg-red-500/15 border-red-300 dark:border-red-500/30'
+                    : oohOutcome === 'in_progress'
+                    ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/30'
+                    : 'bg-purple-500/10 dark:bg-purple-500/15 border-purple-300 dark:border-purple-500/30'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    {oohOutcome === 'resolved' ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    ) : oohOutcome === 'unresolved' ? (
+                      <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    ) : oohOutcome === 'in_progress' ? (
+                      <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <Phone className="h-4 w-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 text-sm">
+                      <p className={`font-medium ${
+                        oohOutcome === 'resolved' ? 'text-green-700 dark:text-green-300'
+                        : oohOutcome === 'unresolved' ? 'text-red-700 dark:text-red-300'
+                        : oohOutcome === 'in_progress' ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-purple-700 dark:text-purple-300'
+                      }`}>
+                        {oohOutcome === 'resolved' ? 'OOH Contact — Handled'
+                        : oohOutcome === 'unresolved' ? 'OOH Contact — Could Not Resolve'
+                        : oohOutcome === 'in_progress' ? 'OOH Contact — In Progress'
+                        : 'Dispatched to OOH Contact'}
+                      </p>
+                      {basic.ooh_notes && (
+                        <p className="text-xs mt-1 opacity-80">{basic.ooh_notes}</p>
+                      )}
+                      {basic.ooh_cost != null && basic.ooh_cost > 0 && (
+                        <p className="text-xs mt-1 opacity-80">Estimated cost: &pound;{basic.ooh_cost.toFixed(2)}</p>
+                      )}
+                      {!oohOutcome && (
+                        <p className="text-xs mt-1 opacity-60">Awaiting response from OOH contact</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={handleMarkComplete}
+                      disabled={closingTicket}
+                    >
+                      {closingTicket ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          Mark Complete
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}
