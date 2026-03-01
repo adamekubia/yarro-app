@@ -82,7 +82,8 @@ async function handleIntake(
   }
 
   // ── OOH CHECK: route emergencies to OOH contacts outside business hours ──
-  if (pmId && pmSettings.ooh_enabled && !ctx.handoff) {
+  // Note: emergencies from AI always have handoff=true, so we must NOT exclude them
+  if (pmId && pmSettings.ooh_enabled) {
     const { data: withinHours } = await supabase.rpc("c1_is_within_business_hours", {
       p_pm_id: pmId,
     });
@@ -104,6 +105,7 @@ async function handleIntake(
             ooh_dispatched_at: new Date().toISOString(),
             ooh_contact_id: contacts[0].id,
             ooh_token: token,
+            handoff: false, // Clear handoff so ticket is exclusively OOH-routed
           }).eq("id", ticketId);
 
           if (updateErr) {

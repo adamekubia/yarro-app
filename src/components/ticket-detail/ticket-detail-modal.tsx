@@ -57,7 +57,7 @@ export function TicketDetailModal({
     refetch,
   } = useTicketDetail(open ? ticketId : null)
 
-  const isHandoff = context?.handoff && basic?.status === 'open' && !basic?.archived
+  const isHandoff = context?.handoff && basic?.status === 'open' && !basic?.archived && !basic?.ooh_dispatched
   const isOnHold = basic?.on_hold === true
   const isOpen = basic?.status === 'open' && !basic?.archived
   const isOOH = basic?.ooh_dispatched === true && isOpen

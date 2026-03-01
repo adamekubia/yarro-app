@@ -606,7 +606,7 @@ export default function TicketsPage() {
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
-        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && t.archived !== true)}
+        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && t.archived !== true && !t.ooh_dispatched)}
         onReview={(ticketId) => {
           const ticket = tickets.find(t => t.id === ticketId)
           if (ticket) {
