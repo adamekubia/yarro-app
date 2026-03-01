@@ -1,18 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { CheckCircle2, AlertTriangle, Clock, Loader2 } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Clock, Loader2, RefreshCw } from 'lucide-react'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+type OOHSubmission = {
+  outcome: string
+  notes: string | null
+  cost: number | null
+  submitted_at: string
+}
 
 type OOHTicket = {
   ticket_id: string
@@ -28,6 +35,7 @@ type OOHTicket = {
   ooh_outcome_at: string | null
   ooh_notes: string | null
   ooh_cost: number | null
+  ooh_submissions: OOHSubmission[]
 }
 
 type Outcome = 'resolved' | 'unresolved' | 'in_progress'
@@ -38,6 +46,23 @@ const UNRESOLVED_REASONS = [
   'Tenant not home',
   'Other',
 ] as const
+
+const OUTCOME_LABELS: Record<string, string> = {
+  resolved: 'Handled',
+  unresolved: 'Couldn\'t resolve',
+  in_progress: 'In progress',
+}
+
+const OUTCOME_COLORS: Record<string, string> = {
+  resolved: 'text-green-600 bg-green-50 border-green-200',
+  unresolved: 'text-red-600 bg-red-50 border-red-200',
+  in_progress: 'text-amber-600 bg-amber-50 border-amber-200',
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 export default function OOHResponsePage() {
   const { token } = useParams<{ token: string }>()
@@ -52,29 +77,31 @@ export default function OOHResponsePage() {
   const [cost, setCost] = useState('')
   const [unresolvedReason, setUnresolvedReason] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [justSubmitted, setJustSubmitted] = useState(false)
+
+  const loadTicket = useCallback(async () => {
+    const { data, error: err } = await supabase.rpc('c1_get_ooh_ticket', {
+      p_token: token,
+    })
+    if (err || !data) {
+      setError('This link is invalid or has expired.')
+      setLoading(false)
+      return
+    }
+    setTicket(data as OOHTicket)
+    setLoading(false)
+  }, [token])
 
   useEffect(() => {
-    async function load() {
-      const { data, error: err } = await supabase.rpc('c1_get_ooh_ticket', {
-        p_token: token,
-      })
-      if (err || !data) {
-        setError('This link is invalid or has expired.')
-        setLoading(false)
-        return
-      }
-      setTicket(data as OOHTicket)
-      if (data.ooh_outcome) {
-        setSubmitted(true)
-        setSelectedOutcome(data.ooh_outcome as Outcome)
-        setNotes(data.ooh_notes || '')
-        setCost(data.ooh_cost?.toString() || '')
-      }
-      setLoading(false)
-    }
-    load()
-  }, [token])
+    loadTicket()
+  }, [loadTicket])
+
+  function resetForm() {
+    setSelectedOutcome(null)
+    setNotes('')
+    setCost('')
+    setUnresolvedReason(null)
+  }
 
   async function handleSubmit() {
     if (!selectedOutcome) return
@@ -98,8 +125,11 @@ export default function OOHResponsePage() {
       return
     }
 
-    setSubmitted(true)
     setSubmitting(false)
+    setJustSubmitted(true)
+    resetForm()
+    await loadTicket()
+    setTimeout(() => setJustSubmitted(false), 4000)
   }
 
   if (loading) {
@@ -123,64 +153,24 @@ export default function OOHResponsePage() {
     )
   }
 
-  // Already submitted — read-only view
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-lg px-4 py-8">
-          <Header />
-
-          <Card className="mt-6">
-            <CardContent className="pt-6 text-center">
-              <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-green-50">
-                <CheckCircle2 className="size-6 text-green-600" />
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Status reported
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {ticket.business_name} will follow up from here.
-              </p>
-
-              <div className="mt-5 rounded-lg bg-gray-50 p-4 text-left text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status</span>
-                  <span className="font-medium text-gray-900 capitalize">
-                    {selectedOutcome === 'in_progress'
-                      ? 'In progress'
-                      : selectedOutcome === 'resolved'
-                        ? 'Handled'
-                        : 'Couldn\'t resolve'}
-                  </span>
-                </div>
-                {notes && (
-                  <div className="mt-3 border-t pt-3">
-                    <span className="text-gray-500">Notes</span>
-                    <p className="mt-1 text-gray-900">{notes}</p>
-                  </div>
-                )}
-                {cost && (
-                  <div className="mt-3 flex justify-between border-t pt-3">
-                    <span className="text-gray-500">Estimated cost</span>
-                    <span className="font-medium text-gray-900">
-                      &pound;{parseFloat(cost).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Footer />
-        </div>
-      </div>
-    )
-  }
+  const submissions = ticket.ooh_submissions || []
+  const hasSubmissions = submissions.length > 0
+  const latestOutcome = ticket.ooh_outcome
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-lg px-4 py-8">
         <Header />
+
+        {/* Success banner */}
+        {justSubmitted && (
+          <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-2.5 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+            <CheckCircle2 className="size-4 text-green-600 shrink-0" />
+            <p className="text-sm font-medium text-green-700">
+              Status updated — {ticket.business_name} has been notified.
+            </p>
+          </div>
+        )}
 
         {/* Issue details */}
         <Card className="mt-6">
@@ -234,10 +224,53 @@ export default function OOHResponsePage() {
           </CardContent>
         </Card>
 
+        {/* Instruction banner */}
+        <div className="mt-5 flex items-start gap-2.5 rounded-lg border border-blue-100 bg-blue-50/50 px-4 py-3">
+          <RefreshCw className="size-4 text-blue-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-700 leading-relaxed">
+            Use this same link to come back and update your status at any time.
+            Each update will be shared with {ticket.business_name}.
+          </p>
+        </div>
+
+        {/* Previous submissions */}
+        {hasSubmissions && (
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
+              Your updates
+            </h3>
+            <div className="space-y-2">
+              {[...submissions].reverse().map((sub, i) => (
+                <div
+                  key={i}
+                  className={`rounded-lg border px-3.5 py-2.5 ${OUTCOME_COLORS[sub.outcome] || 'border-gray-200 bg-gray-50 text-gray-600'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold">
+                      {OUTCOME_LABELS[sub.outcome] || sub.outcome}
+                    </span>
+                    <span className="text-[10px] opacity-70">
+                      {formatTime(sub.submitted_at)}
+                    </span>
+                  </div>
+                  {sub.notes && (
+                    <p className="mt-1 text-xs opacity-80">{sub.notes}</p>
+                  )}
+                  {sub.cost != null && (
+                    <p className="mt-1 text-xs opacity-70">
+                      Cost: &pound;{Number(sub.cost).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Status selection */}
         <div className="mt-6">
           <h3 className="text-sm font-medium text-gray-900">
-            What&apos;s the status?
+            {hasSubmissions ? 'Update status' : 'What\u2019s the status?'}
           </h3>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <OutcomeButton
@@ -381,6 +414,8 @@ export default function OOHResponsePage() {
               >
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
+                ) : hasSubmissions ? (
+                  'Update Status'
                 ) : (
                   'Submit'
                 )}

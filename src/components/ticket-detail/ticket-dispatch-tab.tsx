@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle, Phone } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
-import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
+import type { MessageData, OutboundLogEntry, OOHSubmission } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -87,7 +87,19 @@ const STATUS_STYLES: Record<string, string> = {
 
 // ─── Build purpose entries ───
 
-function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[]): PurposeEntry[] {
+const OOH_OUTCOME_LABELS: Record<string, string> = {
+  resolved: 'Handled by OOH Contact',
+  unresolved: 'Couldn\'t Resolve',
+  in_progress: 'In Progress',
+}
+
+const OOH_OUTCOME_STATUS: Record<string, string> = {
+  resolved: 'completed',
+  unresolved: 'escalation',
+  in_progress: 'sent',
+}
+
+function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[], oohSubmissions?: OOHSubmission[] | null): PurposeEntry[] {
   const entries: PurposeEntry[] = []
 
   const oohLogs = outboundLog.filter(e => OOH_LOG_TYPES.has(e.message_type))
@@ -113,6 +125,35 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
+  }
+
+  // ─── OOH: contact status updates (from portal submissions) ───
+  if (oohSubmissions && oohSubmissions.length > 0) {
+    for (let i = 0; i < oohSubmissions.length; i++) {
+      const sub = oohSubmissions[i]
+      const label = OOH_OUTCOME_LABELS[sub.outcome] || sub.outcome
+      const status = OOH_OUTCOME_STATUS[sub.outcome] || 'sent'
+      const chatMsgs: ChatMsg[] = []
+      if (sub.notes) {
+        chatMsgs.push({ role: 'contractor', text: sub.notes, timestamp: sub.submitted_at })
+      }
+      if (sub.cost != null) {
+        chatMsgs.push({ role: 'contractor', text: `Estimated cost: £${Number(sub.cost).toFixed(2)}`, timestamp: sub.submitted_at })
+      }
+      entries.push({
+        id: `ooh-submission-${i}`,
+        phase: 'OOH Response',
+        label,
+        sublabel: format(new Date(sub.submitted_at), 'dd MMM, HH:mm'),
+        status,
+        amount: sub.cost != null ? `£${Number(sub.cost).toFixed(2)}` : undefined,
+        timestamp: sub.submitted_at,
+        isEscalation: sub.outcome === 'unresolved',
+        isCompleted: sub.outcome === 'resolved',
+        chatMessages: chatMsgs,
+        subEntries: [],
+      })
+    }
   }
 
   // ─── Handoff: PM alerted for handoff tickets (before Ticket Created) ───
@@ -548,6 +589,7 @@ function subEntryLabel(subs: SubEntry[]): string {
 
 const PHASE_ICONS: Record<string, typeof Cog> = {
   'OOH Dispatch': Phone,
+  'OOH Response': Phone,
   Handoff: AlertTriangle,
   'Ticket Created': Send,
   'Contractor Quotes': Wrench,
@@ -788,12 +830,13 @@ interface TicketDispatchTabProps {
   onRedispatched?: () => void
   nextActionReason?: string | null
   onActionTaken?: () => void
+  oohSubmissions?: OOHSubmission[] | null
 }
 
-export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched, nextActionReason, onActionTaken }: TicketDispatchTabProps) {
+export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched, nextActionReason, onActionTaken, oohSubmissions }: TicketDispatchTabProps) {
   const [overlay, setOverlay] = useState<{ title: string; messages: ChatMsg[] } | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const entries = useMemo(() => buildEntries(messages, outboundLog), [messages, outboundLog])
+  const entries = useMemo(() => buildEntries(messages, outboundLog, oohSubmissions), [messages, outboundLog, oohSubmissions])
 
   const hasNoContractors = entries.some(e => e.label === 'No Contractors Available')
 
