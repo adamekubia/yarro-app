@@ -28,7 +28,6 @@ import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
-import { ReviewDispatchModal } from '@/components/review-dispatch-modal'
 import { SlaBadge } from '@/components/sla-badge'
 
 interface TicketRow {
@@ -89,9 +88,9 @@ export default function TicketsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
+  const [reviewTicketId, setReviewTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
-  const [reviewModalTicket, setReviewModalTicket] = useState<TicketRow | null>(null)
   const [search, setSearch] = useState('')
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
@@ -132,9 +131,10 @@ export default function TicketsPage() {
           setCreateDrawerOpen(true)
           return
         }
-        // Auto-open review dispatch modal if action=review and ticket is pending review
+        // Auto-open review drawer if action=review and ticket is pending review
         if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
-          setReviewModalTicket(basicTicket)
+          setReviewTicketId(basicTicket.id)
+          setCreateDrawerOpen(true)
           return
         }
       }
@@ -243,6 +243,7 @@ export default function TicketsPage() {
   const handleCloseCreateDrawer = () => {
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
+    setReviewTicketId(null)
     if (selectedId) {
       router.push('/tickets')
       setSelectedTicketBasic(null)
@@ -260,9 +261,10 @@ export default function TicketsPage() {
     access: string
     images?: string[]
   }) => {
-    if (handoffTicketId) {
+    if (handoffTicketId || reviewTicketId) {
+      const ticketId = handoffTicketId || reviewTicketId!
       const { error } = await supabase.rpc('c1_complete_handoff_ticket', {
-        p_ticket_id: handoffTicketId,
+        p_ticket_id: ticketId,
         p_property_id: data.property_id,
         p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
@@ -277,15 +279,20 @@ export default function TicketsPage() {
         throw new Error(error.message)
       }
 
+      // For review tickets, also clear the pending_review flag
+      if (reviewTicketId) {
+        await supabase.from('c1_tickets').update({ pending_review: false }).eq('id', ticketId)
+      }
+
       try {
         await supabase.functions.invoke('yarro-ticket-notify', {
-          body: { ticket_id: handoffTicketId, source: 'manual-ll' },
+          body: { ticket_id: ticketId, source: 'manual-ll' },
         })
       } catch (webhookErr) {
         console.error('Landlord notification webhook failed:', webhookErr)
       }
 
-      toast.success('Handoff completed - contractor notified')
+      toast.success(reviewTicketId ? 'Ticket reviewed & dispatched' : 'Handoff completed - contractor notified')
     } else {
       const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
         p_property_manager_id: propertyManager!.id,
@@ -318,6 +325,7 @@ export default function TicketsPage() {
 
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
+    setReviewTicketId(null)
     if (selectedId) {
       router.push('/tickets')
       setSelectedTicketBasic(null)
@@ -362,15 +370,16 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
-  const handleDismissHandoff = async () => {
-    if (!handoffTicketId || !selectedTicketBasic) return
+  const handleDismissTicket = async () => {
+    const dismissId = handoffTicketId || reviewTicketId
+    if (!dismissId || !selectedTicketBasic) return
 
     const archivedAt = new Date().toISOString()
 
     const { error: ticketError } = await supabase
       .from('c1_tickets')
       .update({ archived: true, archived_at: archivedAt, status: 'closed' })
-      .eq('id', handoffTicketId)
+      .eq('id', dismissId)
 
     if (ticketError) {
       toast.error('Failed to dismiss ticket')
@@ -380,7 +389,7 @@ export default function TicketsPage() {
     await supabase
       .from('c1_messages')
       .update({ archived: true, archived_at: archivedAt })
-      .eq('ticket_id', handoffTicketId)
+      .eq('ticket_id', dismissId)
 
     if (selectedTicketBasic.conversation_id) {
       await supabase
@@ -389,7 +398,7 @@ export default function TicketsPage() {
         .eq('id', selectedTicketBasic.conversation_id)
     }
 
-    toast.success('Handoff dismissed and archived')
+    toast.success(reviewTicketId ? 'Ticket dismissed and archived' : 'Handoff dismissed and archived')
     handleCloseCreateDrawer()
     await fetchTickets()
   }
@@ -655,7 +664,11 @@ export default function TicketsPage() {
                   <InteractiveHoverButton
                     text="Triage"
                     className="w-24 text-xs h-8"
-                    onClick={() => setReviewModalTicket(ticket)}
+                    onClick={() => {
+                      setSelectedTicketBasic(ticket)
+                      setReviewTicketId(ticket.id)
+                      setCreateDrawerOpen(true)
+                    }}
                   />
                 </div>
               ))}
@@ -824,18 +837,24 @@ export default function TicketsPage() {
         }}
       />
 
-      {/* Create / Complete Ticket Modal */}
+      {/* Create / Complete / Review Ticket Modal */}
       <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
         <DialogContent size="lg">
           <DialogHeader>
-            <DialogTitle>{handoffTicketId ? 'Complete Ticket' : 'New Ticket'}</DialogTitle>
+            <DialogTitle>
+              {reviewTicketId ? 'Review & Dispatch' : handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
+            </DialogTitle>
             <DialogDescription>
-              {handoffTicketId ? 'Fill in the missing details to dispatch this ticket' : 'Create a new maintenance ticket and assign contractors'}
+              {reviewTicketId
+                ? 'Review the AI-generated details and dispatch to contractors'
+                : handoffTicketId
+                ? 'Fill in the missing details to dispatch this ticket'
+                : 'Create a new maintenance ticket and assign contractors'}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <TicketForm
-              initialData={handoffTicketId && selectedTicketBasic ? {
+              initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
                 property_id: selectedTicketBasic.property_id || '',
                 tenant_id: selectedTicketBasic.tenant_id || '',
                 issue_description: selectedTicketBasic.issue_description || '',
@@ -848,10 +867,11 @@ export default function TicketsPage() {
                 conversation_id: selectedTicketBasic.conversation_id || undefined,
               } : undefined}
               isHandoff={!!handoffTicketId}
+              isReview={!!reviewTicketId}
               onSubmit={handleCreateTicket}
               onCancel={handleCloseCreateDrawer}
-              onDismiss={handoffTicketId ? handleDismissHandoff : undefined}
-              submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
+              onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
+              submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
             />
           </DialogBody>
         </DialogContent>
@@ -869,16 +889,6 @@ export default function TicketsPage() {
         confirmingLabel="Archiving..."
       />
 
-      {/* Review Dispatch Modal */}
-      <ReviewDispatchModal
-        ticket={reviewModalTicket}
-        open={!!reviewModalTicket}
-        onClose={() => setReviewModalTicket(null)}
-        onDispatched={() => {
-          setReviewModalTicket(null)
-          fetchTickets()
-        }}
-      />
     </div>
   )
 }

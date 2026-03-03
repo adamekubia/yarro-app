@@ -27,7 +27,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
-import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle, ClipboardList, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
 import { format } from 'date-fns'
 import { ChatHistory } from '@/components/chat-message'
 
@@ -85,6 +85,7 @@ interface TicketFormProps {
   onDismiss?: () => void         // Archive/dismiss handoff without completing
   submitLabel?: string
   isHandoff?: boolean            // Visual styling for handoff tickets
+  isReview?: boolean             // Visual styling for review mode tickets
 }
 
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
@@ -106,6 +107,7 @@ export function TicketForm({
   onDismiss,
   submitLabel = 'Create Ticket',
   isHandoff = false,
+  isReview = false,
 }: TicketFormProps) {
   const { propertyManager } = usePM()
   const supabase = createClient()
@@ -232,7 +234,7 @@ export function TicketForm({
   // Fetch conversation log for handoff tickets
   useEffect(() => {
     const convId = mergedPrefill?.conversation_id
-    if (!isHandoff || !convId) return
+    if ((!isHandoff && !isReview) || !convId) return
 
     const fetchConversation = async () => {
       setLoadingConversation(true)
@@ -250,7 +252,7 @@ export function TicketForm({
       setLoadingConversation(false)
     }
     fetchConversation()
-  }, [isHandoff, mergedPrefill?.conversation_id, supabase])
+  }, [isHandoff, isReview, mergedPrefill?.conversation_id, supabase])
 
   // Helper to check if contractor is assigned to current property
   const isAssignedToProperty = (c: Contractor) =>
@@ -594,8 +596,22 @@ export function TicketForm({
         </div>
       )}
 
-      {/* Conversation thread for handoff tickets — collapsible */}
-      {isHandoff && (conversationLog.length > 0 || loadingConversation) && (
+      {/* Review mode indicator */}
+      {isReview && (
+        <div className="p-3 bg-violet-50 dark:bg-violet-950/30 border border-violet-300 dark:border-violet-800 rounded-lg flex items-start gap-2">
+          <ClipboardList className="h-4 w-4 text-violet-600 dark:text-violet-400 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-violet-800 dark:text-violet-300">Pending Review</p>
+            <p className="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
+              This ticket was auto-created by Yarro and is awaiting your review.
+              Verify the details, select contractors, and dispatch when ready.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Conversation thread for handoff/review tickets — collapsible */}
+      {(isHandoff || isReview) && (conversationLog.length > 0 || loadingConversation) && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
             <Button
@@ -690,7 +706,7 @@ export function TicketForm({
           {formData.property_id && filteredTenants.length === 0 && (
             <p className="text-xs text-amber-600">No tenants at this property. Click to add one.</p>
           )}
-          {isHandoff && formData.tenant_id && (() => {
+          {(isHandoff || isReview) && formData.tenant_id && (() => {
             const tenant = tenants.find(t => t.id === formData.tenant_id)
             if (!tenant) return null
             return (
@@ -857,7 +873,7 @@ export function TicketForm({
                 <img
                   src={url}
                   alt={`Upload ${idx + 1}`}
-                  className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
+                  className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${(isHandoff || isReview) ? 'w-28 h-28' : 'w-16 h-16'}`}
                   onClick={() => window.open(url, '_blank')}
                 />
                 <button
@@ -894,7 +910,7 @@ export function TicketForm({
 
       {/* Footer */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        {isHandoff && onDismiss && (
+        {(isHandoff || isReview) && onDismiss && (
           <InteractiveHoverButton
             text="Dismiss"
             variant="secondary"
