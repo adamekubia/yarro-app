@@ -132,6 +132,11 @@ export default function TicketsPage() {
           setCreateDrawerOpen(true)
           return
         }
+        // Auto-open review dispatch modal if action=review and ticket is pending review
+        if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
+          setReviewModalTicket(basicTicket)
+          return
+        }
       }
       // Only open the detail modal if the create drawer isn't already open
       if (!createDrawerOpen) {

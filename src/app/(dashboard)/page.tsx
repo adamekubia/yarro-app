@@ -208,7 +208,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
             const href = isHandoff
               ? `/tickets?id=${item.ticket_id}&action=complete`
               : isPendingReview
-              ? '/tickets'
+              ? `/tickets?id=${item.ticket_id}&action=review`
               : needsDispatchTab
               ? `/tickets?id=${item.ticket_id}&tab=dispatch`
               : `/tickets?id=${item.ticket_id}`
