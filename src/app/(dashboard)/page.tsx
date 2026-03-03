@@ -243,7 +243,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                 {/* Right: CTA button */}
                 <InteractiveHoverButton
                   text={ctaText}
-                  className="w-24 text-xs h-7 flex-shrink-0"
+                  className="w-[90px] text-xs h-8 flex-shrink-0"
                   tabIndex={-1}
                 />
               </Link>
