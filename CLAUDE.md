@@ -109,7 +109,7 @@ See `.claude/docs/git-workflow.md` for the full SOP with exact commands.
 1. Always work on a feature branch: `adam/descriptive-name`
 2. Commit with clear prefixed messages: `feat:`, `fix:`, `style:`, `refactor:`
 3. Push to YOUR fork: `git push origin adam/branch-name`
-4. Open a PR to `faraaz-netizen/yarro-pm` main branch
+4. Open a PR to `Yarro-AI/yarro-app` main branch
 5. Wait for Faraaz to review. **Never merge your own PRs.**
 
 **Before pushing, always run:** `npm run build`
@@ -152,7 +152,14 @@ Run this before telling Adam a change is complete:
 
 ## End of Session
 
-Before Adam closes the session, **update `SESSION_LOG.md`**:
+Before closing the session:
+
+**If Faraaz is working directly** (not Adam), also write a cross-workspace session entry:
+```bash
+python3 ../../../execution/session_entry.py write -w yarro -s "summary" -d "decisions" -p "pickup"
+```
+
+**Then update `SESSION_LOG.md`**:
 
 ```markdown
 ## YYYY-MM-DD — [What was worked on]

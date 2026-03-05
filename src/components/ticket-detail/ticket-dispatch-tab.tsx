@@ -898,8 +898,8 @@ function LandlordAllocateBar({ ticketId, nextActionReason, landlordAllocated, la
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
-  // Only show when in handoff_review or no_contractors state, and NOT already allocated
-  const isEligible = (nextActionReason === 'handoff_review' || nextActionReason === 'no_contractors') && !landlordAllocated
+  // Show when PM can decide: review mode, no contractors left, or early dispatch (before contractor responds)
+  const isEligible = (nextActionReason === 'handoff_review' || nextActionReason === 'no_contractors' || nextActionReason === 'awaiting_contractor') && !landlordAllocated
   if (!isEligible) return null
   if (!landlordName && !landlordPhone) return null
 
