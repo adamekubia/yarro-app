@@ -204,6 +204,8 @@ export default function TicketsPage() {
         landlord_declined: 'Landlord Declined',
         landlord_no_response: 'Landlord No Response',
         allocated_to_landlord: 'Landlord Managing',
+        landlord_in_progress: 'Landlord In Progress',
+        landlord_resolved: 'Landlord Resolved',
         landlord_needs_help: 'Landlord Needs Help',
         job_not_completed: 'Not Completed',
         awaiting_contractor: 'Awaiting Contractor',
