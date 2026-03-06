@@ -628,20 +628,6 @@ export function TicketForm({
         </div>
       )}
 
-      {/* Review mode indicator */}
-      {isReview && (
-        <div className="p-3 bg-violet-50 dark:bg-violet-950/30 border border-violet-300 dark:border-violet-800 rounded-lg flex items-start gap-2">
-          <ClipboardList className="h-4 w-4 text-violet-600 dark:text-violet-400 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-violet-800 dark:text-violet-300">Pending Review</p>
-            <p className="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
-              This ticket was auto-created by Yarro and is awaiting your review.
-              Verify the details, select contractors, and dispatch when ready.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Conversation thread for handoff/review tickets — collapsible */}
       {(isHandoff || isReview) && (conversationLog.length > 0 || loadingConversation) && (
         <div className="space-y-1.5">
@@ -961,7 +947,7 @@ export function TicketForm({
               onAllocateLandlord?.()
             }}
           >
-            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Building2 className="h-3.5 w-3.5" /> Landlord</>}
+            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Building2 className="h-3.5 w-3.5" /> Allocate to Landlord</>}
           </Button>
         )}
         <div className="flex-1" />

@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogBody,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
@@ -846,13 +845,6 @@ export default function TicketsPage() {
             <DialogTitle>
               {reviewTicketId ? 'Review & Dispatch' : handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
             </DialogTitle>
-            <DialogDescription>
-              {reviewTicketId
-                ? 'Review the AI-generated details and dispatch to contractors'
-                : handoffTicketId
-                ? 'Fill in the missing details to dispatch this ticket'
-                : 'Create a new maintenance ticket and assign contractors'}
-            </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <TicketForm
