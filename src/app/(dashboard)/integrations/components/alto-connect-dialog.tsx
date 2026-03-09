@@ -77,7 +77,7 @@ export function AltoConnectDialog({ open, onOpenChange, onConnected }: AltoConne
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 mt-2">
+        <div className="space-y-3 px-6 pb-6 pt-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Client ID</label>
             <Input
