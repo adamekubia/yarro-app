@@ -6,6 +6,7 @@ export const TEMPLATES = {
   pm_ticket: "HXae68475514259fc241bb14e303280420",            // 1_pm_ticket (new copy)
   ticket_review: "HX574419d5b8a0ca86734caecf59f1107f",       // 1_pm_ticket_review
   handoff: "HXee9d75b96aa9a0d094ea51d402b3ed92",              // 1_pm_ticket_handoff
+  ll_ticket: "HX6cdfda7a2201f058f33c2a4be3ea8efb",            // 1_ll_ticket
 
   // ─── OOH Emergency (yarro-ticket-notify) ───
   ooh_emergency_dispatch: "HXf417fee316a93526eedd11634208910a",  // 20_2_ooh_emergency_dispatch

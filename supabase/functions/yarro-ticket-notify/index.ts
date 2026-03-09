@@ -301,7 +301,7 @@ async function handleIntake(
           recipientPhone: ctx.landlord_phone,
           recipientRole: "landlord",
           messageType: "ll_ticket_created",
-          templateSid: TEMPLATES.pm_ticket,
+          templateSid: TEMPLATES.ll_ticket,
           variables: {
             "1": ctx.issue_description || "Maintenance issue reported",
             "2": ctx.property_address || "Address not available",
@@ -387,7 +387,7 @@ async function handleManualLandlord(
     recipientPhone: ctx.landlord_phone,
     recipientRole: "landlord",
     messageType: "ll_ticket_created",
-    templateSid: TEMPLATES.pm_ticket,
+    templateSid: TEMPLATES.ll_ticket,
     variables: {
       "1": ctx.issue_description || "Maintenance issue reported",
       "2": ctx.property_address || "Address not available",
