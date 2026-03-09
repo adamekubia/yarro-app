@@ -185,7 +185,7 @@ function normaliseResponse(raw: string): NormalisedResponse {
     branch = "emergency";
   } else if (
     norm.includes("\u2705") &&
-    (norm.includes("your request has been submitted") || norm.includes("your report has been submitted"))
+    (norm.includes("your request has been submitted") || norm.includes("your report has been submitted") || norm.includes("i've reported this issue") || norm.includes("ive reported this issue"))
   ) {
     branch = "final";
   } else if (
