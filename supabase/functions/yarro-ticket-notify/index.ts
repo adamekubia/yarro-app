@@ -37,6 +37,18 @@ function formatTenantInfo(ctx: Record<string, any>): string {
     : "Tenant not matched";
 }
 
+function formatReportTime(dateLogged: string | null): string {
+  if (!dateLogged) return "recently";
+  const d = new Date(dateLogged);
+  const hh = d.toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+  const dd = d.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/London" });
+  return `${hh} on ${dd}`;
+}
+
+function reporterName(ctx: Record<string, any>): string {
+  return ctx.caller_name || ctx.tenant_name || "the tenant";
+}
+
 // ─── Source: intake (post-ticket-creation from M(1) or c1_create_ticket) ─
 async function handleIntake(
   supabase: SupabaseClient,
@@ -140,14 +152,12 @@ async function handleIntake(
               recipientPhone: ctx.manager_phone,
               recipientRole: "manager",
               messageType: "pm_ticket_created",
-              templateSid: TEMPLATES.ticket_created,
+              templateSid: TEMPLATES.pm_ticket,
               variables: {
-                "1": shortRef(ticketId),
+                "1": (ctx.issue_description || "Maintenance issue reported") + " (Sent to OOH contact)",
                 "2": ctx.property_address || "Address not available",
-                "3": formatCallerInfo(ctx),
-                "4": formatTenantInfo(ctx),
-                "5": (ctx.issue_description || "Maintenance issue reported") + " (Sent to OOH contact)",
-                "6": ctx.priority || "Standard",
+                "3": reporterName(ctx),
+                "4": formatReportTime(ctx.date_logged),
               },
             });
             results.push({ type: "pm_ooh_notify", sent: r.ok, error: r.error });
@@ -277,14 +287,12 @@ async function handleIntake(
           recipientPhone: ctx.manager_phone,
           recipientRole: "manager",
           messageType: "pm_ticket_created",
-          templateSid: TEMPLATES.ticket_created,
+          templateSid: TEMPLATES.pm_ticket,
           variables: {
-            "1": shortRef(ticketId),
+            "1": ctx.issue_description || "Maintenance issue reported",
             "2": ctx.property_address || "Address not available",
-            "3": formatCallerInfo(ctx),
-            "4": formatTenantInfo(ctx),
-            "5": ctx.issue_description || "Maintenance issue reported",
-            "6": ctx.priority || "Standard",
+            "3": reporterName(ctx),
+            "4": formatReportTime(ctx.date_logged),
           },
         });
         results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
