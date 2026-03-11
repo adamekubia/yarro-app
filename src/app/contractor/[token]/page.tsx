@@ -3,12 +3,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Upload, X, ImageIcon } from 'lucide-react'
+import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Upload, X, PoundSterling } from 'lucide-react'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+// ─── Types ───────────────────────────────────────────────────────────────
 
 type ContractorTicket = {
   ticket_id: string
@@ -38,29 +40,49 @@ type ContractorTicket = {
   tenant_updates: Array<{ type: string; notes?: string; reason?: string; photos?: string[]; submitted_at: string }>
 }
 
-type Stage = 'schedule' | 'complete' | 'done'
+type QuoteContext = {
+  ticket_id: string
+  ticket_ref: string
+  property_address: string
+  issue_title: string | null
+  issue_description: string
+  category: string | null
+  priority: string
+  images: string[]
+  availability: string | null
+  date_logged: string
+  status: string
+  contractor_name: string
+  contractor_id: string
+  contractor_status: string
+  quote_amount: string | null
+  quote_notes: string | null
+  business_name: string
+  tenant_name: string | null
+  access_info: string
+}
 
-function getStage(ticket: ContractorTicket): Stage {
+type Stage = 'quote' | 'quote_submitted' | 'schedule' | 'complete' | 'done'
+
+// ─── Stage Logic ─────────────────────────────────────────────────────────
+
+function getTicketStage(ticket: ContractorTicket): Stage {
   const stage = (ticket.job_stage || '').toLowerCase()
   if (stage === 'completed' || ticket.resolved_at) return 'done'
-  if (stage === 'booked' && ticket.scheduled_date) {
-    const jobDate = new Date(ticket.scheduled_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (jobDate <= today) return 'complete'
-    return 'complete' // show completion form once booked — contractor can mark complete when ready
-  }
+  if (stage === 'booked' && ticket.scheduled_date) return 'complete'
   return 'schedule'
 }
+
+function getQuoteStage(ctx: QuoteContext): Stage {
+  if (ctx.contractor_status === 'replied' || ctx.quote_amount) return 'quote_submitted'
+  return 'quote'
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 const TIME_SLOTS = [
@@ -78,6 +100,16 @@ function formatScheduledSlot(iso: string): { date: string; slot: string } {
   return { date, slot: 'Evening (17:00–20:00)' }
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/^\+/, '')
+  if (digits.startsWith('44') && digits.length === 12) {
+    return `+44 ${digits.slice(2, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`
+  }
+  return '+' + digits.replace(/(\d{2})(\d{4})(\d+)/, '$1 $2 $3')
+}
+
+// ─── Mini Calendar ───────────────────────────────────────────────────────
+
 function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSelect: (d: string) => void; minDate: Date }) {
   const [viewDate, setViewDate] = useState(() => {
     if (selected) return new Date(selected + 'T00:00:00')
@@ -88,14 +120,13 @@ function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSel
   const month = viewDate.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const startOffset = (firstDay + 6) % 7 // Monday start
+  const startOffset = (firstDay + 6) % 7
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   minDate.setHours(0, 0, 0, 0)
 
   const monthLabel = new Date(year, month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-
   const canGoPrev = new Date(year, month, 1) > minDate
 
   const days: (number | null)[] = []
@@ -158,20 +189,21 @@ function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSel
   )
 }
 
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/^\+/, '')
-  if (digits.startsWith('44') && digits.length === 12) {
-    return `+44 ${digits.slice(2, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`
-  }
-  return '+' + digits.replace(/(\d{2})(\d{4})(\d+)/, '$1 $2 $3')
-}
+// ─── Main Component ──────────────────────────────────────────────────────
 
 export default function ContractorPortalPage() {
   const { token } = useParams<{ token: string }>()
 
+  // Data states — one of these will be populated
   const [ticket, setTicket] = useState<ContractorTicket | null>(null)
+  const [quoteCtx, setQuoteCtx] = useState<QuoteContext | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Quote form
+  const [quoteAmount, setQuoteAmount] = useState('')
+  const [quoteNotes, setQuoteNotes] = useState('')
+  const [submittingQuote, setSubmittingQuote] = useState(false)
 
   // Schedule form
   const [scheduleDate, setScheduleDate] = useState('')
@@ -193,22 +225,69 @@ export default function ContractorPortalPage() {
   const [justSubmitted, setJustSubmitted] = useState(false)
   const [submitMessage, setSubmitMessage] = useState('')
 
+  // ─── Load ticket data ────────────────────────────────────────────────
+
   const loadTicket = useCallback(async () => {
-    const { data, error: err } = await supabase.rpc('c1_get_contractor_ticket', {
+    // Try scheduling/completion token first (c1_tickets.contractor_token)
+    const { data: ticketData, error: ticketErr } = await supabase.rpc('c1_get_contractor_ticket', {
       p_token: token,
     })
-    if (err || !data) {
-      setError('This link is invalid or has expired.')
+
+    if (!ticketErr && ticketData) {
+      setTicket(ticketData as ContractorTicket)
+      setQuoteCtx(null)
       setLoading(false)
       return
     }
-    setTicket(data as ContractorTicket)
+
+    // Try quote context token (c1_messages.contractors[].portal_token)
+    const { data: quoteData, error: quoteErr } = await supabase.rpc('c1_get_contractor_quote_context', {
+      p_token: token,
+    })
+
+    if (!quoteErr && quoteData) {
+      setQuoteCtx(quoteData as QuoteContext)
+      setTicket(null)
+      setLoading(false)
+      return
+    }
+
+    // Both failed — invalid token
+    setError('This link is invalid or has expired.')
     setLoading(false)
   }, [token])
 
   useEffect(() => {
     loadTicket()
   }, [loadTicket])
+
+  // ─── Quote submission ────────────────────────────────────────────────
+
+  async function handleQuoteSubmit() {
+    const amount = parseFloat(quoteAmount)
+    if (!amount || amount <= 0) return
+    setSubmittingQuote(true)
+    setError(null)
+
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: {
+          source: 'portal-quote',
+          token,
+          quote_amount: amount,
+          quote_notes: quoteNotes || null,
+        },
+      })
+    } catch (_) { /* server action fires regardless */ }
+
+    await loadTicket()
+    setSubmittingQuote(false)
+    setSubmitMessage('Quote submitted — the property manager will review and get back to you.')
+    setJustSubmitted(true)
+    setTimeout(() => setJustSubmitted(false), 5000)
+  }
+
+  // ─── Schedule submission ─────────────────────────────────────────────
 
   async function handleSchedule() {
     if (!scheduleDate) return
@@ -224,13 +303,14 @@ export default function ContractorPortalPage() {
       })
     } catch (_) { /* server action fires regardless */ }
 
-    // Let DB state be the source of truth
     await loadTicket()
     setSubmittingSchedule(false)
     setSubmitMessage('Job booked — the tenant and property manager have been notified.')
     setJustSubmitted(true)
     setTimeout(() => setJustSubmitted(false), 5000)
   }
+
+  // ─── Photo handling ──────────────────────────────────────────────────
 
   function handlePhotoDrop(e: React.DragEvent) {
     e.preventDefault()
@@ -244,7 +324,7 @@ export default function ContractorPortalPage() {
   }
 
   function addPhotos(files: File[]) {
-    const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+    const MAX_SIZE = 10 * 1024 * 1024
     const valid = files.filter(f => f.size <= MAX_SIZE)
     setCompletionPhotos(prev => [...prev, ...valid].slice(0, 5))
   }
@@ -253,13 +333,13 @@ export default function ContractorPortalPage() {
     setCompletionPhotos(prev => prev.filter((_, i) => i !== idx))
   }
 
+  // ─── Completion submission ───────────────────────────────────────────
+
   async function handleCompletion() {
     if (!completionStatus) return
     setSubmittingCompletion(true)
-
     setError(null)
 
-    // Not complete path
     if (completionStatus === 'not-complete') {
       try {
         await supabase.functions.invoke('yarro-scheduling', {
@@ -277,7 +357,6 @@ export default function ContractorPortalPage() {
       return
     }
 
-    // Complete path — upload photos first
     let photoUrls: string[] = []
     if (completionPhotos.length > 0) {
       setUploadingPhotos(true)
@@ -308,6 +387,8 @@ export default function ContractorPortalPage() {
     setTimeout(() => setJustSubmitted(false), 5000)
   }
 
+  // ─── Reschedule decision ─────────────────────────────────────────────
+
   async function handleRescheduleDecision(approved: boolean) {
     setSubmittingReschedule(true)
     setError(null)
@@ -326,6 +407,8 @@ export default function ContractorPortalPage() {
     setTimeout(() => setJustSubmitted(false), 5000)
   }
 
+  // ─── Loading / Error states ──────────────────────────────────────────
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center" style={{ colorScheme: 'light' }}>
@@ -334,7 +417,7 @@ export default function ContractorPortalPage() {
     )
   }
 
-  if (error || !ticket) {
+  if (error || (!ticket && !quoteCtx)) {
     return (
       <div className="min-h-screen bg-gray-50" style={{ colorScheme: 'light' }}>
         <div className="mx-auto max-w-lg px-4 py-16 text-center">
@@ -347,8 +430,164 @@ export default function ContractorPortalPage() {
     )
   }
 
-  const stage = getStage(ticket)
-  const hasPendingReschedule = ticket.reschedule_requested && ticket.reschedule_status === 'pending'
+  // ─── Quote flow (portal_token from dispatch) ─────────────────────────
+
+  if (quoteCtx) {
+    const stage = getQuoteStage(quoteCtx)
+
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
+        <div className="mx-auto max-w-lg px-4 py-8">
+          {/* Header */}
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-gray-900">Yarro</h1>
+            <p className="mt-0.5 text-sm text-gray-500">
+              {stage === 'quote' ? 'Submit Your Quote' : 'Quote Submitted'}
+            </p>
+          </div>
+
+          {/* Success banner */}
+          {justSubmitted && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-2.5">
+              <CheckCircle2 className="size-4 text-green-600 shrink-0" />
+              <p className="text-sm font-medium text-green-700">{submitMessage}</p>
+            </div>
+          )}
+
+          {/* Job details card */}
+          <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-5">
+              <div className="flex items-start justify-between">
+                <p className="text-sm font-semibold text-gray-900">
+                  {quoteCtx.issue_title || quoteCtx.issue_description}
+                </p>
+                <span className="shrink-0 ml-3 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
+                  T-{quoteCtx.ticket_ref}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Property</span>
+                  <span className="text-right font-medium text-gray-900 flex items-center gap-1">
+                    <MapPin className="size-3.5 text-gray-400" />
+                    {quoteCtx.property_address}
+                  </span>
+                </div>
+                {quoteCtx.category && (
+                  <div className="flex justify-between border-t border-gray-100 pt-2">
+                    <span className="text-gray-500">Category</span>
+                    <span className="font-medium text-gray-900">{quoteCtx.category}</span>
+                  </div>
+                )}
+                {quoteCtx.issue_title && quoteCtx.issue_description && (
+                  <div className="border-t border-gray-100 pt-2">
+                    <span className="text-gray-500">Details</span>
+                    <p className="mt-1 text-gray-700">{quoteCtx.issue_description}</p>
+                  </div>
+                )}
+                {quoteCtx.availability && (
+                  <div className="border-t border-gray-100 pt-2">
+                    <span className="text-gray-500">Tenant availability</span>
+                    <p className="mt-1 text-gray-700">{quoteCtx.availability}</p>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-gray-100 pt-2">
+                  <span className="text-gray-500">From</span>
+                  <span className="font-medium text-gray-900">{quoteCtx.business_name}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Images */}
+            {quoteCtx.images && quoteCtx.images.length > 0 && (
+              <div className="border-t border-gray-100 p-5">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Camera className="size-3.5 text-gray-400" />
+                  <span className="text-xs font-medium text-gray-500">Photos</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {quoteCtx.images.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                      <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quote form */}
+          {stage === 'quote' && (
+            <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="p-5 space-y-4">
+                <h3 className="text-sm font-medium text-gray-900">Your Quote</h3>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Quote Amount</label>
+                  <div className="mt-1.5 relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <PoundSterling className="size-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="0.00"
+                      value={quoteAmount}
+                      onChange={(e) => setQuoteAmount(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Notes <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <textarea
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Any details about the quote, materials needed, timeline..."
+                    value={quoteNotes}
+                    onChange={(e) => setQuoteNotes(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={handleQuoteSubmit}
+                  disabled={submittingQuote || !quoteAmount || parseFloat(quoteAmount) <= 0}
+                  className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submittingQuote ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Quote'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quote submitted state */}
+          {stage === 'quote_submitted' && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-2.5">
+              <CheckCircle2 className="size-4 text-green-600 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-700">
+                  Quote of {quoteCtx.quote_amount} submitted
+                </p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  The property manager will review and get back to you. You&apos;ll receive a notification when approved.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <p className="mt-10 text-center text-xs text-gray-400">Powered by Yarro</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Scheduling / Completion flow (contractor_token from finalize) ───
+
+  const stage = getTicketStage(ticket!)
+  const hasPendingReschedule = ticket!.reschedule_requested && ticket!.reschedule_status === 'pending'
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
@@ -370,10 +609,10 @@ export default function ContractorPortalPage() {
         )}
 
         {/* Quote approved banner (schedule stage) */}
-        {stage === 'schedule' && ticket.contractor_quote && (
+        {stage === 'schedule' && ticket!.contractor_quote && (
           <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
             <p className="text-sm font-semibold text-green-700">
-              Your quote of &pound;{Number(ticket.contractor_quote).toFixed(2)} has been approved.
+              Your quote of &pound;{Number(ticket!.contractor_quote).toFixed(2)} has been approved.
             </p>
             <p className="mt-0.5 text-xs text-green-600">
               Please review the details and book a slot below.
@@ -390,10 +629,10 @@ export default function ContractorPortalPage() {
                 <h3 className="text-sm font-semibold text-amber-700">Reschedule Request</h3>
               </div>
               <p className="text-sm text-gray-700">
-                The tenant has requested to reschedule to <span className="font-semibold">{ticket.reschedule_date ? formatDate(ticket.reschedule_date) : 'a new date'}</span>.
+                The tenant has requested to reschedule to <span className="font-semibold">{ticket!.reschedule_date ? formatDate(ticket!.reschedule_date) : 'a new date'}</span>.
               </p>
-              {ticket.reschedule_reason && (
-                <p className="mt-1 text-xs text-gray-500">Reason: {ticket.reschedule_reason}</p>
+              {ticket!.reschedule_reason && (
+                <p className="mt-1 text-xs text-gray-500">Reason: {ticket!.reschedule_reason}</p>
               )}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
@@ -420,10 +659,10 @@ export default function ContractorPortalPage() {
           <div className="p-5">
             <div className="flex items-start justify-between">
               <p className="text-sm font-semibold text-gray-900">
-                {ticket.issue_title || ticket.issue_description}
+                {ticket!.issue_title || ticket!.issue_description}
               </p>
               <span className="shrink-0 ml-3 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                T-{ticket.ticket_ref}
+                T-{ticket!.ticket_ref}
               </span>
             </div>
 
@@ -432,36 +671,36 @@ export default function ContractorPortalPage() {
                 <span className="text-gray-500">Property</span>
                 <span className="text-right font-medium text-gray-900 flex items-center gap-1">
                   <MapPin className="size-3.5 text-gray-400" />
-                  {ticket.property_address}
+                  {ticket!.property_address}
                 </span>
               </div>
-              {ticket.category && (
+              {ticket!.category && (
                 <div className="flex justify-between border-t border-gray-100 pt-2">
                   <span className="text-gray-500">Category</span>
-                  <span className="font-medium text-gray-900">{ticket.category}</span>
+                  <span className="font-medium text-gray-900">{ticket!.category}</span>
                 </div>
               )}
-              {ticket.issue_title && ticket.issue_description && (
+              {ticket!.issue_title && ticket!.issue_description && (
                 <div className="border-t border-gray-100 pt-2">
                   <span className="text-gray-500">Details</span>
-                  <p className="mt-1 text-gray-700">{ticket.issue_description}</p>
+                  <p className="mt-1 text-gray-700">{ticket!.issue_description}</p>
                 </div>
               )}
-              {ticket.availability && (
+              {ticket!.availability && (
                 <div className="border-t border-gray-100 pt-2">
                   <span className="text-gray-500">Tenant availability</span>
-                  <p className="mt-1 text-gray-700">{ticket.availability}</p>
+                  <p className="mt-1 text-gray-700">{ticket!.availability}</p>
                 </div>
               )}
-              {ticket.tenant_name && (
+              {ticket!.tenant_name && (
                 <div className="flex justify-between border-t border-gray-100 pt-2">
                   <span className="text-gray-500">Tenant</span>
                   <span className="font-medium text-gray-900">
-                    {ticket.tenant_name}
-                    {ticket.tenant_phone && (
-                      <a href={`tel:${ticket.tenant_phone}`} className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:underline">
+                    {ticket!.tenant_name}
+                    {ticket!.tenant_phone && (
+                      <a href={`tel:${ticket!.tenant_phone}`} className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:underline">
                         <Phone className="size-3" />
-                        {formatPhone(ticket.tenant_phone)}
+                        {formatPhone(ticket!.tenant_phone)}
                       </a>
                     )}
                   </span>
@@ -471,14 +710,14 @@ export default function ContractorPortalPage() {
           </div>
 
           {/* Images */}
-          {ticket.images && ticket.images.length > 0 && (
+          {ticket!.images && ticket!.images.length > 0 && (
             <div className="border-t border-gray-100 p-5">
               <div className="flex items-center gap-1.5 mb-3">
                 <Camera className="size-3.5 text-gray-400" />
                 <span className="text-xs font-medium text-gray-500">Photos</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {ticket.images.map((url, i) => (
+                {ticket!.images.map((url, i) => (
                   <a key={i} href={url} target="_blank" rel="noopener noreferrer">
                     <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
                   </a>
@@ -489,11 +728,11 @@ export default function ContractorPortalPage() {
         </div>
 
         {/* Scheduled date (if booked) */}
-        {ticket.scheduled_date && stage !== 'schedule' && (
+        {ticket!.scheduled_date && stage !== 'schedule' && (
           <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 flex items-center gap-2.5">
             <CalendarClock className="size-4 text-blue-500 shrink-0" />
             <p className="text-sm text-blue-700">
-              <span className="font-medium">Scheduled:</span> {formatScheduledSlot(ticket.scheduled_date).date} &middot; {formatScheduledSlot(ticket.scheduled_date).slot}
+              <span className="font-medium">Scheduled:</span> {formatScheduledSlot(ticket!.scheduled_date).date} &middot; {formatScheduledSlot(ticket!.scheduled_date).slot}
             </p>
           </div>
         )}
@@ -551,9 +790,9 @@ export default function ContractorPortalPage() {
         )}
 
         {/* Previous contractor updates */}
-        {ticket.tenant_updates?.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').length > 0 && (
+        {ticket!.tenant_updates?.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').length > 0 && (
           <div className="mt-4 space-y-2">
-            {ticket.tenant_updates.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').map((update, i) => (
+            {ticket!.tenant_updates.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').map((update, i) => (
               <div key={i} className={`rounded-lg border px-4 py-3 ${
                 update.type === 'contractor_not_completed'
                   ? 'border-orange-200 bg-orange-50'
@@ -578,12 +817,11 @@ export default function ContractorPortalPage() {
         )}
 
         {/* Completion form */}
-        {stage === 'complete' && !ticket.resolved_at && (
+        {stage === 'complete' && !ticket!.resolved_at && (
           <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-5 space-y-4">
               <h3 className="text-sm font-medium text-gray-900">Has this job been completed?</h3>
 
-              {/* Two choice buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -611,10 +849,8 @@ export default function ContractorPortalPage() {
                 </button>
               </div>
 
-              {/* Complete: photo upload + notes */}
               {completionStatus === 'complete' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  {/* Photo drop zone */}
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Photos <span className="font-normal text-gray-400">(optional, max 5)</span>
@@ -637,7 +873,6 @@ export default function ContractorPortalPage() {
                         />
                       </label>
                     </div>
-                    {/* Photo previews */}
                     {completionPhotos.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {completionPhotos.map((file, i) => (
@@ -657,7 +892,6 @@ export default function ContractorPortalPage() {
                       </div>
                     )}
                   </div>
-
                   <div>
                     <label className="text-sm font-medium text-gray-700">
                       Notes <span className="font-normal text-gray-400">(optional)</span>
@@ -673,7 +907,6 @@ export default function ContractorPortalPage() {
                 </div>
               )}
 
-              {/* Not Complete: reason field */}
               {completionStatus === 'not-complete' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div>
@@ -691,7 +924,6 @@ export default function ContractorPortalPage() {
                 </div>
               )}
 
-              {/* Submit button */}
               {completionStatus && (
                 <button
                   onClick={handleCompletion}

@@ -472,6 +472,100 @@ async function handleFilloutScheduling(
   );
 }
 
+// ─── Path: Portal Quote (contractor submits quote via portal) ────────────
+async function handlePortalQuote(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, quote_amount, quote_notes } = body;
+
+  if (!token || quote_amount === undefined || quote_amount === null) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token or quote_amount" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Look up contractor by portal_token
+  const { data: ctx, error: ctxError } = await supabase.rpc(
+    "c1_get_contractor_quote_context",
+    { p_token: token },
+  );
+
+  if (ctxError || !ctx) {
+    const errMsg = ctxError?.message || "Invalid or expired token";
+    await alertTelegram(FN, "portal-quote → lookup", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Guard: don't allow double-submission
+  if (ctx.contractor_status === "replied") {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Quote already submitted", quote_amount: ctx.quote_amount }),
+      { status: 409, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Format quote amount
+  const num = parseFloat(String(quote_amount));
+  if (isNaN(num) || num <= 0) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Invalid quote amount" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  const numFmt = `\u00a3${num.toFixed(2)}`;
+
+  // Merge quote into contractor JSONB entry
+  const { error: mergeError } = await supabase.rpc("c1_msg_merge_contractor", {
+    p_ticket_id: ctx.ticket_id,
+    p_contractor_id: ctx.contractor_id,
+    p_patch: {
+      status: "replied",
+      replied_at: new Date().toISOString(),
+      quote_amount: numFmt,
+      quote_notes: quote_notes || null,
+      via_flows: false,
+    },
+  });
+
+  if (mergeError) {
+    await alertTelegram(FN, "portal-quote → merge", mergeError.message, {
+      Ticket: ctx.ticket_id,
+    });
+    return new Response(
+      JSON.stringify({ ok: false, error: mergeError.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Trigger state machine → dispatches PM notification automatically
+  const { error: nextError } = await supabase.rpc("c1_message_next_action", {
+    p_ticket_id: ctx.ticket_id,
+  });
+
+  if (nextError) {
+    await alertTelegram(FN, "portal-quote → next_action", nextError.message, {
+      Ticket: ctx.ticket_id,
+    });
+  }
+
+  console.log(`[${FN}] portal-quote: contractor ${ctx.contractor_id} submitted ${numFmt} for ticket ${ctx.ticket_id}`);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      source: "portal-quote",
+      ticket_id: ctx.ticket_id,
+      quote_amount: numFmt,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 // ─── Path C: Portal Scheduling (contractor books via portal) ─────────────
 async function handlePortalSchedule(
   supabase: SupabaseClient,
@@ -1053,6 +1147,8 @@ Deno.serve(async (req: Request) => {
         return await handlePortalSchedule(supabase, body);
       case "portal-completion":
         return await handlePortalCompletion(supabase, body);
+      case "portal-quote":
+        return await handlePortalQuote(supabase, body);
       case "reschedule-request":
         return await handleRescheduleRequest(supabase, body);
       case "reschedule-decision":

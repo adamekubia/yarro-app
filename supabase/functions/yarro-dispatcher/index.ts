@@ -41,6 +41,9 @@ async function handleContractorSms(
     accessInfo = `Must be arranged with tenant. Available: ${slots}`;
   }
 
+  // Generate portal token for email contractors (CTA link to quote portal)
+  const portalToken = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+
   const variables: Record<string, string> = {
     "1": manager.business_name || "Your property manager",
     "2": contractor.property_address || "Address not available",
@@ -48,6 +51,7 @@ async function handleContractorSms(
     "4": mediaSummary,
     "5": contractor.priority || "Standard",
     "6": accessInfo,
+    "7": portalToken,
   };
 
   // Send + log + alert via sendAndLog
@@ -77,6 +81,13 @@ async function handleContractorSms(
       Ticket: ticket.id,
     });
   }
+
+  // Store portal token in contractor JSONB entry (after mark_sent to avoid re-dispatch trigger)
+  await supabase.rpc("c1_msg_merge_contractor", {
+    p_ticket_id: ticket.id,
+    p_contractor_id: contractor.id,
+    p_patch: { portal_token: portalToken },
+  });
 
   // ── Send tenant portal link alongside contractor quote dispatch ──
   {

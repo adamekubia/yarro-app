@@ -1,89 +1,113 @@
-// Email content templates — mirrors templates.ts (WhatsApp SIDs)
-// Each message type maps to a subject + body builder using the same variables
+// Email content templates — minimal CTA emails that link to portals
+// Each message type maps to a subject + heading + brief body + CTA button
 
 type Vars = Record<string, string>;
 
 interface EmailContent {
   subject: string;
-  body: string; // Plain text body (inserted into HTML shell)
+  heading: string;
+  body: string;
+  cta?: { text: string; url: string };
 }
 
 // ─── Content Builders ────────────────────────────────────────────────────
 
 const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   // ─── Contractor Messages ───
-  // Variables match EXACTLY what each edge function sends — do not rearrange
 
-  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=media, 5=priority, 6=access
+  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=media, 5=priority, 6=access, 7=portalToken
   contractor_dispatch: (v) => ({
     subject: `New Job Request — ${v["3"] || "Maintenance issue"}`,
-    body: `Hi,\n\nYou have a new maintenance job request from ${v["1"] || "your property manager"}.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nPriority: ${v["5"] || "Standard"}\n\nAccess: ${v["6"] || "Contact property manager for details"}\n\nPlease reply to this email with your soonest availability and quote estimate.`,
+    heading: "New Job Request",
+    body: `You have a new maintenance job request from ${v["1"] || "your property manager"} at ${v["2"] || "a property"}.`,
+    cta: v["7"] ? { text: "View Details & Submit Quote", url: `https://app.yarro.ai/contractor/${v["7"]}` } : undefined,
   }),
 
   // scheduling finalize-job: 1=address, 2=issue, 3=quote, 4=access, 5=contractorToken
   contractor_job_schedule: (v) => ({
     subject: `Job Approved — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nYour quote has been approved and you can now schedule the job.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nApproved Quote: ${v["3"] || "N/A"}\n\nAccess: ${v["4"] || "Contact property manager for details"}\n\nPlease use the link below to confirm your availability:\nhttps://app.yarro.ai/contractor/${v["5"] || ""}`,
+    heading: "Quote Approved",
+    body: `Your quote of ${v["3"] || "the agreed amount"} has been approved for ${v["2"] || "maintenance"} at ${v["1"] || "the property"}. Please schedule the job.`,
+    cta: v["5"] ? { text: "Schedule Job", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
   }),
 
   // job-reminder: 1=address, 2=issue, 3=slot, 4=access, 5=contractorToken
   contractor_job_reminder: (v) => ({
     subject: `Reminder: Job Today — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nThis is a reminder that you have a job scheduled for today.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nTime: ${v["3"] || "N/A"}\n\nAccess: ${v["4"] || "Contact property manager for details"}\n\nPlease use the link below to confirm attendance or mark the job as complete:\nhttps://app.yarro.ai/contractor/${v["5"] || ""}`,
+    heading: "Job Reminder",
+    body: `You have a job scheduled for today at ${v["1"] || "the property"}.`,
+    cta: v["5"] ? { text: "View Job Details", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
   }),
 
   // followups contractor_reminder: 1=address, 2=issue, 3=contractorToken
   contractor_reminder: (v) => ({
-    subject: `Action Required — Pending Job Request`,
-    body: `Hi,\n\nYou have a pending job request that needs your attention.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nPlease use the link below to respond:\nhttps://app.yarro.ai/contractor/${v["3"] || ""}\n\nIf you are unable to take this job, please let us know so we can arrange an alternative.`,
+    subject: "Action Required — Pending Job Request",
+    heading: "Pending Job Request",
+    body: `You have a pending job request at ${v["1"] || "a property"} that needs your attention.`,
+    cta: v["3"] ? { text: "Respond Now", url: `https://app.yarro.ai/contractor/${v["3"]}` } : undefined,
   }),
 
   // followups completion_followup: 1=address, 2=issue, 3=contractorToken
   completion_followup: (v) => ({
     subject: `Completion Update Needed — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nWe are following up on a recently completed job.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nPlease use the link below to confirm the job has been completed:\nhttps://app.yarro.ai/contractor/${v["3"] || ""}`,
+    heading: "Completion Update Needed",
+    body: `Please confirm the job at ${v["1"] || "the property"} has been completed.`,
+    cta: v["3"] ? { text: "Update Status", url: `https://app.yarro.ai/contractor/${v["3"]}` } : undefined,
   }),
 
   // ─── Landlord Messages ───
+
   // landlord_quote: 1=contractor(+category), 2=address, 3=issue, 4=media, 5=total_cost
   landlord_quote: (v) => ({
     subject: `Quote for Approval — ${v["2"] || "Property"}`,
-    body: `Hi,\n\nA contractor has submitted a quote for your property.\n\nContractor: ${v["1"] || "N/A"}\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nTotal Cost: ${v["5"] || "N/A"}\n\nPlease reply APPROVE or DECLINE to this email.`,
+    heading: "Quote for Approval",
+    body: `${v["1"] || "A contractor"} has submitted a quote of ${v["5"] || "N/A"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"}. Please reply APPROVE or DECLINE.`,
   }),
 
   // landlord_allocate: 1=address, 2=issue, 3=tenant_name, 4=tenant_phone, 5=business_name, 6=token
   landlord_allocate: (v) => ({
     subject: `Maintenance Issue — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nA maintenance issue has been reported at your property and allocated to you to handle directly.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nTenant: ${v["3"] || "N/A"} (${v["4"] || "N/A"})\n\nPlease use the link below to provide updates:\nhttps://app.yarro.ai/landlord/${v["6"] || ""}`,
+    heading: "Issue Allocated to You",
+    body: `A maintenance issue has been reported at ${v["1"] || "your property"} and allocated to you to handle.`,
+    cta: v["6"] ? { text: "View & Update", url: `https://app.yarro.ai/landlord/${v["6"]}` } : undefined,
   }),
 
   // no_more_contractors: 1=address, 2=issue
   no_more_contractors: (v) => ({
     subject: `No Contractors Available — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nWe were unable to find an available contractor for the maintenance issue at your property.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nYour property manager has been notified and will follow up with alternative arrangements.`,
+    heading: "No Contractors Available",
+    body: `We were unable to find an available contractor for ${v["2"] || "the maintenance issue"} at ${v["1"] || "your property"}. Your property manager will follow up.`,
   }),
 
   // ll_job_booked: 1=llName, 2=category, 3=formattedWindow, 4=issue, 5=address, 6=mgrContact
   ll_job_booked: (v) => ({
     subject: `Job Booked — ${v["5"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nA ${v["2"] || "contractor"} has been booked for your property.\n\nProperty: ${v["5"] || "N/A"}\nIssue: ${v["4"] || "N/A"}\nScheduled: ${v["3"] || "N/A"}\n\nIf you have any questions, contact your property manager on ${v["6"] || "N/A"}.`,
+    heading: "Job Scheduled",
+    body: `A ${v["2"] || "contractor"} has been booked for ${v["4"] || "maintenance"} at ${v["5"] || "your property"} on ${v["3"] || "the scheduled date"}.`,
   }),
 
   // ll_job_completed: 1=address, 2=issue, 3=contrName
   ll_job_completed: (v) => ({
     subject: `Job Completed — ${v["1"] || "Property"}`,
-    body: `Hi,\n\nThe maintenance job at your property has been completed.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nContractor: ${v["3"] || "N/A"}\n\nIf there are any concerns, please contact your property manager.`,
+    heading: "Job Completed",
+    body: `The maintenance job at ${v["1"] || "your property"} has been completed by ${v["3"] || "the contractor"}.`,
   }),
 };
 
 // ─── HTML Shell ──────────────────────────────────────────────────────────
 
-function htmlShell(body: string): string {
-  // Convert newlines to <br> for HTML
-  const htmlBody = body
-    .split("\n")
-    .map((line) => (line.trim() === "" ? "<br>" : `<p style="margin:0 0 8px 0;color:#374151;font-size:15px;line-height:1.6;">${escapeHtml(line)}</p>`))
-    .join("");
+function htmlShell(heading: string, body: string, cta?: { text: string; url: string }): string {
+  const ctaBlock = cta
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;">
+        <tr><td align="center">
+          <a href="${escapeHtml(cta.url)}" style="display:inline-block;background-color:#1e40af;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;mso-padding-alt:0;text-underline-color:#1e40af;">
+            <!--[if mso]><i style="mso-font-width:150%;mso-text-raise:22pt">&nbsp;</i><![endif]-->
+            <span style="mso-text-raise:11pt;">${escapeHtml(cta.text)}</span>
+            <!--[if mso]><i style="mso-font-width:150%">&nbsp;</i><![endif]-->
+          </a>
+        </td></tr>
+      </table>`
+    : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -98,7 +122,9 @@ function htmlShell(body: string): string {
         </td></tr>
         <!-- Body -->
         <tr><td style="padding:32px;">
-          ${htmlBody}
+          <h2 style="margin:0 0 12px;color:#111827;font-size:18px;font-weight:600;">${escapeHtml(heading)}</h2>
+          <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">${escapeHtml(body)}</p>
+          ${ctaBlock}
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:16px 32px;border-top:1px solid #e5e7eb;">
@@ -140,6 +166,6 @@ export function buildEmail(
   const content = builder(variables);
   return {
     subject: content.subject,
-    html: htmlShell(content.body),
+    html: htmlShell(content.heading, content.body, content.cta),
   };
 }
