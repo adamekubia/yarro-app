@@ -35,6 +35,7 @@ type ContractorTicket = {
   reschedule_reason: string | null
   reschedule_status: string | null
   resolved_at: string | null
+  tenant_updates: Array<{ type: string; notes?: string; reason?: string; photos?: string[]; submitted_at: string }>
 }
 
 type Stage = 'schedule' | 'complete' | 'done'
@@ -216,14 +217,12 @@ export default function ContractorPortalPage() {
     const slotHour = TIME_SLOTS.find(s => s.value === scheduleSlot)?.hour ?? 9
     const dateStr = `${scheduleDate}T${String(slotHour).padStart(2, '0')}:00:00`
 
-    const { data: raw, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleSlot || 'morning', notes: scheduleNotes || null },
     })
 
-    const data = typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return raw } })() : raw
-
-    if (err || (!data?.ok && !data?.success)) {
-      const msg = data?.error || err?.message || ''
+    if (err) {
+      const msg = err?.message || ''
       setError(msg.includes('already scheduled') ? 'This job has already been scheduled.' : 'Something went wrong. Please try again.')
       setSubmittingSchedule(false)
       return
@@ -263,11 +262,10 @@ export default function ContractorPortalPage() {
 
     // Not complete path
     if (completionStatus === 'not-complete') {
-      const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+      const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
         body: { source: 'portal-completion', token, resolved: false, notes: completionReason || null },
       })
-      const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
-      if (err || (!data?.ok && !data?.success)) {
+      if (err) {
         setError('Something went wrong. Please try again.')
         setSubmittingCompletion(false)
         return
@@ -298,13 +296,11 @@ export default function ContractorPortalPage() {
       setUploadingPhotos(false)
     }
 
-    const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'portal-completion', token, resolved: true, notes: completionNotes || null, photos: photoUrls },
     })
 
-    const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
-
-    if (err || (!data?.ok && !data?.success)) {
+    if (err) {
       setError('Something went wrong. Please try again.')
       setSubmittingCompletion(false)
       return
@@ -320,13 +316,11 @@ export default function ContractorPortalPage() {
   async function handleRescheduleDecision(approved: boolean) {
     setSubmittingReschedule(true)
 
-    const { data: raw3, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'reschedule-decision', token, approved },
     })
 
-    const data = typeof raw3 === 'string' ? (() => { try { return JSON.parse(raw3) } catch { return raw3 } })() : raw3
-
-    if (err || (!data?.ok && !data?.success)) {
+    if (err) {
       setError('Something went wrong. Please try again.')
       setSubmittingReschedule(false)
       return
@@ -560,6 +554,33 @@ export default function ContractorPortalPage() {
                 {submittingSchedule ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Confirm Booking'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Previous contractor updates */}
+        {ticket.tenant_updates?.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').length > 0 && (
+          <div className="mt-4 space-y-2">
+            {ticket.tenant_updates.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').map((update, i) => (
+              <div key={i} className={`rounded-lg border px-4 py-3 ${
+                update.type === 'contractor_not_completed'
+                  ? 'border-orange-200 bg-orange-50'
+                  : 'border-green-200 bg-green-50'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-medium ${
+                    update.type === 'contractor_not_completed' ? 'text-orange-600' : 'text-green-600'
+                  }`}>
+                    {update.type === 'contractor_not_completed' ? 'Reported not complete' : 'Marked complete'}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(update.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {(update.reason || update.notes) && (
+                  <p className="mt-1 text-sm text-gray-700">{update.reason || update.notes}</p>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

@@ -129,14 +129,12 @@ export default function TenantPortalPage() {
     if (!rescheduleDate) return
     setSubmittingReschedule(true)
 
-    const { data: raw, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'reschedule-request', token, proposed_date: new Date(rescheduleDate).toISOString(), reason: rescheduleReason || null },
     })
 
-    const data = typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return raw } })() : raw
-
-    if (err || (!data?.ok && !data?.success)) {
-      const msg = data?.error || err?.message || ''
+    if (err) {
+      const msg = err?.message || ''
       setError(msg.includes('already requested') ? 'You have already requested a reschedule.' : 'Something went wrong. Please try again.')
       setSubmittingReschedule(false)
       return
@@ -153,13 +151,11 @@ export default function TenantPortalPage() {
     if (confirmResolved === null) return
     setSubmittingConfirmation(true)
 
-    const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'tenant-confirmation', token, resolved: confirmResolved, notes: confirmNotes || null },
     })
 
-    const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
-
-    if (err || (!data?.ok && !data?.success)) {
+    if (err) {
       setError('Something went wrong. Please try again.')
       setSubmittingConfirmation(false)
       return
