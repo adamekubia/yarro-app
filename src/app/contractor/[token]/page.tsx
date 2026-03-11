@@ -62,6 +62,21 @@ function formatDateTime(iso: string): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
+const TIME_SLOTS = [
+  { value: 'morning', label: 'Morning', range: '09:00–12:00', hour: 9 },
+  { value: 'afternoon', label: 'Afternoon', range: '12:00–17:00', hour: 13 },
+  { value: 'evening', label: 'Evening', range: '17:00–20:00', hour: 18 },
+] as const
+
+function formatScheduledSlot(iso: string): { date: string; slot: string } {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
+  const hour = d.getHours()
+  if (hour < 12) return { date, slot: 'Morning (09:00–12:00)' }
+  if (hour < 17) return { date, slot: 'Afternoon (12:00–17:00)' }
+  return { date, slot: 'Evening (17:00–20:00)' }
+}
+
 function formatPhone(raw: string): string {
   const digits = raw.replace(/^\+/, '')
   if (digits.startsWith('44') && digits.length === 12) {
@@ -79,7 +94,7 @@ export default function ContractorPortalPage() {
 
   // Schedule form
   const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleTime, setScheduleTime] = useState('')
+  const [scheduleSlot, setScheduleSlot] = useState<'morning' | 'afternoon' | 'evening' | ''>('')
   const [scheduleNotes, setScheduleNotes] = useState('')
   const [submittingSchedule, setSubmittingSchedule] = useState(false)
 
@@ -114,12 +129,11 @@ export default function ContractorPortalPage() {
     if (!scheduleDate) return
     setSubmittingSchedule(true)
 
-    const dateStr = scheduleTime
-      ? `${scheduleDate}T${scheduleTime}:00`
-      : `${scheduleDate}T09:00:00`
+    const slotHour = TIME_SLOTS.find(s => s.value === scheduleSlot)?.hour ?? 9
+    const dateStr = `${scheduleDate}T${String(slotHour).padStart(2, '0')}:00:00`
 
     const { data, error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleTime || null, notes: scheduleNotes || null },
+      body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleSlot || 'morning', notes: scheduleNotes || null },
     })
 
     if (err || !data?.ok) {
@@ -343,7 +357,7 @@ export default function ContractorPortalPage() {
           <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 flex items-center gap-2.5">
             <CalendarClock className="size-4 text-blue-500 shrink-0" />
             <p className="text-sm text-blue-700">
-              <span className="font-medium">Scheduled:</span> {formatDateTime(ticket.scheduled_date)}
+              <span className="font-medium">Scheduled:</span> {formatScheduledSlot(ticket.scheduled_date).date} &middot; {formatScheduledSlot(ticket.scheduled_date).slot}
             </p>
           </div>
         )}
@@ -364,15 +378,24 @@ export default function ContractorPortalPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Time <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <input
-                  type="time"
-                  className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={scheduleTime}
-                  onChange={(e) => setScheduleTime(e.target.value)}
-                />
+                <label className="text-sm font-medium text-gray-700">When can you attend?</label>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot.value}
+                      type="button"
+                      onClick={() => setScheduleSlot(slot.value)}
+                      className={`rounded-lg border-2 px-3 py-2.5 text-center transition-colors ${
+                        scheduleSlot === slot.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{slot.label}</span>
+                      <span className="block text-[10px] text-gray-400 mt-0.5">{slot.range}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">
@@ -388,7 +411,7 @@ export default function ContractorPortalPage() {
               </div>
               <button
                 onClick={handleSchedule}
-                disabled={submittingSchedule || !scheduleDate}
+                disabled={submittingSchedule || !scheduleDate || !scheduleSlot}
                 className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {submittingSchedule ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Confirm Booking'}

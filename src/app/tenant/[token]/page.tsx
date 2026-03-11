@@ -70,6 +70,15 @@ function formatDateTime(iso: string): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
+function formatScheduledSlot(iso: string): { date: string; slot: string } {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
+  const hour = d.getHours()
+  if (hour < 12) return { date, slot: 'in the morning (09:00–12:00)' }
+  if (hour < 17) return { date, slot: 'in the afternoon (12:00–17:00)' }
+  return { date, slot: 'in the evening (17:00–20:00)' }
+}
+
 function formatPhone(raw: string): string {
   const digits = raw.replace(/^\+/, '')
   if (digits.startsWith('44') && digits.length === 12) {
@@ -209,38 +218,37 @@ export default function TenantPortalPage() {
 
         {/* Status tracker */}
         <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             {STAGE_ORDER.map((stage, i) => {
               const isActive = i <= activeIdx
               const isCurrent = i === activeIdx
+              const isLast = i === STAGE_ORDER.length - 1
               return (
-                <div key={stage} className="flex flex-col items-center flex-1">
-                  <div className={`flex items-center justify-center size-8 rounded-full transition-colors ${
-                    isCurrent ? 'bg-blue-600 text-white' :
-                    isActive ? 'bg-green-100 text-green-600' :
-                    'bg-gray-100 text-gray-400'
-                  }`}>
-                    {isActive && !isCurrent ? <CheckCircle2 className="size-4" /> : STAGE_ICONS[stage]}
+                <div key={stage} className="flex items-center flex-1 last:flex-none">
+                  {/* Node */}
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center size-8 rounded-full transition-colors ${
+                      isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
+                      isActive ? 'bg-green-500 text-white' :
+                      'bg-gray-200 text-gray-400'
+                    }`}>
+                      {isActive && !isCurrent ? <CheckCircle2 className="size-4" /> : STAGE_ICONS[stage]}
+                    </div>
+                    <span className={`mt-2 text-[10px] font-medium text-center leading-tight whitespace-nowrap ${
+                      isCurrent ? 'text-blue-600' : isActive ? 'text-green-600' : 'text-gray-400'
+                    }`}>
+                      {STAGE_LABELS[stage]}
+                    </span>
                   </div>
-                  <span className={`mt-1.5 text-[10px] font-medium text-center leading-tight ${
-                    isCurrent ? 'text-blue-600' : isActive ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    {STAGE_LABELS[stage]}
-                  </span>
-                  {i < STAGE_ORDER.length - 1 && (
-                    <div className="hidden" /> /* connector handled by flex gap */
+                  {/* Connector */}
+                  {!isLast && (
+                    <div className={`flex-1 h-0.5 mx-1.5 mb-5 ${
+                      i < activeIdx ? 'bg-green-400' : 'bg-gray-200'
+                    }`} />
                   )}
                 </div>
               )
             })}
-          </div>
-          {/* Connector lines */}
-          <div className="flex items-center mt-[-38px] mb-[22px] px-4">
-            {STAGE_ORDER.slice(0, -1).map((_, i) => (
-              <div key={i} className={`flex-1 h-0.5 mx-1 ${
-                i < activeIdx ? 'bg-green-300' : 'bg-gray-200'
-              }`} />
-            ))}
           </div>
         </div>
 
@@ -315,7 +323,11 @@ export default function TenantPortalPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Date</span>
-                  <span className="font-semibold text-gray-900">{formatDateTime(ticket.scheduled_date)}</span>
+                  <span className="font-semibold text-gray-900">{formatScheduledSlot(ticket.scheduled_date).date}</span>
+                </div>
+                <div className="flex justify-between border-t border-gray-100 pt-2">
+                  <span className="text-gray-500">Expected arrival</span>
+                  <span className="font-medium text-gray-900">{formatScheduledSlot(ticket.scheduled_date).slot}</span>
                 </div>
                 {ticket.contractor_name && (
                   <div className="flex justify-between border-t border-gray-100 pt-2">
