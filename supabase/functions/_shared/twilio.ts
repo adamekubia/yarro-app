@@ -162,13 +162,15 @@ export async function sendAndLog(
       const table = params.recipientRole === "contractor" ? "c1_contractors" : "c1_landlords";
       const phoneCol = params.recipientRole === "contractor" ? "contractor_phone" : "phone";
       const emailCol = params.recipientRole === "contractor" ? "contractor_email" : "email";
+      // Look specifically for an email-preference entry (multiple entries may share the same phone)
       const { data } = await supabase
         .from(table)
         .select(`contact_method, ${emailCol}`)
         .eq(phoneCol, params.recipientPhone)
+        .eq("contact_method", "email")
         .limit(1)
-        .single();
-      if (data?.contact_method === "email" && data?.[emailCol]) {
+        .maybeSingle();
+      if (data && data[emailCol]) {
         channel = "email";
         recipientEmail = data[emailCol];
       }
