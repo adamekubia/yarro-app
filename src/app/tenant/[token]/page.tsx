@@ -218,23 +218,23 @@ export default function TenantPortalPage() {
 
         {/* Status tracker */}
         <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <div className="flex items-center">
+          <div className="flex items-start">
             {STAGE_ORDER.map((stage, i) => {
               const isActive = i <= activeIdx
               const isCurrent = i === activeIdx
               const isLast = i === STAGE_ORDER.length - 1
               return (
-                <div key={stage} className="flex items-center flex-1 last:flex-none">
+                <div key={stage} className="flex flex-1 items-start">
                   {/* Node */}
-                  <div className="flex flex-col items-center">
-                    <div className={`flex items-center justify-center size-8 rounded-full transition-colors ${
+                  <div className="flex flex-col items-center w-full">
+                    <div className={`flex items-center justify-center size-10 rounded-full transition-colors ${
                       isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
                       isActive ? 'bg-green-500 text-white' :
                       'bg-gray-200 text-gray-400'
                     }`}>
                       {isActive && !isCurrent ? <CheckCircle2 className="size-4" /> : STAGE_ICONS[stage]}
                     </div>
-                    <span className={`mt-2 text-[10px] font-medium text-center leading-tight whitespace-nowrap ${
+                    <span className={`mt-2 text-[10px] font-medium text-center leading-tight ${
                       isCurrent ? 'text-blue-600' : isActive ? 'text-green-600' : 'text-gray-400'
                     }`}>
                       {STAGE_LABELS[stage]}
@@ -242,7 +242,7 @@ export default function TenantPortalPage() {
                   </div>
                   {/* Connector */}
                   {!isLast && (
-                    <div className={`flex-1 h-0.5 mx-1.5 mb-5 ${
+                    <div className={`h-0.5 w-full mt-5 -mx-2 ${
                       i < activeIdx ? 'bg-green-400' : 'bg-gray-200'
                     }`} />
                   )}

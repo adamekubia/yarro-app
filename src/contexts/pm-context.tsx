@@ -101,8 +101,11 @@ export function PMProvider({ children }: { children: ReactNode }) {
 
     // When tab becomes visible, do a simple session check
     // If no session, redirect to login. Don't use getUser() - it can hang.
+    // Skip for public portal pages — they have no auth session by design.
+    const publicPrefixes = ['/ooh/', '/contractor/', '/tenant/', '/landlord/', '/i/']
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        if (publicPrefixes.some((p) => window.location.pathname.startsWith(p))) return
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) {
             window.location.href = '/login'
