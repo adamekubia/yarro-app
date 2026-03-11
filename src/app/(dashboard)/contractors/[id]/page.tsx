@@ -16,18 +16,18 @@ import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
-import { ArrowLeft, Pencil, Save, X, Check, Trash2, Loader2, ChevronDown, Phone as PhoneIcon, Mail, Tag } from 'lucide-react'
+import { ArrowLeft, Pencil, Save, X, Check, Trash2, Loader2, ChevronDown, Phone as PhoneIcon, Mail, Tag, MessageCircle } from 'lucide-react'
 
 // --- Types ---
 
 interface Contractor {
   id: string; contractor_name: string; category: string; categories: string[] | null
   contractor_phone: string | null; contractor_email: string | null; active: boolean
-  property_ids: string[] | null; created_at: string
+  property_ids: string[] | null; created_at: string; contact_method: string
 }
 interface ContractorEditable {
   id: string; contractor_name: string; categories: string[]; contractor_phone: string
-  contractor_email: string | null; active: boolean; property_ids: string[]
+  contractor_email: string | null; active: boolean; property_ids: string[]; contact_method: string
 }
 interface PropertyOption { id: string; address: string }
 interface TicketRow {
@@ -42,7 +42,7 @@ const toEditable = (c: Contractor): ContractorEditable => ({
   id: c.id, contractor_name: c.contractor_name,
   categories: c.categories || (c.category ? [c.category] : []),
   contractor_phone: c.contractor_phone || '', contractor_email: c.contractor_email,
-  active: c.active, property_ids: c.property_ids || [],
+  active: c.active, property_ids: c.property_ids || [], contact_method: c.contact_method || 'whatsapp',
 })
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({ value: c, label: c }))
 
@@ -106,7 +106,7 @@ export default function ContractorDetailPage() {
     const { data: current } = await supabase.from('c1_contractors').select('_audit_log').eq('id', data.id).single()
     const newLog = [...(current?._audit_log as unknown[] || []), auditEntry]
     const normalized = normalizeRecord('contractors', { contractor_name: data.contractor_name, contractor_phone: data.contractor_phone, contractor_email: data.contractor_email })
-    const { error } = await supabase.from('c1_contractors').update({ ...normalized, category: data.categories[0] || '', categories: data.categories, active: data.active, property_ids: data.property_ids, _audit_log: newLog }).eq('id', data.id)
+    const { error } = await supabase.from('c1_contractors').update({ ...normalized, category: data.categories[0] || '', categories: data.categories, active: data.active, property_ids: data.property_ids, contact_method: data.contact_method, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
     toast.success('Contractor updated'); await fetchContractor()
   }, [supabase, fetchContractor])
@@ -253,6 +253,18 @@ export default function ContractorDetailPage() {
                     </div>
                   </div>
                 </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Contact Method</p>
+                    <div className="flex rounded-md border border-input overflow-hidden w-fit">
+                      <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-emerald-600 text-white' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                      <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-blue-600 text-white' : 'bg-background hover:bg-muted'}`}>Email</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Properties edit */}
@@ -336,6 +348,15 @@ export default function ContractorDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
                     <p className="text-[15px] font-medium mt-0.5">{contractor.active ? 'Active' : 'Inactive'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Contact Method</p>
+                    <p className="text-[15px] font-medium mt-0.5">{contractor.contact_method === 'email' ? 'Email' : 'WhatsApp'}</p>
                   </div>
                 </div>
               </div>

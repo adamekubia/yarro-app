@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "./supabase.ts";
 import { alertTelegram } from "./telegram.ts";
+import { sendEmail } from "./resend.ts";
+import { buildEmail } from "./email-templates.ts";
 
 const TWILIO_FROM = "whatsapp:+447463558759";
 
@@ -139,6 +141,10 @@ export interface SendAndLogParams {
   messageType: string;
   templateSid: string;
   variables: Record<string, string>;
+  /** Optional: override channel. If omitted, defaults to WhatsApp. */
+  channel?: "whatsapp" | "email";
+  /** Required when channel is "email" */
+  recipientEmail?: string;
 }
 
 export async function sendAndLog(
@@ -147,11 +153,54 @@ export async function sendAndLog(
   flowStep: string,
   params: SendAndLogParams,
 ): Promise<TwilioResult> {
-  const result = await sendWhatsApp(
-    params.recipientPhone,
-    params.templateSid,
-    params.variables,
-  );
+  // ─── Auto-detect channel from DB when not explicitly set ───
+  let channel = params.channel || "whatsapp";
+  let recipientEmail = params.recipientEmail;
+
+  if (!params.channel && (params.recipientRole === "contractor" || params.recipientRole === "landlord")) {
+    try {
+      const table = params.recipientRole === "contractor" ? "c1_contractors" : "c1_landlords";
+      const phoneCol = params.recipientRole === "contractor" ? "contractor_phone" : "phone";
+      const emailCol = params.recipientRole === "contractor" ? "contractor_email" : "email";
+      const { data } = await supabase
+        .from(table)
+        .select(`contact_method, ${emailCol}`)
+        .eq(phoneCol, params.recipientPhone)
+        .limit(1)
+        .single();
+      if (data?.contact_method === "email" && data?.[emailCol]) {
+        channel = "email";
+        recipientEmail = data[emailCol];
+      }
+    } catch (e) {
+      console.warn(`[sendAndLog] Channel lookup failed for ${params.recipientRole}, defaulting to WhatsApp:`, e);
+    }
+  }
+
+  let result: TwilioResult;
+
+  if (channel === "email" && recipientEmail) {
+    // ─── Email path via Resend ───
+    const emailContent = buildEmail(params.messageType, params.variables);
+    if (!emailContent) {
+      console.warn(`[sendAndLog] No email template for "${params.messageType}", falling back to WhatsApp`);
+      result = await sendWhatsApp(params.recipientPhone, params.templateSid, params.variables);
+    } else {
+      const emailResult = await sendEmail(recipientEmail, emailContent.subject, emailContent.html);
+      result = {
+        ok: emailResult.ok,
+        messageSid: emailResult.emailId || undefined,
+        status: emailResult.ok ? "sent" : "failed",
+        body: emailContent.subject,
+        to: recipientEmail,
+        error: emailResult.error,
+        httpStatus: emailResult.httpStatus,
+      };
+    }
+  } else {
+    // ─── WhatsApp path via Twilio ───
+    result = await sendWhatsApp(params.recipientPhone, params.templateSid, params.variables);
+  }
 
   await logOutbound(supabase, {
     ticketId: params.ticketId,
@@ -159,17 +208,20 @@ export async function sendAndLog(
     recipientPhone: params.recipientPhone,
     recipientRole: params.recipientRole,
     twilioSid: result.messageSid || null,
-    templateSid: params.templateSid,
+    templateSid: channel === "email" ? `email:${params.messageType}` : params.templateSid,
     contentVariables: params.variables,
     twilioBody: result.body || null,
     status: result.ok ? (result.status || "queued") : "failed",
   });
 
   if (!result.ok) {
-    await alertTelegram(functionName, flowStep, result.error || "Unknown Twilio error", {
+    await alertTelegram(functionName, flowStep, result.error || `Unknown ${channel} error`, {
       Ticket: params.ticketId,
-      Recipient: `${params.recipientPhone} (${params.recipientRole})`,
-      Template: params.templateSid,
+      Channel: channel,
+      Recipient: channel === "email"
+        ? `${recipientEmail} (${params.recipientRole})`
+        : `${params.recipientPhone} (${params.recipientRole})`,
+      Template: channel === "email" ? params.messageType : params.templateSid,
       "Message Type": params.messageType,
       "HTTP Status": result.httpStatus ? String(result.httpStatus) : "N/A",
       Variables: JSON.stringify(params.variables),

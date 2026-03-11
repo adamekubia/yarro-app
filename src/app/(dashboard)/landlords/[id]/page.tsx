@@ -13,12 +13,12 @@ import { Input } from '@/components/ui/input'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
-import { ArrowLeft, Pencil, Save, X, Trash2, Loader2, Phone as PhoneIcon, Mail, Building2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Save, X, Trash2, Loader2, Phone as PhoneIcon, Mail, Building2, MessageCircle } from 'lucide-react'
 
 // --- Types ---
 
-interface Landlord { id: string; full_name: string; phone: string | null; email: string | null; created_at: string }
-interface LandlordEditable { id: string; full_name: string; phone: string | null; email: string | null }
+interface Landlord { id: string; full_name: string; phone: string | null; email: string | null; created_at: string; contact_method: string }
+interface LandlordEditable { id: string; full_name: string; phone: string | null; email: string | null; contact_method: string }
 interface PropertyRow { id: string; address: string }
 interface TicketRow {
   id: string; issue_title: string | null; issue_description: string | null
@@ -28,7 +28,7 @@ interface TicketRow {
 
 // --- Helpers ---
 
-const toEditable = (l: Landlord): LandlordEditable => ({ id: l.id, full_name: l.full_name || '', phone: l.phone, email: l.email })
+const toEditable = (l: Landlord): LandlordEditable => ({ id: l.id, full_name: l.full_name || '', phone: l.phone, email: l.email, contact_method: l.contact_method || 'whatsapp' })
 
 const displayStageMap: Record<string, string> = {
   pending_review: 'Needs Review', handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
@@ -104,7 +104,7 @@ export default function LandlordDetailPage() {
     const { data: current } = await supabase.from('c1_landlords').select('_audit_log').eq('id', data.id).single()
     const newLog = [...(current?._audit_log as unknown[] || []), auditEntry]
     const normalized = normalizeRecord('landlords', { full_name: data.full_name, phone: data.phone, email: data.email })
-    const { error } = await supabase.from('c1_landlords').update({ ...normalized, _audit_log: newLog }).eq('id', data.id)
+    const { error } = await supabase.from('c1_landlords').update({ ...normalized, contact_method: data.contact_method, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
     const { error: propError } = await supabase.from('c1_properties').update({ landlord_name: normalized.full_name, landlord_phone: normalized.phone, landlord_email: normalized.email }).eq('landlord_id', data.id)
     if (propError) toast.error('Landlord saved but failed to sync data to linked properties. Try again or contact support.')
@@ -199,6 +199,18 @@ export default function LandlordDetailPage() {
                     <p className="text-[15px] font-medium mt-0.5">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
                   </div>
                 </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Contact Method</p>
+                    <div className="flex rounded-md border border-input overflow-hidden w-fit">
+                      <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-emerald-600 text-white' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                      <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-blue-600 text-white' : 'bg-background hover:bg-muted'}`}>Email</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           ) : (
@@ -229,6 +241,15 @@ export default function LandlordDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Properties</p>
                     <p className="text-[15px] font-medium mt-0.5">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Contact Method</p>
+                    <p className="text-[15px] font-medium mt-0.5">{landlord.contact_method === 'email' ? 'Email' : 'WhatsApp'}</p>
                   </div>
                 </div>
               </div>
