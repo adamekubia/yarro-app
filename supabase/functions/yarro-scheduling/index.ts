@@ -494,7 +494,7 @@ async function handlePortalSchedule(
     p_notes: notes || null,
   });
 
-  if (error || !data?.ok) {
+  if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Schedule submission failed";
     await alertTelegram(FN, "portal-schedule \u2192 RPC", errMsg, { Token: token });
     return new Response(
@@ -648,7 +648,7 @@ async function handlePortalCompletion(
     p_photos: photos || null,
   });
 
-  if (error || !data?.ok) {
+  if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Completion submission failed";
     await alertTelegram(FN, "portal-completion \u2192 RPC", errMsg, { Token: token });
     return new Response(
@@ -756,7 +756,7 @@ async function handleRescheduleRequest(
     p_reason: reason || null,
   });
 
-  if (error || !data?.ok) {
+  if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Reschedule request failed";
     await alertTelegram(FN, "reschedule-request \u2192 RPC", errMsg, { Token: token });
     return new Response(
@@ -808,7 +808,7 @@ async function handleRescheduleDecision(
     p_approved: approved,
   });
 
-  if (error || !data?.ok) {
+  if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Reschedule decision failed";
     await alertTelegram(FN, "reschedule-decision \u2192 RPC", errMsg, { Token: token });
     return new Response(
@@ -898,7 +898,7 @@ async function handleTenantConfirmation(
     p_notes: notes || null,
   });
 
-  if (error || !data?.ok) {
+  if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Tenant confirmation failed";
     await alertTelegram(FN, "tenant-confirmation \u2192 RPC", errMsg, { Token: token });
     return new Response(
