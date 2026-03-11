@@ -766,6 +766,28 @@ async function handlePortalCompletion(
     })());
   }
 
+  // Tenant notification — CTA to leave feedback via tenant portal
+  const tenantPhone = ctx.tenant?.phone;
+  const tenantToken = ctx.ticket?.tenant_token;
+  if (tenantPhone && tenantToken) {
+    const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-completion → tenant_job_completed", {
+        ticketId,
+        recipientPhone: tenantPhone,
+        recipientRole: "tenant",
+        messageType: "tenant_job_completed",
+        templateSid: TEMPLATES.tenant_job_completed,
+        variables: {
+          "1": tenantFirstName,
+          "2": issueTitle,
+          "3": tenantToken,
+        },
+      });
+      results.push({ type: "tenant_job_completed", sent: r.ok, error: r.error });
+    })());
+  }
+
   await Promise.all(sends);
 
   return new Response(
