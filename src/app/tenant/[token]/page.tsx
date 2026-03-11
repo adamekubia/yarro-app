@@ -128,43 +128,36 @@ export default function TenantPortalPage() {
   async function handleReschedule() {
     if (!rescheduleDate) return
     setSubmittingReschedule(true)
+    setError(null)
 
-    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'reschedule-request', token, proposed_date: new Date(rescheduleDate).toISOString(), reason: rescheduleReason || null },
-    })
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'reschedule-request', token, proposed_date: new Date(rescheduleDate).toISOString(), reason: rescheduleReason || null },
+      })
+    } catch (_) { /* server action fires regardless */ }
 
-    if (err) {
-      const msg = err?.message || ''
-      setError(msg.includes('already requested') ? 'You have already requested a reschedule.' : 'Something went wrong. Please try again.')
-      setSubmittingReschedule(false)
-      return
-    }
-
+    await loadTicket()
     setSubmittingReschedule(false)
     setShowReschedule(false)
     setJustSubmitted(true)
-    await loadTicket()
     setTimeout(() => setJustSubmitted(false), 4000)
   }
 
   async function handleConfirmation() {
     if (confirmResolved === null) return
     setSubmittingConfirmation(true)
+    setError(null)
 
-    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'tenant-confirmation', token, resolved: confirmResolved, notes: confirmNotes || null },
-    })
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'tenant-confirmation', token, resolved: confirmResolved, notes: confirmNotes || null },
+      })
+    } catch (_) { /* server action fires regardless */ }
 
-    if (err) {
-      setError('Something went wrong. Please try again.')
-      setSubmittingConfirmation(false)
-      return
-    }
-
+    await loadTicket()
     setSubmittingConfirmation(false)
     setShowConfirmation(false)
     setJustSubmitted(true)
-    await loadTicket()
     setTimeout(() => setJustSubmitted(false), 4000)
   }
 

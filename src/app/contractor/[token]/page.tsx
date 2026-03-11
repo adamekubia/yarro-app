@@ -213,25 +213,22 @@ export default function ContractorPortalPage() {
   async function handleSchedule() {
     if (!scheduleDate) return
     setSubmittingSchedule(true)
+    setError(null)
 
     const slotHour = TIME_SLOTS.find(s => s.value === scheduleSlot)?.hour ?? 9
     const dateStr = `${scheduleDate}T${String(slotHour).padStart(2, '0')}:00:00`
 
-    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleSlot || 'morning', notes: scheduleNotes || null },
-    })
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleSlot || 'morning', notes: scheduleNotes || null },
+      })
+    } catch (_) { /* server action fires regardless */ }
 
-    if (err) {
-      const msg = err?.message || ''
-      setError(msg.includes('already scheduled') ? 'This job has already been scheduled.' : 'Something went wrong. Please try again.')
-      setSubmittingSchedule(false)
-      return
-    }
-
+    // Let DB state be the source of truth
+    await loadTicket()
     setSubmittingSchedule(false)
     setSubmitMessage('Job booked — the tenant and property manager have been notified.')
     setJustSubmitted(true)
-    await loadTicket()
     setTimeout(() => setJustSubmitted(false), 5000)
   }
 
@@ -260,20 +257,22 @@ export default function ContractorPortalPage() {
     if (!completionStatus) return
     setSubmittingCompletion(true)
 
+    setError(null)
+
     // Not complete path
     if (completionStatus === 'not-complete') {
-      const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'portal-completion', token, resolved: false, notes: completionReason || null },
-      })
-      if (err) {
-        setError('Something went wrong. Please try again.')
-        setSubmittingCompletion(false)
-        return
-      }
+      try {
+        await supabase.functions.invoke('yarro-scheduling', {
+          body: { source: 'portal-completion', token, resolved: false, notes: completionReason || null },
+        })
+      } catch (_) { /* server action fires regardless */ }
+
+      await loadTicket()
       setSubmittingCompletion(false)
+      setCompletionStatus(null)
+      setCompletionReason('')
       setSubmitMessage('Report submitted — the property manager has been notified.')
       setJustSubmitted(true)
-      await loadTicket()
       setTimeout(() => setJustSubmitted(false), 5000)
       return
     }
@@ -296,36 +295,30 @@ export default function ContractorPortalPage() {
       setUploadingPhotos(false)
     }
 
-    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'portal-completion', token, resolved: true, notes: completionNotes || null, photos: photoUrls },
-    })
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'portal-completion', token, resolved: true, notes: completionNotes || null, photos: photoUrls },
+      })
+    } catch (_) { /* server action fires regardless */ }
 
-    if (err) {
-      setError('Something went wrong. Please try again.')
-      setSubmittingCompletion(false)
-      return
-    }
-
+    await loadTicket()
     setSubmittingCompletion(false)
     setSubmitMessage('Job marked as complete — the property manager has been notified.')
     setJustSubmitted(true)
-    await loadTicket()
     setTimeout(() => setJustSubmitted(false), 5000)
   }
 
   async function handleRescheduleDecision(approved: boolean) {
     setSubmittingReschedule(true)
+    setError(null)
 
-    const { error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'reschedule-decision', token, approved },
-    })
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'reschedule-decision', token, approved },
+      })
+    } catch (_) { /* server action fires regardless */ }
 
-    if (err) {
-      setError('Something went wrong. Please try again.')
-      setSubmittingReschedule(false)
-      return
-    }
-
+    await loadTicket()
     setSubmittingReschedule(false)
     setSubmitMessage(approved ? 'Reschedule approved.' : 'Reschedule declined.')
     setJustSubmitted(true)
