@@ -38,6 +38,7 @@ type ContractorTicket = {
   reschedule_status: string | null
   resolved_at: string | null
   tenant_updates: Array<{ type: string; notes?: string; reason?: string; photos?: string[]; submitted_at: string }>
+  min_booking_lead_hours: number
 }
 
 type QuoteContext = {
@@ -91,6 +92,35 @@ const TIME_SLOTS = [
   { value: 'evening', label: 'Evening', range: '17:00–20:00', hour: 18 },
 ] as const
 
+/** Returns slot start hours that are still bookable for a given date, respecting lead time. */
+function getAvailableSlots(dateStr: string, leadHours: number): Set<number> {
+  const now = new Date()
+  const available = new Set<number>()
+  for (const slot of TIME_SLOTS) {
+    // Build the slot start time in local timezone
+    const slotStart = new Date(`${dateStr}T${String(slot.hour).padStart(2, '0')}:00:00`)
+    const hoursUntilSlot = (slotStart.getTime() - now.getTime()) / (1000 * 60 * 60)
+    if (hoursUntilSlot >= leadHours) {
+      available.add(slot.hour)
+    }
+  }
+  return available
+}
+
+/** Returns the earliest bookable date (where at least one slot is available). */
+function getMinBookableDate(leadHours: number): Date {
+  const now = new Date()
+  const candidate = new Date(now)
+  candidate.setHours(0, 0, 0, 0)
+  // Check up to 7 days ahead (lead time can be up to a few days)
+  for (let i = 0; i < 14; i++) {
+    const dateStr = `${candidate.getFullYear()}-${String(candidate.getMonth() + 1).padStart(2, '0')}-${String(candidate.getDate()).padStart(2, '0')}`
+    if (getAvailableSlots(dateStr, leadHours).size > 0) return candidate
+    candidate.setDate(candidate.getDate() + 1)
+  }
+  return now // fallback
+}
+
 function formatScheduledSlot(iso: string): { date: string; slot: string } {
   const d = new Date(iso)
   const date = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
@@ -110,7 +140,7 @@ function formatPhone(raw: string): string {
 
 // ─── Mini Calendar ───────────────────────────────────────────────────────
 
-function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSelect: (d: string) => void; minDate: Date }) {
+function MiniCalendar({ selected, onSelect, minDate, isDateDisabled }: { selected: string; onSelect: (d: string) => void; minDate: Date; isDateDisabled?: (dateStr: string) => boolean }) {
   const [viewDate, setViewDate] = useState(() => {
     if (selected) return new Date(selected + 'T00:00:00')
     return new Date()
@@ -161,6 +191,8 @@ function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSel
           const date = new Date(year, month, day)
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const isPast = date < minDate
+          const noSlots = !isPast && isDateDisabled?.(dateStr)
+          const isDisabled = isPast || !!noSlots
           const isSelected = selected === dateStr
           const isToday = date.getTime() === today.getTime()
 
@@ -168,12 +200,12 @@ function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSel
             <button
               key={dateStr}
               type="button"
-              disabled={isPast}
+              disabled={isDisabled}
               onClick={() => onSelect(dateStr)}
               className={`h-9 w-full rounded-lg text-sm transition-colors ${
                 isSelected
                   ? 'bg-blue-600 text-white font-semibold'
-                  : isPast
+                  : isDisabled
                     ? 'text-gray-200 cursor-default'
                     : isToday
                       ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
@@ -738,32 +770,46 @@ export default function ContractorPortalPage() {
         )}
 
         {/* Schedule form */}
-        {stage === 'schedule' && (
+        {stage === 'schedule' && (() => {
+          const leadHours = ticket!.min_booking_lead_hours ?? 3
+          const availableSlots = scheduleDate ? getAvailableSlots(scheduleDate, leadHours) : null
+          return (
           <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-5 space-y-4">
               <h3 className="text-sm font-medium text-gray-900">Book a slot</h3>
               <div>
                 <label className="text-sm font-medium text-gray-700">Select a date</label>
-                <MiniCalendar selected={scheduleDate} onSelect={setScheduleDate} minDate={new Date()} />
+                <MiniCalendar
+                  selected={scheduleDate}
+                  onSelect={(d) => { setScheduleDate(d); setScheduleSlot('') }}
+                  minDate={getMinBookableDate(leadHours)}
+                  isDateDisabled={(dateStr) => getAvailableSlots(dateStr, leadHours).size === 0}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">When can you attend?</label>
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  {TIME_SLOTS.map((slot) => (
+                  {TIME_SLOTS.map((slot) => {
+                    const disabled = availableSlots != null && !availableSlots.has(slot.hour)
+                    return (
                     <button
                       key={slot.value}
                       type="button"
+                      disabled={disabled}
                       onClick={() => setScheduleSlot(slot.value)}
                       className={`rounded-lg border-2 px-3 py-2.5 text-center transition-colors ${
                         scheduleSlot === slot.value
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                          : disabled
+                            ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                       }`}
                     >
                       <span className="block text-sm font-medium">{slot.label}</span>
                       <span className="block text-[10px] text-gray-400 mt-0.5">{slot.range}</span>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
               <div>
@@ -787,7 +833,8 @@ export default function ContractorPortalPage() {
               </button>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* Previous contractor updates */}
         {ticket!.tenant_updates?.filter(u => u.type === 'contractor_not_completed' || u.type === 'contractor_completed').length > 0 && (

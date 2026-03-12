@@ -72,7 +72,21 @@ interface DraftSettings {
   business_hours_end: string
   business_days: string[]
   ooh_routine_action: 'queue_review' | 'dispatch'
+  min_booking_lead_hours: string
 }
+
+const LEAD_TIME_OPTIONS = [
+  { value: '1', label: '1 hour' },
+  { value: '2', label: '2 hours' },
+  { value: '3', label: '3 hours' },
+  { value: '4', label: '4 hours' },
+  { value: '6', label: '6 hours' },
+  { value: '8', label: '8 hours' },
+  { value: '12', label: '12 hours' },
+  { value: '24', label: '1 day' },
+  { value: '48', label: '2 days' },
+  { value: '72', label: '3 days' },
+]
 
 const DEFAULTS: DraftSettings = {
   ticket_mode: 'auto',
@@ -91,6 +105,7 @@ const DEFAULTS: DraftSettings = {
   business_hours_end: '17:00',
   business_days: ['mon', 'tue', 'wed', 'thu', 'fri'],
   ooh_routine_action: 'queue_review',
+  min_booking_lead_hours: '3',
 }
 
 const ALL_DAYS = [
@@ -160,6 +175,7 @@ export default function RulesPage() {
       business_hours_end: (pm.business_hours_end || '17:00:00').slice(0, 5),
       business_days: pm.business_days || ['mon', 'tue', 'wed', 'thu', 'fri'],
       ooh_routine_action: pm.ooh_routine_action || 'queue_review',
+      min_booking_lead_hours: (pm.min_booking_lead_hours ?? 3).toString(),
     }
     setDraft(fromPM)
     setSaved(fromPM)
@@ -256,6 +272,7 @@ export default function RulesPage() {
       business_hours_end: draft.business_hours_end,
       business_days: draft.business_days,
       ooh_routine_action: draft.ooh_routine_action,
+      min_booking_lead_hours: parseInt(draft.min_booking_lead_hours) || 3,
     }
 
     const { error } = await supabase
@@ -781,6 +798,39 @@ export default function RulesPage() {
               escalateOnChange={(v) => updateDraft({ completion_timeout: v })}
               escalateOptions={timeoutOpts(draft.completion_reminder, draft.completion_reminder_on)}
             />
+          </div>
+        </section>
+
+        {/* Booking Rules */}
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold">Booking</h3>
+            <p className="text-xs text-muted-foreground">Contractor scheduling rules</p>
+          </div>
+          <div className="rounded-lg border p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Minimum booking lead time</p>
+                <p className="text-xs text-muted-foreground">
+                  How far in advance a contractor must book. Slots within this window are unavailable.
+                </p>
+              </div>
+              <Select
+                value={draft.min_booking_lead_hours}
+                onValueChange={(v) => updateDraft({ min_booking_lead_hours: v })}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_TIME_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </section>
       </div>

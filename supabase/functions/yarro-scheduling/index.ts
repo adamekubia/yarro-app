@@ -930,7 +930,14 @@ async function handleRescheduleRequest(
   // Fetch full context for notifications (RPC only returns ticket_id)
   const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
 
+  const addr = ctx?.property?.address || "Address not available";
+  const issueTitle = ctx?.ticket?.issue_title || "Maintenance issue";
+  const proposedDateFormatted = proposed_date
+    ? new Date(proposed_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+    : "a new date";
+
   // Notify contractor via WhatsApp — "tenant wants to reschedule, check your portal"
+  // Variables: 1=address, 2=issue, 3=proposed_date, 4=reason, 5=contractor_token
   if (ctx?.ok && ctx.contractor?.contractor_phone && TEMPLATES.contractor_reschedule_request !== "PENDING_APPROVAL") {
     await sendAndLog(supabase, FN, "reschedule-request \u2192 contractor WhatsApp", {
       ticketId,
@@ -939,7 +946,11 @@ async function handleRescheduleRequest(
       messageType: "contractor_reschedule_request",
       templateSid: TEMPLATES.contractor_reschedule_request,
       variables: {
-        "1": ctx.ticket?.contractor_token || token,
+        "1": addr,
+        "2": issueTitle,
+        "3": proposedDateFormatted,
+        "4": reason || "No reason given",
+        "5": ctx.ticket?.contractor_token || token,
       },
     });
   }
@@ -987,9 +998,17 @@ async function handleRescheduleDecision(
   const tenantToken = ctx?.ticket?.tenant_token;
   const mgrPhone = ctx?.manager?.phone;
   const addr = ctx?.property?.address || "Address not available";
+  const issueTitle = ctx?.ticket?.issue_title || "Maintenance issue";
+  const contrName = ctx?.contractor?.contractor_name || "Contractor";
+
+  // Format the new date if approved
+  const newDate = data.new_date
+    ? new Date(data.new_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+    : "the new date";
 
   if (approved) {
     // Tenant gets "reschedule confirmed"
+    // Variables: 1=address, 2=issue, 3=new_date, 4=tenant_token
     if (tenantPhone && tenantToken && TEMPLATES.tenant_reschedule_approved !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant approved", {
         ticketId,
@@ -998,12 +1017,16 @@ async function handleRescheduleDecision(
         messageType: "tenant_reschedule_approved",
         templateSid: TEMPLATES.tenant_reschedule_approved,
         variables: {
-          "1": tenantToken,
+          "1": addr,
+          "2": issueTitle,
+          "3": newDate,
+          "4": tenantToken,
         },
       });
     }
 
     // PM gets info-only notification (approved only, per design)
+    // Variables: 1=address, 2=issue, 3=contractor_name, 4=new_date
     if (mgrPhone && TEMPLATES.pm_reschedule_approved !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 PM approved", {
         ticketId,
@@ -1013,11 +1036,15 @@ async function handleRescheduleDecision(
         templateSid: TEMPLATES.pm_reschedule_approved,
         variables: {
           "1": addr,
+          "2": issueTitle,
+          "3": contrName,
+          "4": newDate,
         },
       });
     }
   } else {
     // Tenant gets "reschedule declined"
+    // Variables: 1=address, 2=issue, 3=tenant_token
     if (tenantPhone && tenantToken && TEMPLATES.tenant_reschedule_declined !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant declined", {
         ticketId,
@@ -1026,7 +1053,9 @@ async function handleRescheduleDecision(
         messageType: "tenant_reschedule_declined",
         templateSid: TEMPLATES.tenant_reschedule_declined,
         variables: {
-          "1": tenantToken,
+          "1": addr,
+          "2": issueTitle,
+          "3": tenantToken,
         },
       });
     }

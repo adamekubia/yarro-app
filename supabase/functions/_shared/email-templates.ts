@@ -92,6 +92,32 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     heading: "Job Completed",
     body: `The maintenance job at ${v["1"] || "your property"} has been completed by ${v["3"] || "the contractor"}.`,
   }),
+
+  // ─── Reschedule Messages ───
+
+  // contractor_reschedule_request: 1=address, 2=issue, 3=proposed_date, 4=reason, 5=contractor_token
+  contractor_reschedule_request: (v) => ({
+    subject: `Reschedule Request — ${v["1"] || "Property"}`,
+    heading: "Reschedule Requested",
+    body: `The tenant has requested to reschedule the ${v["2"] || "maintenance"} job at ${v["1"] || "the property"} to ${v["3"] || "a new date"}. Reason: ${v["4"] || "Not provided"}.`,
+    cta: v["5"] ? { text: "Review Request", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
+  }),
+
+  // tenant_reschedule_approved: 1=address, 2=issue, 3=new_date, 4=tenant_token
+  tenant_reschedule_approved: (v) => ({
+    subject: `Reschedule Confirmed — ${v["1"] || "Property"}`,
+    heading: "Reschedule Confirmed",
+    body: `Your reschedule request for ${v["2"] || "the maintenance job"} at ${v["1"] || "your property"} has been approved. The new date is ${v["3"] || "to be confirmed"}.`,
+    cta: v["4"] ? { text: "View Details", url: `https://app.yarro.ai/tenant/${v["4"]}` } : undefined,
+  }),
+
+  // tenant_reschedule_declined: 1=address, 2=issue, 3=tenant_token
+  tenant_reschedule_declined: (v) => ({
+    subject: `Reschedule Declined — ${v["1"] || "Property"}`,
+    heading: "Reschedule Declined",
+    body: `Your reschedule request for ${v["2"] || "the maintenance job"} at ${v["1"] || "your property"} was declined. The original appointment still stands.`,
+    cta: v["3"] ? { text: "View Details", url: `https://app.yarro.ai/tenant/${v["3"]}` } : undefined,
+  }),
 };
 
 // ─── HTML Shell ──────────────────────────────────────────────────────────
