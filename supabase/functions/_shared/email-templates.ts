@@ -103,20 +103,20 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     cta: v["5"] ? { text: "Review Request", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
   }),
 
-  // tenant_reschedule_approved: 1=address, 2=issue, 3=new_date, 4=tenant_token
+  // tenant_reschedule_approved: 1=tenantName, 2=issue, 3=address, 4=appointment, 5=tenantToken
   tenant_reschedule_approved: (v) => ({
-    subject: `Reschedule Confirmed — ${v["1"] || "Property"}`,
+    subject: `Reschedule Confirmed — ${v["3"] || "Property"}`,
     heading: "Reschedule Confirmed",
-    body: `Your reschedule request for ${v["2"] || "the maintenance job"} at ${v["1"] || "your property"} has been approved. The new date is ${v["3"] || "to be confirmed"}.`,
-    cta: v["4"] ? { text: "View Details", url: `https://app.yarro.ai/tenant/${v["4"]}` } : undefined,
+    body: `Hi ${v["1"] || "there"}, your reschedule request for ${v["2"] || "the maintenance job"} at ${v["3"] || "your property"} has been approved. Your new appointment is ${v["4"] || "to be confirmed"}.`,
+    cta: v["5"] ? { text: "View Booking", url: `https://app.yarro.ai/tenant/${v["5"]}` } : undefined,
   }),
 
-  // tenant_reschedule_declined: 1=address, 2=issue, 3=tenant_token
+  // tenant_reschedule_declined: 1=tenantName, 2=issue, 3=address, 4=originalAppointment, 5=tenantToken
   tenant_reschedule_declined: (v) => ({
-    subject: `Reschedule Declined — ${v["1"] || "Property"}`,
+    subject: `Reschedule Declined — ${v["3"] || "Property"}`,
     heading: "Reschedule Declined",
-    body: `Your reschedule request for ${v["2"] || "the maintenance job"} at ${v["1"] || "your property"} was declined. The original appointment still stands.`,
-    cta: v["3"] ? { text: "View Details", url: `https://app.yarro.ai/tenant/${v["3"]}` } : undefined,
+    body: `Hi ${v["1"] || "there"}, your reschedule request for ${v["2"] || "the maintenance job"} at ${v["3"] || "your property"} could not be accommodated. Your original appointment on ${v["4"] || "the scheduled date"} remains as scheduled.`,
+    cta: v["5"] ? { text: "View Booking", url: `https://app.yarro.ai/tenant/${v["5"]}` } : undefined,
   }),
 };
 

@@ -42,10 +42,10 @@ export const TEMPLATES = {
   tenant_portal_link: "HXa9fe8d047800fb7cc5089fe52d8e1c0a",       // 1b_tenant_portal_link
 
   // ─── Reschedule (portal-driven) ───
-  contractor_reschedule_request: "PENDING_APPROVAL",               // contractor gets: tenant wants to reschedule
-  tenant_reschedule_approved: "PENDING_APPROVAL",                  // tenant gets: reschedule confirmed
-  tenant_reschedule_declined: "PENDING_APPROVAL",                  // tenant gets: reschedule declined
-  pm_reschedule_approved: "PENDING_APPROVAL",                      // PM gets: reschedule was approved (info only)
+  contractor_reschedule_request: "HXf89e32c3c81daadae69441c1ee1f47fc", // 8a_contractor_reschedule
+  tenant_reschedule_approved: "HXc23248c496127023fcc734bee2a9a570", // 8b_tenant_reschedule_approve
+  tenant_reschedule_declined: "HX5970d0b59e71aa9b65b80a9ea9fc38c9", // 8c_tenant_reschedule_declined
+  pm_reschedule_approved: "HXe65aba3e4c039787600546a41f151c54",     // 8d_pm_reschedule_approved
 
   // ─── Followups (yarro-followups) ───
   contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder
