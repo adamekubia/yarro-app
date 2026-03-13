@@ -377,8 +377,10 @@ async function handleNoMoreContractors(
   const manager = payload.manager || {};
   const property = payload.property || {};
 
-  // Reason context for why no contractors are available (prepared for future template with {{3}})
-  const reason = payload.reason || "All registered contractors have been contacted with no response";
+  // Append reason to issue description so PM knows WHY no contractors are available
+  const issue = ticket.issue_description || "Maintenance issue reported";
+  const reason = payload.reason || "All contacted contractors declined or did not respond";
+  const issueWithReason = `${issue} — ${reason}`;
 
   const result = await sendAndLog(supabase, FN, "pm-nomorecontractors-sms → Twilio send", {
     ticketId: ticket.id,
@@ -388,9 +390,7 @@ async function handleNoMoreContractors(
     templateSid: TEMPLATES.no_more_contractors,
     variables: {
       "1": property.address || "Address not available",
-      "2": ticket.issue_description || "Maintenance issue reported",
-      // TODO: When new template 2d_no_contractors_v2 is approved by Meta,
-      // swap SID in templates.ts and uncomment: "3": reason,
+      "2": issueWithReason,
     },
   });
 

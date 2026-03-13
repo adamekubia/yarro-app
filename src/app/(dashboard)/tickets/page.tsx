@@ -22,7 +22,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
@@ -475,7 +475,21 @@ export default function TicketsPage() {
       key: 'display_stage',
       header: 'Stage',
       sortable: true,
-      render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} className="opacity-90" /> : '-',
+      render: (ticket) => {
+        if (!ticket.display_stage) return '-'
+        const isWaiting = isWaitingReason(ticket.next_action_reason)
+        if (!isWaiting) return <StatusBadge status={ticket.display_stage} className="opacity-90" />
+        const daysSince = (Date.now() - new Date(ticket.date_logged).getTime()) / 86_400_000
+        const waitColor = daysSince > 3 ? 'text-red-500' : daysSince > 1 ? 'text-amber-500' : 'text-muted-foreground/60'
+        return (
+          <div className="flex items-center gap-1.5">
+            <StatusBadge status={ticket.display_stage} className="opacity-90" />
+            <span className={`text-[10px] font-medium ${waitColor}`}>
+              {formatDistanceToNow(new Date(ticket.date_logged), { addSuffix: false })}
+            </span>
+          </div>
+        )
+      },
     },
     {
       key: 'sla',
