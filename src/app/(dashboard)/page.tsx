@@ -180,6 +180,8 @@ const REASON_BADGE: Record<string, { label: string; dot: string; text: string }>
   landlord_needs_help:  { label: 'Landlord Needs Help', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
   awaiting_contractor:  { label: 'Awaiting reply',    dot: 'bg-sky-500',    text: 'text-sky-600 dark:text-sky-400' },
   awaiting_booking:     { label: 'Awaiting booking',  dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400' },
+  scheduled:            { label: 'Scheduled',          dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  awaiting_landlord:    { label: 'Awaiting landlord',  dot: 'bg-orange-400',  text: 'text-orange-500 dark:text-orange-400' },
 }
 
 // Recommended next-step descriptions per state (Task 4)
@@ -196,7 +198,15 @@ const NEXT_STEPS: Record<string, string> = {
   landlord_needs_help: 'Landlord needs help — take over',
 }
 
-function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
+const IN_PROGRESS_REASONS = new Set([
+  'awaiting_contractor', 'awaiting_booking', 'awaiting_landlord',
+  'allocated_to_landlord', 'landlord_in_progress', 'ooh_dispatched', 'ooh_in_progress',
+  'scheduled',
+])
+
+function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTickets: TicketSummary[] }) {
+  const [leftTab, setLeftTab] = useState<'todo' | 'in_progress'>('todo')
+
   // Only actionable items — exclude FOLLOW_UP and delay awaiting_landlord by 24h
   const actionable = todoItems.filter(i => {
     if (i.action_type === 'FOLLOW_UP') return false
@@ -207,16 +217,29 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
     return true
   })
 
+  const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
+
   return (
     <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
 
-      {/* Header */}
+      {/* Header with tabs */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h2 className="text-lg font-semibold text-card-foreground whitespace-nowrap">To-do</h2>
-          {actionable.length > 0 && (
-            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-              {actionable.length}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <button
+            onClick={() => setLeftTab('todo')}
+            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'todo' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+          >
+            To-do
+          </button>
+          <button
+            onClick={() => setLeftTab('in_progress')}
+            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+          >
+            In Progress
+          </button>
+          {(leftTab === 'todo' ? actionable.length : inProgressTickets.length) > 0 && (
+            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 ml-1">
+              {leftTab === 'todo' ? actionable.length : inProgressTickets.length}
             </span>
           )}
         </div>
@@ -228,7 +251,8 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
         </Link>
       </div>
 
-      {actionable.length === 0 ? (
+      {leftTab === 'todo' ? (
+      actionable.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
         </div>
@@ -293,6 +317,36 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
             )
           })}
         </div>
+      )
+      ) : (
+        /* In Progress tab */
+        inProgressTickets.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <p className="text-sm text-muted-foreground">No tickets in progress</p>
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+            {inProgressTickets.map((ticket) => {
+              const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+              return (
+                <Link
+                  key={ticket.id}
+                  href={`/tickets?id=${ticket.id}`}
+                  className="flex items-center gap-3 py-3 px-5 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.address || '—'}</p>
+                    <span className="flex items-center gap-1.5 mt-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                      <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )
       )}
 
     </div>
@@ -315,7 +369,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
-  const [rightTab, setRightTab] = useState<'scheduled' | 'in_progress'>('scheduled')
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -626,10 +679,10 @@ export default function DashboardPage() {
         {/* Main Content — panels below header line */}
         <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
             {/* To-do — primary left column */}
-            <TodoPanel todoItems={todoItems} />
+            <TodoPanel todoItems={todoItems} allTickets={allTickets} />
 
           <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
-              {/* RIGHT: Scheduled / In Progress — tabbed panel */}
+              {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
                 const allScheduled = allTickets
@@ -645,12 +698,6 @@ export default function DashboardPage() {
                 const upcomingScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) >= startOfToday).slice(0, 5)
                 const overdueScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) < startOfToday)
 
-                const IN_PROGRESS_REASONS = new Set([
-                  'awaiting_contractor', 'awaiting_booking', 'awaiting_landlord',
-                  'allocated_to_landlord', 'landlord_in_progress', 'ooh_dispatched', 'ooh_in_progress'
-                ])
-                const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
-
                 const byDate: Record<string, TicketSummary[]> = {}
                 for (const t of upcomingScheduled) {
                   const key = formatDate(t.scheduled_date!)
@@ -661,26 +708,12 @@ export default function DashboardPage() {
 
                 return (
                   <div className="rounded-xl border border-border/60 flex flex-col min-w-0 min-h-0 overflow-hidden">
-                    {/* Header with tabs */}
-                    <div className="flex items-center gap-2 px-5 py-3 border-b border-border/40 flex-shrink-0">
-                      <div className="flex items-center gap-1 flex-1 min-w-0">
-                        <button
-                          onClick={() => setRightTab('scheduled')}
-                          className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${rightTab === 'scheduled' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-                        >
-                          Scheduled
-                        </button>
-                        <button
-                          onClick={() => setRightTab('in_progress')}
-                          className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${rightTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-                        >
-                          In Progress
-                        </button>
-                      </div>
+                    <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
+                      <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {(rightTab === 'scheduled' ? (upcomingScheduled.length + overdueScheduled.length) : inProgressTickets.length) > 0 && (
+                        {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                            {rightTab === 'scheduled' ? (upcomingScheduled.length + overdueScheduled.length) : inProgressTickets.length}
+                            {upcomingScheduled.length + overdueScheduled.length}
                           </span>
                         )}
                         <Link href="/tickets">
@@ -693,60 +726,58 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4">
-                      {rightTab === 'scheduled' ? (
-                        <>
-                          {groups.length === 0 && overdueScheduled.length === 0 ? (
-                            <div className="flex gap-3 items-center">
-                              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
-                                <span className="text-xs text-muted-foreground/40">—</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground/40">No scheduled jobs</p>
+                      {groups.length === 0 && overdueScheduled.length === 0 ? (
+                        <div className="flex gap-3 items-center">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground/40">—</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground/40">No scheduled jobs</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {/* Overdue jobs */}
+                          {overdueScheduled.length > 0 && (
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500">Overdue</span>
+                              {overdueScheduled.map((ticket) => (
+                                <Link
+                                  key={ticket.id}
+                                  href={`/tickets?id=${ticket.id}`}
+                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                                  </div>
+                                  <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
+                                </Link>
+                              ))}
                             </div>
-                          ) : (
-                            <div className="flex flex-col gap-4">
-                              {/* Overdue jobs */}
-                              {overdueScheduled.length > 0 && (
-                                <div className="flex flex-col gap-1.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500">Overdue</span>
-                                  {overdueScheduled.map((ticket) => (
-                                    <Link
-                                      key={ticket.id}
-                                      href={`/tickets?id=${ticket.id}`}
-                                      className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
-                                    >
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                      </div>
-                                      <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Upcoming jobs */}
-                              {groups.map(([date, tickets]) => (
-                                <div key={date} className="flex gap-3">
-                                  {(() => {
-                                    const [day, month] = date.split(' ')
-                                    return (
-                                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/60 flex flex-col items-center justify-center">
-                                        <span className="text-[20px] font-semibold text-card-foreground leading-none">{day}</span>
-                                        <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground leading-none mt-0.5">{month}</span>
-                                      </div>
-                                    )
-                                  })()}
-                                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                                    {tickets.map((ticket) => (
-                                      <Link
-                                        key={ticket.id}
-                                        href={`/tickets?id=${ticket.id}`}
-                                        className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium text-card-foreground truncate">
-                                            {ticket.issue_description || 'No description'}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                          )}
+                          {/* Upcoming jobs */}
+                          {groups.map(([date, tickets]) => (
+                            <div key={date} className="flex gap-3">
+                              {(() => {
+                                const [day, month] = date.split(' ')
+                                return (
+                                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/60 flex flex-col items-center justify-center">
+                                    <span className="text-[20px] font-semibold text-card-foreground leading-none">{day}</span>
+                                    <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground leading-none mt-0.5">{month}</span>
+                                  </div>
+                                )
+                              })()}
+                              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                                {tickets.map((ticket) => (
+                                  <Link
+                                    key={ticket.id}
+                                    href={`/tickets?id=${ticket.id}`}
+                                    className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-card-foreground truncate">
+                                        {ticket.issue_description || 'No description'}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
                                     </div>
                                   </Link>
                                 ))}
@@ -754,42 +785,6 @@ export default function DashboardPage() {
                             </div>
                           ))}
                         </div>
-                      )}
-                        </>
-                      ) : (
-                        /* In Progress tab */
-                        inProgressTickets.length === 0 ? (
-                          <div className="flex gap-3 items-center">
-                            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
-                              <span className="text-xs text-muted-foreground/40">—</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground/40">No tickets in progress</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col divide-y divide-border/30">
-                            {inProgressTickets.map((ticket) => {
-                              const badge = REASON_BADGE[ticket.next_action_reason || '']
-                              return (
-                                <Link
-                                  key={ticket.id}
-                                  href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-3 py-2.5 px-1 hover:bg-muted/30 transition-colors rounded-lg"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                    {badge && (
-                                      <span className="flex items-center gap-1.5 mt-1">
-                                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                                        <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
-                                      </span>
-                                    )}
-                                  </div>
-                                </Link>
-                              )
-                            })}
-                          </div>
-                        )
                       )}
                     </div>
                   </div>
