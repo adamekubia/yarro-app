@@ -220,7 +220,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
   const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
 
   return (
-    <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden flex-1 lg:flex-1">
+    <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
       {/* Header with tabs */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
@@ -677,11 +677,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
+        <div className="h-[calc(100vh-7rem)] lg:flex-1 lg:min-h-0 lg:h-auto overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
             {/* To-do — primary left column */}
-            <TodoPanel todoItems={todoItems} allTickets={allTickets} />
+            <div className="h-1/3 lg:h-auto lg:flex-1 lg:min-h-0 flex flex-col min-h-0">
+              <TodoPanel todoItems={todoItems} allTickets={allTickets} />
+            </div>
 
-          <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
+          <div className="h-2/3 lg:h-full flex flex-col gap-4 lg:grid lg:grid-cols-1 lg:grid-rows-2 lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
@@ -707,7 +709,7 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden flex-1">
+                  <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
                     <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
                       <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -792,7 +794,7 @@ export default function DashboardPage() {
               })()}
 
             {/* Recent activity */}
-            <div className="rounded-xl border border-border/60 flex flex-col overflow-hidden flex-1">
+            <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
                 <Link href="/tickets" className="flex-shrink-0">
