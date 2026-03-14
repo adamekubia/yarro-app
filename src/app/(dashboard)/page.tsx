@@ -34,6 +34,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface DashboardStats {
   totalTickets: number
@@ -220,20 +221,20 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
   const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
 
   return (
-    <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
-      {/* Header with tabs */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
+      {/* Tab row */}
+      <div className="flex items-center gap-3 px-8 pb-3 flex-shrink-0">
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <button
             onClick={() => setLeftTab('todo')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'todo' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             To-do
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             In Progress
           </button>
@@ -243,18 +244,12 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             </span>
           )}
         </div>
-        <Link href="/tickets" className="flex-shrink-0">
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-            View all
-            <ArrowRight className="ml-1 h-3 w-3" />
-          </Button>
-        </Link>
       </div>
 
       {leftTab === 'todo' ? (
       actionable.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">All clear — nothing needs your attention</p>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -275,7 +270,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
               <Link
                 key={item.id}
                 href={href}
-                className="flex items-center gap-3 py-3 px-5 transition-colors min-w-0 hover:bg-muted/30 group"
+                className="flex items-center gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group"
               >
                 {/* Left: info */}
                 <div className="flex-1 min-w-0">
@@ -332,7 +327,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                 <Link
                   key={ticket.id}
                   href={`/tickets?id=${ticket.id}`}
-                  className="flex items-center gap-3 py-3 px-5 hover:bg-muted/30 transition-colors"
+                  className="flex items-center gap-3 py-3 px-8 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
@@ -612,76 +607,113 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-        {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 gap-4">
-          {/* LEFT: search */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="relative w-full max-w-72 min-w-0">
-              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  placeholder="Search tickets…"
-                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              {searchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  {searchResults.map((ticket) => (
-                    <Link
-                      key={ticket.id}
-                      href={`/tickets?id=${ticket.id}`}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                      </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    </Link>
-                  ))}
-                  <Link
-                    href="/tickets"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    View all results
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
+    <div className="h-screen flex flex-col overflow-hidden lg:h-full">
+        {/* Top bar — search + create only */}
+        <div className="flex-shrink-0 flex items-center justify-between px-8 py-3 border-b border-border/40 gap-4">
+          <div className="relative min-w-0">
+            <div className={cn(
+              'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-64',
+              searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'
+            )}>
+              <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                placeholder="Search tickets…"
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/50 min-w-0"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
             </div>
+            {searchFocused && searchResults.length > 0 && (
+              <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                {searchResults.map((ticket) => (
+                  <Link
+                    key={ticket.id}
+                    href={`/tickets?id=${ticket.id}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  </Link>
+                ))}
+                <Link
+                  href="/tickets"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
+                >
+                  View all results
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
           </div>
-          {/* RIGHT: Create ticket button */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/tickets?create=true">
-              <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
-            </Link>
-          </div>
+          <Link href="/tickets?create=true" className="flex-shrink-0">
+            <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
+          </Link>
         </div>
 
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
-            {/* To-do — primary left column */}
-            <TodoPanel todoItems={todoItems} allTickets={allTickets} />
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
 
-          <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
+          {/* Left column — title + To-do */}
+          <div className="flex flex-col flex-1 min-h-0 min-w-0 lg:border-r lg:border-border/40">
+
+            {/* Page title */}
+            <div className="flex-shrink-0 px-8 pt-5 pb-4 lg:pt-8 lg:pb-6">
+              <h1 className="text-2xl font-bold text-foreground">
+                {(() => {
+                  const h = new Date().getHours()
+                  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+                })()}, {propertyManager?.name?.split(' ')[0] ?? 'there'}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length > 0 && (
+                  <span className="ml-2 font-medium text-foreground">
+                    · {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length} {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length === 1 ? 'item needs' : 'items need'} your attention
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Action required label */}
+            <div className="flex-shrink-0 px-8 pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Action required</span>
+                {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length > 0 && (
+                  <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                    {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length}
+                  </span>
+                )}
+              </div>
+              <Link href="/tickets">
+                <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80">
+                  View all <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* TodoPanel — borderless list */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <TodoPanel todoItems={todoItems} allTickets={allTickets} />
+            </div>
+          </div> {/* closes left column */}
+
+          {/* Right column — Scheduled + Recent Activity */}
+          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] flex-shrink-0 min-h-0 divide-y divide-border/40">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
@@ -707,9 +739,9 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 min-h-0 overflow-hidden">
-                    <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
-                      <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
+                  <div className="flex flex-col min-w-0 min-h-0 overflow-hidden flex-1">
+                    <div className="flex items-center px-6 pt-6 pb-3 flex-shrink-0">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1 min-w-0">Scheduled</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
@@ -725,7 +757,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4">
+                    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-6 pb-6">
                       {groups.length === 0 && overdueScheduled.length === 0 ? (
                         <div className="flex gap-3 items-center">
                           <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
@@ -743,13 +775,13 @@ export default function DashboardPage() {
                                 <Link
                                   key={ticket.id}
                                   href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
+                                  className="flex items-center gap-3 py-3 px-3 rounded-xl transition-colors bg-red-50 dark:bg-red-950/20 border border-red-200/60 dark:border-red-900/40 hover:bg-red-100/80 dark:hover:bg-red-950/30"
                                 >
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 truncate">{ticket.issue_description || 'No description'}</p>
+                                    <p className="text-xs text-red-500/60 truncate mt-0.5">{ticket.address || '—'}</p>
                                   </div>
-                                  <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
+                                  <span className="text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap bg-red-100 dark:bg-red-900/40 px-2.5 py-1 rounded-full">Confirm completion</span>
                                 </Link>
                               ))}
                             </div>
@@ -792,9 +824,9 @@ export default function DashboardPage() {
               })()}
 
             {/* Recent activity */}
-            <div className="rounded-xl border border-border/60 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
+            <div className="flex flex-col min-h-0 overflow-hidden flex-1">
+              <div className="flex items-center px-6 pt-6 pb-3 min-w-0 flex-shrink-0">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1 min-w-0">Recent activity</span>
                 <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -802,7 +834,7 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/30 overflow-y-auto flex-1 min-h-0">
+              <div className="divide-y divide-border/30 overflow-y-auto flex-1 min-h-0 px-2">
                 {recentEvents.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-muted-foreground">
                     No recent activity
