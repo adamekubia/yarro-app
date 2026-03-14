@@ -220,7 +220,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
   const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
 
   return (
-    <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden lg:flex-1 lg:min-h-0">
+    <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden min-h-[33vh] lg:min-h-0 lg:flex-1">
 
       {/* Header with tabs */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
@@ -257,7 +257,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
           <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border/40 overflow-y-auto overflow-x-hidden max-h-[60vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
+        <div className="flex flex-col divide-y divide-border/40 overflow-y-auto overflow-x-hidden max-h-[27vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
           {actionable.map(item => {
             const ctaText = ACTION_CTA[item.action_label] || 'View'
             const isHandoff = item.next_action_reason === 'handoff_review'
@@ -325,7 +325,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             <p className="text-sm text-muted-foreground">No tickets in progress</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border/30 overflow-y-auto overflow-x-hidden max-h-[60vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
+          <div className="flex flex-col divide-y divide-border/30 overflow-y-auto overflow-x-hidden max-h-[27vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
             {inProgressTickets.map((ticket) => {
               const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
               return (
@@ -707,7 +707,7 @@ export default function DashboardPage() {
                 const groups = Object.entries(byDate)
 
                 return (
-                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 min-h-0 overflow-hidden">
+                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden min-h-[33vh] lg:min-h-0">
                     <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
                       <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -725,7 +725,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4">
+                    <div className="flex flex-col overflow-y-auto p-4 max-h-[27vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
                       {groups.length === 0 && overdueScheduled.length === 0 ? (
                         <div className="flex gap-3 items-center">
                           <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
@@ -792,7 +792,7 @@ export default function DashboardPage() {
               })()}
 
             {/* Recent activity */}
-            <div className="rounded-xl border border-border/60 flex flex-col min-h-0 overflow-hidden">
+            <div className="rounded-xl border border-border/60 flex flex-col overflow-hidden min-h-[33vh] lg:min-h-0">
               <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
                 <Link href="/tickets" className="flex-shrink-0">
@@ -802,7 +802,7 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/30 overflow-y-auto flex-1 min-h-0">
+              <div className="divide-y divide-border/30 overflow-y-auto max-h-[27vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
                 {recentEvents.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-muted-foreground">
                     No recent activity
