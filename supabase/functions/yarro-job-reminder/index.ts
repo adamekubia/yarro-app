@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES } from "../_shared/templates.ts";
+import { logEvent } from "../_shared/events.ts";
 
 const FN = "yarro-job-reminder";
 
@@ -38,6 +39,13 @@ async function sendReminder(
       "5": reminder.contractor_token || "missing-token",
     },
   });
+
+  if (result.ok) {
+    await logEvent(supabase, reminder.ticket_id, "JOB_REMINDER_SENT", {
+      scheduled_date: reminder.scheduled_date,
+      message_sid: result.messageSid,
+    });
+  }
 
   return {
     ticket_id: reminder.ticket_id,

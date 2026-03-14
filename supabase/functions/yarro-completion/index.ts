@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
+import { logEvent } from "../_shared/events.ts";
 
 // ─── Function: yarro-completion ──────────────────────────────────────────
 
@@ -267,6 +268,14 @@ Deno.serve(async (req: Request) => {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
+
+    // Log completion event
+    await logEvent(supabase, parsed.ticket_id, rpcResult.completed ? "JOB_COMPLETED_FORM" : "JOB_NOT_COMPLETED", {
+      source: parsed.source,
+      completed: rpcResult.completed,
+      reason: parsed.reason,
+      media_count: finalMediaUrls.length,
+    });
 
     // Send notifications if RPC says we should
     const results: Array<{ type: string; sent: boolean; error?: string }> = [];

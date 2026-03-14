@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
+import { logEvent } from "../_shared/events.ts";
 
 const FN = "yarro-ooh-escalation";
 
@@ -95,6 +96,14 @@ Deno.serve(async (_req: Request) => {
       }
 
       totalEscalated += ticketIds.length;
+
+      // Log event for each escalated ticket
+      for (const tid of ticketIds) {
+        await logEvent(supabase, tid, "OOH_ESCALATED_MORNING", {
+          reason: "OOH contact did not respond before business hours",
+          pm_id: pm.id,
+        });
+      }
 
       await alertInfo(FN, `OOH escalation: ${ticketIds.length} ticket(s) for PM ${pm.id}`, {
         Tickets: ticketIds.join(", "),

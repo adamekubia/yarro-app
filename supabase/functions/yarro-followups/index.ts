@@ -3,6 +3,7 @@ import { createSupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
+import { logEvent } from "../_shared/events.ts";
 
 // ─── Function: yarro-followups ───────────────────────────────────────────
 
@@ -141,6 +142,25 @@ Deno.serve(async (req: Request) => {
       templateSid: config.templateSid,
       variables: config.getVariables(payload),
     });
+
+    // Log event for tracking
+    if (result.ok) {
+      const EVENT_MAP: Record<string, string> = {
+        "contractor-reminder-sms": "CONTRACTOR_REMINDED",
+        "landlord-followup-sms": "LANDLORD_FOLLOWUP_SENT",
+        "pm-landlord-timeout-sms": "LANDLORD_TIMEOUT",
+        "contractor-completion-reminder-sms": "COMPLETION_REMINDER_SENT",
+        "pm-completion-overdue-sms": "COMPLETION_PM_ESCALATED",
+      };
+      const eventType = EVENT_MAP[route];
+      if (eventType) {
+        await logEvent(supabase, payload.ticket_id, eventType, {
+          route,
+          recipient_role: config.recipientRole,
+          message_sid: result.messageSid,
+        });
+      }
+    }
 
     // Confirm delivery in DB (mark-after-send — prevents lost messages on 503)
     if (result.ok && config.confirmType) {

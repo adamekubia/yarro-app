@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog, logOutbound } from "../_shared/twilio.ts";
 import { TEMPLATES, formatFriendlyDate, formatUkPhone, withArticle, timeOfDay, categoryDisplayName } from "../_shared/templates.ts";
+import { logEvent } from "../_shared/events.ts";
 
 // ─── Function: yarro-scheduling ──────────────────────────────────────────
 
@@ -982,6 +983,11 @@ async function handleRescheduleRequest(
     });
   }
 
+  await logEvent(supabase, ticketId, "RESCHEDULE_REQUESTED", {
+    proposed_date: proposed_date,
+    reason: reason || null,
+  }, "TENANT");
+
   return new Response(
     JSON.stringify({ ok: true, path: "reschedule-request", ticket_id: ticketId }),
     { status: 200, headers: { "Content-Type": "application/json" } },
@@ -1098,6 +1104,10 @@ async function handleRescheduleDecision(
     }
     // PM does NOT get notified on decline (per design — they see it in app)
   }
+
+  await logEvent(supabase, ticketId, approved ? "RESCHEDULE_APPROVED" : "RESCHEDULE_DECLINED", {
+    new_date: data.new_date || null,
+  }, "CONTRACTOR");
 
   return new Response(
     JSON.stringify({
