@@ -34,6 +34,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface DashboardStats {
   totalTickets: number
@@ -220,31 +221,39 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
   const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
 
   return (
-    <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+    <div className="rounded-xl border-2 border-primary/20 bg-card flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
-      {/* Header with tabs */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <button
-            onClick={() => setLeftTab('todo')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'todo' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-          >
-            To-do
-          </button>
-          <button
-            onClick={() => setLeftTab('in_progress')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-          >
-            In Progress
-          </button>
-          {(leftTab === 'todo' ? actionable.length : inProgressTickets.length) > 0 && (
-            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 ml-1">
-              {leftTab === 'todo' ? actionable.length : inProgressTickets.length}
-            </span>
-          )}
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <h2 className="text-base font-bold text-card-foreground">Action required</h2>
+          <div className="flex items-center gap-1.5 ml-1">
+            <button
+              onClick={() => setLeftTab('todo')}
+              className={`text-sm font-medium px-2.5 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground hover:bg-muted/60'}`}
+            >
+              To-do
+              {actionable.length > 0 && (
+                <span className={`ml-1.5 text-xs font-bold ${leftTab === 'todo' ? 'text-primary-foreground/80' : 'text-primary'}`}>
+                  {actionable.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setLeftTab('in_progress')}
+              className={`text-sm font-medium px-2.5 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground hover:bg-muted/60'}`}
+            >
+              In Progress
+              {inProgressTickets.length > 0 && (
+                <span className={`ml-1.5 text-xs font-bold ${leftTab === 'in_progress' ? 'text-primary-foreground/80' : 'text-primary'}`}>
+                  {inProgressTickets.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
         <Link href="/tickets" className="flex-shrink-0">
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+          <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
             View all
             <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
@@ -252,90 +261,101 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
       </div>
 
       {leftTab === 'todo' ? (
-      actionable.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
-        </div>
-      ) : (
-        <div className="flex flex-col divide-y divide-border/40 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          {actionable.map(item => {
-            const ctaText = ACTION_CTA[item.action_label] || 'View'
-            const isHandoff = item.next_action_reason === 'handoff_review'
-            const isPendingReview = item.next_action_reason === 'pending_review'
-            const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-            const href = isHandoff
-              ? `/tickets?id=${item.ticket_id}&action=complete`
-              : isPendingReview
-              ? `/tickets?id=${item.ticket_id}&action=review`
-              : needsDispatchTab
-              ? `/tickets?id=${item.ticket_id}&tab=dispatch`
-              : `/tickets?id=${item.ticket_id}`
+        actionable.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 gap-2">
+            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <span className="text-emerald-500 text-lg">✓</span>
+            </div>
+            <p className="text-sm font-medium text-card-foreground">All clear</p>
+            <p className="text-xs text-muted-foreground">Nothing needs your attention right now</p>
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+            {actionable.map(item => {
+              const ctaText = ACTION_CTA[item.action_label] || 'View'
+              const isHandoff = item.next_action_reason === 'handoff_review'
+              const isPendingReview = item.next_action_reason === 'pending_review'
+              const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+              const href = isHandoff
+                ? `/tickets?id=${item.ticket_id}&action=complete`
+                : isPendingReview
+                ? `/tickets?id=${item.ticket_id}&action=review`
+                : needsDispatchTab
+                ? `/tickets?id=${item.ticket_id}&tab=dispatch`
+                : `/tickets?id=${item.ticket_id}`
+              const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
+              const isUrgent = item.sla_breached || waitHrs > 48
 
-            return (
-              <Link
-                key={item.id}
-                href={href}
-                className="flex items-center gap-3 py-3 px-5 transition-colors min-w-0 hover:bg-muted/30 group"
-              >
-                {/* Left: info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                    {item.priority && <StatusBadge status={item.priority} size="sm" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                  {NEXT_STEPS[item.next_action_reason || ''] && (
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">{NEXT_STEPS[item.next_action_reason || '']}</p>
+              return (
+                <Link
+                  key={item.id}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-4 py-4 px-5 transition-colors min-w-0 group',
+                    isUrgent ? 'hover:bg-red-50/50 dark:hover:bg-red-950/10' : 'hover:bg-muted/30'
                   )}
-                  <div className="flex items-center gap-2 mt-1">
-                    {(() => {
-                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-                      return (
-                        <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                        </span>
-                      )
-                    })()}
-                    {(() => {
-                      const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                      const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-red-500'
-                        : waitHrs > 24 ? 'text-xs font-medium text-amber-500'
-                        : 'text-[11px] text-muted-foreground/60'
-                      return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                    })()}
-                  </div>
-                </div>
+                >
+                  {/* Urgency indicator */}
+                  <div className={cn(
+                    'w-1 self-stretch rounded-full flex-shrink-0',
+                    isUrgent ? 'bg-red-500' : 'bg-primary/30'
+                  )} />
 
-                {/* Right: CTA button */}
-                <InteractiveHoverButton
-                  text={ctaText}
-                  className="w-[90px] text-xs h-8 flex-shrink-0"
-                  tabIndex={-1}
-                />
-              </Link>
-            )
-          })}
-        </div>
-      )
+                  {/* Left: info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-semibold text-card-foreground truncate">{item.property_label}</p>
+                      {item.priority && <StatusBadge status={item.priority} size="sm" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {(() => {
+                        const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+                        return (
+                          <span className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+                          </span>
+                        )
+                      })()}
+                      <span className={cn(
+                        'text-xs',
+                        waitHrs > 48 ? 'font-semibold text-red-500' : waitHrs > 24 ? 'font-medium text-amber-500' : 'text-muted-foreground/60'
+                      )}>
+                        {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: CTA */}
+                  <InteractiveHoverButton
+                    text={ctaText}
+                    className="w-[90px] text-xs h-8 flex-shrink-0"
+                    tabIndex={-1}
+                  />
+                </Link>
+              )
+            })}
+          </div>
+        )
       ) : (
-        /* In Progress tab */
         inProgressTickets.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">No tickets in progress</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border/30 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
+          <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {inProgressTickets.map((ticket) => {
               const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
               return (
                 <Link
                   key={ticket.id}
                   href={`/tickets?id=${ticket.id}`}
-                  className="flex items-center gap-3 py-3 px-5 hover:bg-muted/30 transition-colors"
+                  className="flex items-center gap-4 py-3 px-5 hover:bg-muted/30 transition-colors"
                 >
+                  <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-muted-foreground/20" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                    <p className="text-sm font-semibold text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.address || '—'}</p>
                     <span className="flex items-center gap-1.5 mt-1">
                       <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
@@ -613,66 +633,78 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-        {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 gap-4">
-          {/* LEFT: search */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="relative w-full max-w-72 min-w-0">
-              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  placeholder="Search tickets…"
-                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+        {/* Identity header */}
+        <div className="flex-shrink-0 px-6 pt-5 pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                Good {(() => {
+                  const h = new Date().getHours()
+                  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
+                })()}, {propertyManager?.name?.split(' ')[0] ?? 'there'}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length > 0 && (
+                  <span className="ml-2 text-primary font-medium">
+                    · {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length} {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length === 1 ? 'item' : 'items'} need your attention
+                  </span>
                 )}
-              </div>
-              {searchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  {searchResults.map((ticket) => (
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Search */}
+              <div className="relative">
+                <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all w-56 ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
+                  <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    placeholder="Search tickets…"
+                    className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+                  />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {searchFocused && searchResults.length > 0 && (
+                  <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                    {searchResults.map((ticket) => (
+                      <Link
+                        key={ticket.id}
+                        href={`/tickets?id=${ticket.id}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                        </div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </Link>
+                    ))}
                     <Link
-                      key={ticket.id}
-                      href={`/tickets?id=${ticket.id}`}
+                      href="/tickets"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                      </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      View all results
+                      <ArrowRight className="h-3 w-3" />
                     </Link>
-                  ))}
-                  <Link
-                    href="/tickets"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    View all results
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+              <Link href="/tickets?create=true">
+                <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
+              </Link>
             </div>
-          </div>
-          {/* RIGHT: Create ticket button */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/tickets?create=true">
-              <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
-            </Link>
           </div>
         </div>
 
@@ -711,7 +743,7 @@ export default function DashboardPage() {
                 return (
                   <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
                     <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
-                      <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground flex-1 min-w-0 uppercase tracking-wider">Scheduled</h3>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
@@ -745,13 +777,13 @@ export default function DashboardPage() {
                                 <Link
                                   key={ticket.id}
                                   href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
+                                  className="flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 hover:bg-red-100 dark:hover:bg-red-950/30"
                                 >
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 truncate">{ticket.issue_description || 'No description'}</p>
+                                    <p className="text-xs text-red-500/70 truncate mt-0.5">{ticket.address || '—'}</p>
                                   </div>
-                                  <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
+                                  <span className="text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap bg-red-100 dark:bg-red-900/40 px-2 py-0.5 rounded-full">Confirm completion</span>
                                 </Link>
                               ))}
                             </div>
@@ -796,7 +828,7 @@ export default function DashboardPage() {
             {/* Recent activity */}
             <div className="rounded-xl border border-border/60 flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground flex-1 min-w-0 uppercase tracking-wider">Recent activity</h3>
                 <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
