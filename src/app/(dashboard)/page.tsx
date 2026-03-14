@@ -220,7 +220,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
   const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
 
   return (
-    <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
+    <div className="rounded-xl border border-border/60 flex flex-col min-w-0 overflow-hidden lg:flex-1 lg:min-h-0">
 
       {/* Header with tabs */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
@@ -257,7 +257,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
           <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex flex-col divide-y divide-border/40 overflow-y-auto overflow-x-hidden max-h-[60vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
           {actionable.map(item => {
             const ctaText = ACTION_CTA[item.action_label] || 'View'
             const isHandoff = item.next_action_reason === 'handoff_review'
@@ -325,7 +325,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             <p className="text-sm text-muted-foreground">No tickets in progress</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <div className="flex flex-col divide-y divide-border/30 overflow-y-auto overflow-x-hidden max-h-[60vh] lg:flex-1 lg:min-h-0 lg:max-h-none">
             {inProgressTickets.map((ticket) => {
               const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
               return (
