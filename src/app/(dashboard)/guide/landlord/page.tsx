@@ -3,7 +3,8 @@
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
 import { WhatsAppPreview } from '@/components/whatsapp-preview'
-import { Bell, ThumbsUp, BookOpen } from 'lucide-react'
+import { Bell, ThumbsUp } from 'lucide-react'
+import { typography } from '@/lib/typography'
 
 const LANDLORD_GUIDE_TEXT = `HOW YARRO WORKS FOR LANDLORDS
 
@@ -30,8 +31,7 @@ export default function LandlordGuidePage() {
       <div className="h-full p-6 flex flex-col gap-4 overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
+          <h1 className={typography.pageTitle}>
             Product Guide
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
