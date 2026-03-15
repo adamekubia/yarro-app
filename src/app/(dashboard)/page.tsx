@@ -678,7 +678,6 @@ export default function DashboardPage() {
 
         {/* Page title */}
         <div className="flex-shrink-0 px-8 pt-3 pb-2 lg:pt-4 lg:pb-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Dashboard</p>
           <h1 className="text-2xl font-bold text-foreground">
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
           </h1>
