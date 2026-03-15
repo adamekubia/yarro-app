@@ -228,7 +228,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <button
             onClick={() => setLeftTab('todo')}
-            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-foreground/85 text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             To-do
             {actionable.length > 0 && (
@@ -239,7 +239,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-foreground/85 text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             In Progress
             {inProgressTickets.length > 0 && (
@@ -281,7 +281,13 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                    {item.priority && <StatusBadge status={item.priority} size="sm" />}
+                    {item.priority && (
+                      <StatusBadge
+                        status={item.priority}
+                        size="sm"
+                        className="border-border/50 text-muted-foreground/70"
+                      />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
                   {NEXT_STEPS[item.next_action_reason || ''] && (
@@ -292,8 +298,8 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                       const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
                       return (
                         <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                          <span className="text-xs font-medium text-muted-foreground/70">{badge.label}</span>
                         </span>
                       )
                     })()}
@@ -336,8 +342,8 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                     <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.address || '—'}</p>
                     <span className="flex items-center gap-1.5 mt-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                      <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                      <span className="text-[11px] font-medium text-muted-foreground/70">{badge.label}</span>
                     </span>
                   </div>
                 </Link>
