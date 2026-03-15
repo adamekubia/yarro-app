@@ -115,34 +115,34 @@ interface RecentEvent {
 }
 
 const EVENT_DOT_COLOR: Record<string, string> = {
-  ISSUE_CREATED:        'bg-blue-500',
-  PENDING_REVIEW:       'bg-violet-500',
-  HANDOFF_CREATED:      'bg-violet-500',
-  CONTRACTOR_ASSIGNED:  'bg-blue-400',
-  QUOTE_RECEIVED:       'bg-amber-500',
-  QUOTE_APPROVED:       'bg-emerald-500',
-  QUOTE_DECLINED:       'bg-red-400',
-  LANDLORD_APPROVED:    'bg-emerald-500',
-  LANDLORD_DECLINED:    'bg-red-400',
-  BOOKING_CONFIRMED:    'bg-emerald-500',
-  NO_CONTRACTORS:       'bg-red-400',
-  JOB_SCHEDULED:        'bg-emerald-400',
-  JOB_COMPLETED:        'bg-emerald-600',
-  TICKET_CLOSED:        'bg-zinc-400',
-  TICKET_ON_HOLD:       'bg-amber-400',
-  TICKET_RESUMED:       'bg-blue-400',
-  TICKET_ARCHIVED:      'bg-zinc-400',
-  FOLLOW_UP_REQUESTED:  'bg-amber-500',
+  ISSUE_CREATED:           'bg-primary',
+  PENDING_REVIEW:          'bg-primary',
+  HANDOFF_CREATED:         'bg-primary',
+  CONTRACTOR_ASSIGNED:     'bg-primary',
+  QUOTE_RECEIVED:          'bg-warning',
+  QUOTE_APPROVED:          'bg-success',
+  QUOTE_DECLINED:          'bg-danger',
+  LANDLORD_APPROVED:       'bg-success',
+  LANDLORD_DECLINED:       'bg-danger',
+  BOOKING_CONFIRMED:       'bg-success',
+  NO_CONTRACTORS:          'bg-danger',
+  JOB_SCHEDULED:           'bg-success',
+  JOB_COMPLETED:           'bg-success',
+  TICKET_CLOSED:           'bg-muted-foreground',
+  TICKET_ON_HOLD:          'bg-warning',
+  TICKET_RESUMED:          'bg-primary',
+  TICKET_ARCHIVED:         'bg-muted-foreground',
+  FOLLOW_UP_REQUESTED:     'bg-warning',
   // OOH events
-  OOH_DISPATCHED:       'bg-purple-500',
-  OOH_RESOLVED:         'bg-emerald-500',
-  OOH_UNRESOLVED:       'bg-red-400',
-  OOH_IN_PROGRESS:      'bg-amber-500',
+  OOH_DISPATCHED:          'bg-primary',
+  OOH_RESOLVED:            'bg-success',
+  OOH_UNRESOLVED:          'bg-danger',
+  OOH_IN_PROGRESS:         'bg-warning',
   // Landlord allocation events
-  LANDLORD_ALLOCATED:   'bg-purple-500',
-  LANDLORD_IN_PROGRESS: 'bg-amber-500',
-  LANDLORD_RESOLVED_ALLOC: 'bg-emerald-500',
-  LANDLORD_NEEDS_HELP:  'bg-red-500',
+  LANDLORD_ALLOCATED:      'bg-primary',
+  LANDLORD_IN_PROGRESS:    'bg-warning',
+  LANDLORD_RESOLVED_ALLOC: 'bg-success',
+  LANDLORD_NEEDS_HELP:     'bg-danger',
 }
 
 // CTA button text per action type
@@ -163,26 +163,26 @@ const ACTION_CTA: Record<string, string> = {
 
 // Dot + text badges per next_action_reason (distinct from StatusBadge pills)
 const REASON_BADGE: Record<string, { label: string; dot: string; text: string }> = {
-  on_hold:              { label: 'On Hold',           dot: 'bg-gray-400',   text: 'text-gray-500 dark:text-gray-400' },
-  pending_review:       { label: 'Needs review',      dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
-  handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
-  ooh_dispatched:       { label: 'OOH Dispatched',    dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  ooh_resolved:         { label: 'OOH Resolved',      dot: 'bg-green-500',  text: 'text-green-600 dark:text-green-400' },
-  ooh_unresolved:       { label: 'OOH Unresolved',    dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
-  ooh_in_progress:      { label: 'OOH In Progress',   dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
-  no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
-  job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
-  landlord_no_response: { label: 'Landlord silent',   dot: 'bg-orange-400', text: 'text-orange-500 dark:text-orange-400' },
-  manager_approval:     { label: 'Needs approval',    dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400' },
-  allocated_to_landlord:{ label: 'Landlord Managing', dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  landlord_in_progress: { label: 'Landlord In Progress', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
-  landlord_resolved:    { label: 'Landlord Resolved', dot: 'bg-green-500', text: 'text-green-600 dark:text-green-400' },
-  landlord_needs_help:  { label: 'Landlord Needs Help', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
-  awaiting_contractor:  { label: 'Awaiting reply',    dot: 'bg-sky-500',    text: 'text-sky-600 dark:text-sky-400' },
-  awaiting_booking:     { label: 'Awaiting booking',  dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400' },
-  scheduled:            { label: 'Scheduled',          dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-  awaiting_landlord:    { label: 'Awaiting landlord',  dot: 'bg-orange-400',  text: 'text-orange-500 dark:text-orange-400' },
+  on_hold:              { label: 'On Hold',              dot: 'bg-muted-foreground', text: 'text-muted-foreground' },
+  pending_review:       { label: 'Needs review',         dot: 'bg-primary',          text: 'text-primary' },
+  handoff_review:       { label: 'Handoff',              dot: 'bg-danger',           text: 'text-danger' },
+  ooh_dispatched:       { label: 'OOH Dispatched',       dot: 'bg-primary',          text: 'text-primary' },
+  ooh_resolved:         { label: 'OOH Resolved',         dot: 'bg-success',          text: 'text-success' },
+  ooh_unresolved:       { label: 'OOH Unresolved',       dot: 'bg-danger',           text: 'text-danger' },
+  ooh_in_progress:      { label: 'OOH In Progress',      dot: 'bg-warning',          text: 'text-warning' },
+  no_contractors:       { label: 'No contractors',       dot: 'bg-warning',          text: 'text-warning' },
+  job_not_completed:    { label: 'Not completed',        dot: 'bg-primary',          text: 'text-primary' },
+  landlord_declined:    { label: 'Landlord declined',    dot: 'bg-danger',           text: 'text-danger' },
+  landlord_no_response: { label: 'Landlord silent',      dot: 'bg-warning',          text: 'text-warning' },
+  manager_approval:     { label: 'Needs approval',       dot: 'bg-primary',          text: 'text-primary' },
+  allocated_to_landlord:{ label: 'Landlord Managing',    dot: 'bg-primary',          text: 'text-primary' },
+  landlord_in_progress: { label: 'Landlord In Progress', dot: 'bg-warning',          text: 'text-warning' },
+  landlord_resolved:    { label: 'Landlord Resolved',    dot: 'bg-success',          text: 'text-success' },
+  landlord_needs_help:  { label: 'Landlord Needs Help',  dot: 'bg-danger',           text: 'text-danger' },
+  awaiting_contractor:  { label: 'Awaiting reply',       dot: 'bg-warning',          text: 'text-warning' },
+  awaiting_booking:     { label: 'Awaiting booking',     dot: 'bg-warning',          text: 'text-warning' },
+  scheduled:            { label: 'Scheduled',             dot: 'bg-success',          text: 'text-success' },
+  awaiting_landlord:    { label: 'Awaiting landlord',    dot: 'bg-warning',          text: 'text-warning' },
 }
 
 // Recommended next-step descriptions per state (Task 4)
@@ -309,8 +309,8 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                     })()}
                     {(() => {
                       const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                      const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-red-500'
-                        : waitHrs > 24 ? 'text-xs font-medium text-amber-500'
+                      const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
+                        : waitHrs > 24 ? 'text-xs font-medium text-warning'
                         : 'text-[11px] text-muted-foreground/60'
                       return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
                     })()}
@@ -755,18 +755,18 @@ export default function DashboardPage() {
                           {/* Overdue jobs */}
                           {overdueScheduled.length > 0 && (
                             <div className="flex flex-col gap-1.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500">Overdue</span>
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-danger">Overdue</span>
                               {overdueScheduled.map((ticket) => (
                                 <Link
                                   key={ticket.id}
                                   href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
+                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-danger/5 transition-colors border border-danger/20"
                                 >
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
                                     <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
                                   </div>
-                                  <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
+                                  <span className="text-[10px] font-medium text-danger whitespace-nowrap">Confirm completion</span>
                                 </Link>
                               ))}
                             </div>
@@ -826,7 +826,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   recentEvents.map((event, idx) => {
-                    const dotColor = EVENT_DOT_COLOR[event.event_type] || 'bg-zinc-400'
+                    const dotColor = EVENT_DOT_COLOR[event.event_type] || 'bg-muted-foreground'
                     const isGrouped = (event.event_count ?? 1) > 1
                     const detail = event.issue_snippet || event.property_label
                     const inner = (
@@ -929,8 +929,8 @@ export default function DashboardPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                <div className="h-8 w-8 rounded-lg bg-danger/10 flex items-center justify-center">
+                  <AlertTriangle className="h-4 w-4 text-danger" />
                 </div>
                 <div>
                   <DialogTitle>Create Ticket from Handoff</DialogTitle>
