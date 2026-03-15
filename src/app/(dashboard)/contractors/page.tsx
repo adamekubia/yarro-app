@@ -597,7 +597,7 @@ export default function ContractorsPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
+    <div className="px-8 pb-8 pt-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
