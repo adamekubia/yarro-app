@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Plug, Building2 } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { toast } from 'sonner'
@@ -91,13 +91,9 @@ export default function IntegrationsPage() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <Plug className="h-5 w-5" />
+        <h1 className="text-2xl font-bold text-foreground">
           Integrations
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Connect your CRM and property management tools
-        </p>
       </div>
 
       <div className="space-y-4">

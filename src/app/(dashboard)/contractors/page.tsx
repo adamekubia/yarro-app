@@ -601,13 +601,9 @@ export default function ContractorsPage() {
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
+          <h1 className="text-2xl font-bold text-foreground">
             Contractors
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your contractor network
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>

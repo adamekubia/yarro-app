@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
+import { Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
@@ -507,13 +507,9 @@ export default function PropertiesPage() {
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
+          <h1 className="text-2xl font-bold text-foreground">
             Properties
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your property portfolio
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
