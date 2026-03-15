@@ -224,48 +224,38 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
       {/* Tab row */}
-      <div className="flex items-end justify-between px-8 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-end gap-0">
+      <div className="relative flex items-end justify-between px-8 flex-shrink-0">
+        {/* Full-width baseline */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-border/40" />
+
+        <div className="flex items-end gap-6 relative">
           <button
             onClick={() => setLeftTab('todo')}
             className={cn(
-              'flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 border-b-2 transition-colors -mb-px',
-              leftTab === 'todo'
-                ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+              'relative pb-3 text-sm font-medium transition-colors',
+              leftTab === 'todo' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             To-do
-            {actionable.length > 0 && (
-              <span className={cn(
-                'text-[11px] font-semibold tabular-nums',
-                leftTab === 'todo' ? 'text-primary' : 'text-muted-foreground/60'
-              )}>
-                {actionable.length}
-              </span>
+            {leftTab === 'todo' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
             className={cn(
-              'flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 border-b-2 transition-colors -mb-px',
-              leftTab === 'in_progress'
-                ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+              'relative pb-3 text-sm font-medium transition-colors',
+              leftTab === 'in_progress' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             In Progress
-            {inProgressTickets.length > 0 && (
-              <span className={cn(
-                'text-[11px] font-semibold tabular-nums',
-                leftTab === 'in_progress' ? 'text-primary' : 'text-muted-foreground/60'
-              )}>
-                {inProgressTickets.length}
-              </span>
+            {leftTab === 'in_progress' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}
           </button>
         </div>
-        <Link href="/tickets" className="flex-shrink-0 pb-2">
+
+        <Link href="/tickets" className="relative flex-shrink-0 pb-3">
           <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent px-0">
             View all
             <ArrowRight className="ml-1 h-3 w-3" />
@@ -279,7 +269,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
           <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">All clear — nothing needs your attention</p>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-1">
           {actionable.map(item => {
             const ctaText = ACTION_CTA[item.action_label] || 'View'
             const isHandoff = item.next_action_reason === 'handoff_review'
@@ -703,7 +693,7 @@ export default function DashboardPage() {
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:border-r lg:border-border/40">
 
             {/* Page title */}
-            <div className="flex-shrink-0 px-8 pt-5 pb-0 lg:pt-8 lg:pb-0">
+            <div className="flex-shrink-0 px-8 pt-5 pb-4 lg:pt-8 lg:pb-5">
               <h1 className="text-2xl font-bold text-foreground">
                 {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h1>
