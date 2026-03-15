@@ -15,6 +15,7 @@ import {
   Search,
 } from 'lucide-react'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import {
   Sheet,
   SheetContent,
@@ -223,19 +224,28 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
     <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
 
       {/* Header with tabs */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
+      <div className="relative flex items-end gap-3 px-5 flex-shrink-0">
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-border/40" />
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
             onClick={() => setLeftTab('todo')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'todo' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={cn(
+              'relative pb-3 pt-3 text-sm font-semibold transition-colors',
+              leftTab === 'todo' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
           >
             To-do
+            {leftTab === 'todo' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={cn(
+              'relative pb-3 pt-3 text-sm font-semibold transition-colors',
+              leftTab === 'in_progress' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
           >
             In Progress
+            {leftTab === 'in_progress' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
           </button>
           {(leftTab === 'todo' ? actionable.length : inProgressTickets.length) > 0 && (
             <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 ml-1">
