@@ -212,8 +212,8 @@ export default function TenantDetailPage() {
               </div>
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Phone</p>
@@ -223,7 +223,7 @@ export default function TenantDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Mail className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Email</p>
@@ -233,7 +233,7 @@ export default function TenantDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <Shield className="h-4 w-4 text-warning" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Role</p>
@@ -244,8 +244,8 @@ export default function TenantDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <BadgeCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <BadgeCheck className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Verified By</p>
@@ -273,8 +273,8 @@ export default function TenantDetailPage() {
             <>
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
@@ -283,7 +283,7 @@ export default function TenantDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Mail className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
@@ -292,7 +292,7 @@ export default function TenantDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <Shield className="h-4 w-4 text-warning" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Role</p>
@@ -300,8 +300,8 @@ export default function TenantDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <BadgeCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <BadgeCheck className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Verified By</p>

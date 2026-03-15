@@ -313,8 +313,8 @@ export default function PropertyDetailPage() {
               </div>
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Banknote className="h-4 w-4 text-success" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
@@ -330,7 +330,7 @@ export default function PropertyDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Crown className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Landlord</p>
@@ -344,8 +344,8 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Phone className="h-4 w-4 text-destructive" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Emergency Contact</p>
@@ -353,8 +353,8 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <KeyRound className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Access Instructions</p>
@@ -465,8 +465,8 @@ export default function PropertyDetailPage() {
               {/* Meta info — 2-column aligned layout, 60/40 split */}
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Banknote className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Landlord Approval</p>
@@ -479,7 +479,7 @@ export default function PropertyDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Crown className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Landlord</p>
@@ -492,8 +492,8 @@ export default function PropertyDetailPage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Phone className="h-4 w-4 text-destructive" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Emergency Contact</p>
@@ -501,8 +501,8 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <KeyRound className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Access Instructions</p>
