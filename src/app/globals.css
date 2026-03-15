@@ -51,8 +51,11 @@
   --color-yarro-light: var(--yarro-light);
   --color-yarro-cyan: var(--yarro-cyan);
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
 }
 
 :root {
@@ -75,8 +78,11 @@
 
   /* Semantic colors */
   --success: #10b981;
+  --success-foreground: #ffffff;
   --warning: #f59e0b;
+  --warning-foreground: #1a1a1a;
   --danger: #ef4444;
+  --danger-foreground: #ffffff;
 
   /* Light Theme — Apple Zinc + Yarro Blue */
   --background: #FAFAFA;
@@ -132,6 +138,9 @@
   --muted-foreground: #A1A1AA;
   --accent: #27272A;
   --accent-foreground: #FAFAFA;
+  --success-foreground: #ffffff;
+  --warning-foreground: #1a1a1a;
+  --danger-foreground: #ffffff;
   --destructive: #EF4444;
   --border: #27272A;
   --input: #27272A;
@@ -169,6 +178,9 @@
   --muted-foreground: #94a3b8;
   --accent: #1e3a5f;
   --accent-foreground: #a6e1ff;
+  --success-foreground: #ffffff;
+  --warning-foreground: #1a1a1a;
+  --danger-foreground: #ffffff;
   --destructive: #ef4444;
   --border: #1e3a5f;
   --input: #1e3a5f;
