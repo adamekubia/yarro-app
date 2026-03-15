@@ -4,7 +4,7 @@ import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
 import { WhatsAppPreview } from '@/components/whatsapp-preview'
 import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield } from 'lucide-react'
-import { typography } from '@/lib/typography'
+import { PageShell } from '@/components/page-shell'
 
 const PM_GUIDE_TEXT = `HOW TO USE YARRO AS A PROPERTY MANAGER
 
@@ -41,25 +41,8 @@ TIPS:
 
 export default function GuidePage() {
   return (
-    <div className="h-full overflow-hidden bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background">
-      <div className="h-full p-6 flex flex-col gap-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0">
-          <h1 className={typography.pageTitle}>
-            Product Guide
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Your complete guide to Yarro property management
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex-shrink-0">
-          <GuideTabs />
-        </div>
-
-        {/* Content - fills remaining space */}
-        <div className="flex-1 min-h-0">
+    <PageShell title="Product Guide" subtitle="Your complete guide to Yarro property management" headerExtra={<GuideTabs />}>
+      <div className="flex-1 min-h-0 pt-4">
           <CopyableGuide title="Getting Started" content={PM_GUIDE_TEXT}>
             <div className="h-full flex flex-col">
               <p className="text-sm text-muted-foreground mb-4">
@@ -173,7 +156,6 @@ export default function GuidePage() {
             </div>
           </CopyableGuide>
         </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }

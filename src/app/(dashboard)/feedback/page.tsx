@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner'
 import { Bug, Lightbulb, Sparkles, HelpCircle, CheckCircle2, Clock, Ticket } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { typography } from '@/lib/typography'
+import { PageShell } from '@/components/page-shell'
 
 const FEEDBACK_CATEGORIES = [
   { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20 hover:border-red-500/40', activeBorder: 'border-red-500/50 ring-2 ring-red-500/20', activeBg: 'bg-red-500/15' },
@@ -110,22 +110,10 @@ export default function FeedbackPage() {
   const activeCat = FEEDBACK_CATEGORIES.find(c => c.value === category)
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Hero — compact */}
-      <div className="relative bg-gradient-to-br from-primary/5 via-background to-blue-500/5 dark:from-primary/10 dark:to-blue-500/10 border-b flex-shrink-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.03] via-transparent to-transparent" />
-        <div className="relative px-8 pt-6 pb-5">
-          <div>
-            <h1 className={typography.pageTitle}>
-              Feedback
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Help us shape Yarro. Every piece of feedback makes the product better.</p>
-          </div>
-        </div>
-      </div>
+    <PageShell title="Feedback" subtitle="Help us shape Yarro. Every piece of feedback makes the product better.">
 
       {/* Main content — fills remaining space, no page scroll */}
-      <div className="flex-1 overflow-hidden flex flex-col px-8 py-6 gap-6">
+      <div className="flex-1 overflow-hidden flex flex-col gap-6">
 
         {/* Category Buttons — always visible, no scroll */}
         <div className="flex-shrink-0">
@@ -282,6 +270,6 @@ export default function FeedbackPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }
