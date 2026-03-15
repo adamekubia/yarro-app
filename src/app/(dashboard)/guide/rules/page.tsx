@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import {
-  SlidersHorizontal,
   Save,
   Check,
   Clock,
@@ -455,11 +454,7 @@ export default function RulesPage() {
   return (
     <div className="h-full flex flex-col p-6 px-8">
       <div className="mb-6 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Rules & Preferences</h1>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">Configure how Yarro handles dispatching, approvals, and follow-ups.</p>
+        <h1 className="text-2xl font-bold text-foreground">Rules & Preferences</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4 space-y-6">
