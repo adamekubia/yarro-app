@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { MessageCircle, Bug, Lightbulb, Sparkles, HelpCircle, CheckCircle2, Clock, Ticket } from 'lucide-react'
+import { Bug, Lightbulb, Sparkles, HelpCircle, CheckCircle2, Clock, Ticket } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { typography } from '@/lib/typography'
 
 const FEEDBACK_CATEGORIES = [
   { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20 hover:border-red-500/40', activeBorder: 'border-red-500/50 ring-2 ring-red-500/20', activeBg: 'bg-red-500/15' },
@@ -115,8 +116,7 @@ export default function FeedbackPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.03] via-transparent to-transparent" />
         <div className="relative px-8 pt-6 pb-5">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
+            <h1 className={typography.pageTitle}>
               Feedback
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">Help us shape Yarro. Every piece of feedback makes the product better.</p>
