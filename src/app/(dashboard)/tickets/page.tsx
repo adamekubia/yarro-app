@@ -10,13 +10,6 @@ import { DataTable, Column } from '@/components/data-table'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogBody,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
@@ -441,8 +434,8 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => (
         <div className="min-w-0 max-w-[400px]">
-          <p className="font-medium truncate">{ticket.issue_description || 'No description'}</p>
-          <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+          <p className="text-sm font-medium truncate">{ticket.address || 'No address'}</p>
+          <p className="text-xs text-muted-foreground truncate">{ticket.issue_description || 'No description'}</p>
         </div>
       ),
     },
@@ -520,7 +513,7 @@ export default function TicketsPage() {
           return (
             <InteractiveHoverButton
               text="Review"
-              className="w-20 text-xs h-7"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation()
                 setSelectedTicketBasic(ticket)
@@ -641,8 +634,7 @@ export default function TicketsPage() {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           <InteractiveHoverButton
-            text="Create"
-            className="w-24 text-xs h-7"
+            text="Create ticket"
             onClick={() => setCreateDrawerOpen(true)}
           />
         </>
@@ -692,7 +684,7 @@ export default function TicketsPage() {
                   </div>
                   <InteractiveHoverButton
                     text="Triage"
-                    className="w-24 text-xs h-8"
+                    size="sm"
                     onClick={() => {
                       setSelectedTicketBasic(ticket)
                       setReviewTicketId(ticket.id)
@@ -859,40 +851,30 @@ export default function TicketsPage() {
         }}
       />
 
-      {/* Create / Complete / Review Ticket Modal */}
-      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>
-              {reviewTicketId ? 'Review & Dispatch' : handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <TicketForm
-              initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
-                property_id: selectedTicketBasic.property_id || '',
-                tenant_id: selectedTicketBasic.tenant_id || '',
-                issue_description: selectedTicketBasic.issue_description || '',
-                category: selectedTicketBasic.category || '',
-                priority: selectedTicketBasic.priority || 'Medium',
-                contractor_id: selectedTicketBasic.contractor_id || null,
-                availability: selectedTicketBasic.availability || '',
-                access: selectedTicketBasic.access || '',
-                images: (selectedTicketBasic as { images?: string[] }).images || [],
-                conversation_id: selectedTicketBasic.conversation_id || undefined,
-              } : undefined}
-              isHandoff={!!handoffTicketId}
-              isReview={!!reviewTicketId}
-              ticketId={reviewTicketId || handoffTicketId || null}
-              onSubmit={handleCreateTicket}
-              onCancel={handleCloseCreateDrawer}
-              onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
-              onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
-              submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
-            />
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+      {/* Create / Complete / Review Ticket Drawer */}
+      <TicketForm
+        open={createDrawerOpen}
+        onClose={handleCloseCreateDrawer}
+        initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
+          property_id: selectedTicketBasic.property_id || '',
+          tenant_id: selectedTicketBasic.tenant_id || '',
+          issue_description: selectedTicketBasic.issue_description || '',
+          category: selectedTicketBasic.category || '',
+          priority: selectedTicketBasic.priority || 'Medium',
+          contractor_id: selectedTicketBasic.contractor_id || null,
+          availability: selectedTicketBasic.availability || '',
+          access: selectedTicketBasic.access || '',
+          images: (selectedTicketBasic as { images?: string[] }).images || [],
+          conversation_id: selectedTicketBasic.conversation_id || undefined,
+        } : undefined}
+        isHandoff={!!handoffTicketId}
+        isReview={!!reviewTicketId}
+        ticketId={reviewTicketId || handoffTicketId || null}
+        onSubmit={handleCreateTicket}
+        onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
+        onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
+        submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
+      />
 
       {/* Archive Confirmation Dialog */}
       <ConfirmDeleteDialog

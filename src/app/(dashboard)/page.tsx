@@ -34,7 +34,9 @@ import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
+import { PageShell } from '@/components/page-shell'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
 
 interface DashboardStats {
   totalTickets: number
@@ -207,6 +209,7 @@ const IN_PROGRESS_REASONS = new Set([
 
 function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTickets: TicketSummary[] }) {
   const [leftTab, setLeftTab] = useState<'todo' | 'in_progress'>('todo')
+  const openTicket = useOpenTicket()
 
   // Only actionable items — exclude FOLLOW_UP and delay awaiting_landlord by 24h
   const actionable = todoItems.filter(i => {
@@ -224,30 +227,30 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
       {/* Tab row */}
-      <div className="flex items-end justify-between px-8 border-b border-border/40 flex-shrink-0">
+      <div className="flex items-end justify-between px-8 border-b border-foreground/10 flex-shrink-0 pt-4">
         <div className="flex items-end gap-6">
           <button
             onClick={() => setLeftTab('todo')}
-            className="flex items-center py-2.5 -mb-px transition-colors group"
+            className="flex items-center py-2 transition-colors group focus:outline-none"
           >
             <span className={cn(
-              'text-sm font-medium border-b-2 pb-px transition-colors',
+              'text-sm font-medium transition-colors',
               leftTab === 'todo'
-                ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent group-hover:text-foreground group-hover:border-border'
+                ? 'text-primary'
+                : 'text-muted-foreground group-hover:text-foreground'
             )}>
               To-do
             </span>
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className="flex items-center py-2.5 -mb-px transition-colors group"
+            className="flex items-center py-2 transition-colors group focus:outline-none"
           >
             <span className={cn(
-              'text-sm font-medium border-b-2 pb-px transition-colors',
+              'text-sm font-medium transition-colors',
               leftTab === 'in_progress'
-                ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent group-hover:text-foreground group-hover:border-border'
+                ? 'text-primary'
+                : 'text-muted-foreground group-hover:text-foreground'
             )}>
               In Progress
             </span>
@@ -273,20 +276,17 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             const isHandoff = item.next_action_reason === 'handoff_review'
             const isPendingReview = item.next_action_reason === 'pending_review'
             const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-            const href = isHandoff
+
+            // Action flows navigate to /tickets (page-specific Create/Review drawer)
+            // Normal viewing opens the global drawer on this page
+            const actionHref = isHandoff
               ? `/tickets?id=${item.ticket_id}&action=complete`
               : isPendingReview
               ? `/tickets?id=${item.ticket_id}&action=review`
-              : needsDispatchTab
-              ? `/tickets?id=${item.ticket_id}&tab=dispatch`
-              : `/tickets?id=${item.ticket_id}`
+              : null
 
-            return (
-              <Link
-                key={item.id}
-                href={href}
-                className="flex items-start gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group"
-              >
+            const rowContent = (
+              <>
                 {/* Left: info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -327,7 +327,25 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                 <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">
                   {ctaText}
                 </span>
-              </Link>
+              </>
+            )
+
+            const rowClass = "flex items-start gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer"
+
+            // Action flows navigate to /tickets (page-specific Create/Review drawer)
+            if (actionHref) {
+              return <Link key={item.id} href={actionHref} className={rowClass}>{rowContent}</Link>
+            }
+
+            // Normal viewing opens the global drawer on this page
+            return (
+              <button
+                key={item.id}
+                onClick={() => openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)}
+                className={cn(rowClass, 'w-full text-left')}
+              >
+                {rowContent}
+              </button>
             )
           })}
         </div>
@@ -343,20 +361,20 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             {inProgressTickets.map((ticket) => {
               const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
               return (
-                <Link
+                <button
                   key={ticket.id}
-                  href={`/tickets?id=${ticket.id}`}
-                  className="flex items-center gap-3 py-3 px-8 hover:bg-muted/30 transition-colors"
+                  onClick={() => openTicket(ticket.id)}
+                  className="flex items-center gap-3 py-3 px-8 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.address || '—'}</p>
+                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.address || '—'}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.issue_description || 'No description'}</p>
                     <span className="flex items-center gap-1.5 mt-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
                       <span className="text-[11px] font-medium text-muted-foreground/70">{badge.label}</span>
                     </span>
                   </div>
-                </Link>
+                </button>
               )
             })}
           </div>
@@ -370,6 +388,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
 export default function DashboardPage() {
   const { propertyManager } = usePM()
   const { dateRange } = useDateRange()
+  const openTicket = useOpenTicket()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [allTickets, setAllTickets] = useState<TicketSummary[]>([])
   const [awaitingTickets, setAwaitingTickets] = useState<TicketSummary[]>([])
@@ -598,6 +617,13 @@ export default function DashboardPage() {
     }
   }
 
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const firstName = propertyManager?.business_name?.split(' ')[0] ?? ''
+  const greetingLabel = firstName ? `${greeting}, ${firstName}` : greeting
+
   // Autocomplete results for global search in top bar
   const searchResults = searchTerm.trim()
     ? allTickets
@@ -611,99 +637,88 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <div className="p-4 h-full overflow-hidden">
-        <div className="animate-pulse space-y-3">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-[168px] bg-muted rounded-xl" />
-          <div className="grid grid-cols-2 gap-3">
-            <div className="h-[200px] bg-muted rounded-xl" />
-            <div className="h-[200px] bg-muted rounded-xl" />
+      <PageShell title={greetingLabel} noPadding>
+        <div className="p-4 h-full overflow-hidden">
+          <div className="animate-pulse space-y-3">
+            <div className="h-8 w-48 bg-muted rounded" />
+            <div className="h-[168px] bg-muted rounded-xl" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-[200px] bg-muted rounded-xl" />
+              <div className="h-[200px] bg-muted rounded-xl" />
+            </div>
+            <div className="flex-1 bg-muted rounded-xl min-h-[160px]" />
           </div>
-          <div className="flex-1 bg-muted rounded-xl min-h-[160px]" />
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden lg:h-full">
-        {/* Top bar — search + create only */}
-        <div className="flex-shrink-0 flex items-center justify-between px-8 py-3 border-b border-border/40 gap-4">
-          <div className="relative min-w-0">
-            <div className={cn(
-              'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-64',
-              searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'
-            )}>
-              <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                placeholder="Search tickets…"
-                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/50 min-w-0"
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            {searchFocused && searchResults.length > 0 && (
-              <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                {searchResults.map((ticket) => (
-                  <Link
-                    key={ticket.id}
-                    href={`/tickets?id=${ticket.id}`}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                    </div>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  </Link>
-                ))}
-                <Link
-                  href="/tickets"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                >
-                  View all results
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
+    <PageShell
+      title={greetingLabel}
+      topBar={
+        <div className="relative min-w-0">
+          <div className={cn(
+            'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-64',
+            searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'
+          )}>
+            <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+              placeholder="Search tickets…"
+              className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/50 min-w-0"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
-          <Link href="/tickets?create=true" className="flex-shrink-0">
-            <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
-          </Link>
+          {searchFocused && searchResults.length > 0 && (
+            <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+              {searchResults.map((ticket) => (
+                <button
+                  key={ticket.id}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { openTicket(ticket.id); setSearchTerm(''); setSearchFocused(false) }}
+                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0 w-full text-left cursor-pointer"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
+                  </div>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                </button>
+              ))}
+              <Link
+                href="/tickets"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
+              >
+                View all results
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
         </div>
-
-        {/* Page title */}
-        <div className="flex-shrink-0 px-8 pt-3 pb-2 lg:pt-4 lg:pb-3">
-          <h1 className="text-2xl font-bold text-foreground">
-            {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </h1>
-        </div>
-
+      }
+      actions={
+        <Button variant="cta" size="default" asChild>
+          <Link href="/tickets?create=true">Create ticket</Link>
+        </Button>
+      }
+      noPadding
+    >
         {/* Main Content — panels below header line */}
         <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
 
-          {/* Left column — title + To-do */}
+          {/* Left column — To-do */}
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:border-r lg:border-border/40">
-
-            {/* Page title */}
-            <div className="flex-shrink-0 px-8 pt-5 pb-0 lg:pt-8 lg:pb-0">
-              <h1 className="text-2xl font-bold text-foreground">
-                {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </h1>
-            </div>
-
             {/* TodoPanel — borderless list */}
             <div className="flex flex-col">
               <TodoPanel todoItems={todoItems} allTickets={allTickets} />
@@ -711,7 +726,7 @@ export default function DashboardPage() {
           </div> {/* closes left column */}
 
           {/* Right column — Scheduled + Recent Activity */}
-          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 divide-y divide-border/40 border-t border-border/40 lg:border-t-0">
+          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 divide-y divide-border/40 border-t border-foreground/10 lg:border-t-0">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
@@ -728,18 +743,10 @@ export default function DashboardPage() {
                 const upcomingScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) >= startOfToday).slice(0, 5)
                 const overdueScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) < startOfToday)
 
-                const byDate: Record<string, TicketSummary[]> = {}
-                for (const t of upcomingScheduled) {
-                  const key = formatDate(t.scheduled_date!)
-                  if (!byDate[key]) byDate[key] = []
-                  byDate[key].push(t)
-                }
-                const groups = Object.entries(byDate)
-
                 return (
                   <div className="flex flex-col min-w-0 min-h-0 overflow-hidden flex-1">
                     <div className="flex items-center px-6 pt-6 pb-3 flex-shrink-0">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1 min-w-0">Scheduled</span>
+                      <span className="text-sm font-semibold text-muted-foreground flex-1 min-w-0">Scheduled</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
@@ -756,7 +763,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-6 pb-6">
-                      {groups.length === 0 && overdueScheduled.length === 0 ? (
+                      {upcomingScheduled.length === 0 && overdueScheduled.length === 0 ? (
                         <div className="flex gap-3 items-center">
                           <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
                             <span className="text-xs text-muted-foreground/40">—</span>
@@ -764,56 +771,49 @@ export default function DashboardPage() {
                           <p className="text-sm text-muted-foreground/40">No scheduled jobs</p>
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col">
                           {/* Overdue jobs */}
                           {overdueScheduled.length > 0 && (
-                            <div className="flex flex-col gap-1.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-danger">Overdue</span>
+                            <div className="flex flex-col gap-1.5 mb-3">
+                              <span className="text-[10px] font-semibold text-danger">Overdue</span>
                               {overdueScheduled.map((ticket) => (
-                                <Link
+                                <button
                                   key={ticket.id}
-                                  href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-danger/5 transition-colors border border-danger/20"
+                                  onClick={() => openTicket(ticket.id)}
+                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-danger/5 transition-colors border border-danger/20 w-full text-left cursor-pointer"
                                 >
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 truncate">{ticket.issue_description || 'No description'}</p>
-                                    <p className="text-xs text-red-500/60 truncate mt-0.5">{ticket.address || '—'}</p>
+                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 truncate">{ticket.address || '—'}</p>
+                                    <p className="text-xs text-red-500/60 truncate mt-0.5">{ticket.issue_description || 'No description'}</p>
                                   </div>
                                   <span className="text-[10px] font-medium text-danger whitespace-nowrap">Confirm completion</span>
-                                </Link>
+                                </button>
                               ))}
                             </div>
                           )}
-                          {/* Upcoming jobs */}
-                          {groups.map(([date, tickets]) => (
-                            <div key={date} className="flex gap-3">
-                              {(() => {
-                                const [day, month] = date.split(' ')
-                                return (
-                                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/60 flex flex-col items-center justify-center">
-                                    <span className="text-[20px] font-semibold text-card-foreground leading-none">{day}</span>
-                                    <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground leading-none mt-0.5">{month}</span>
-                                  </div>
-                                )
-                              })()}
-                              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                                {tickets.map((ticket) => (
-                                  <Link
-                                    key={ticket.id}
-                                    href={`/tickets?id=${ticket.id}`}
-                                    className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-card-foreground truncate">
-                                        {ticket.issue_description || 'No description'}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                          {/* Upcoming jobs — flat list with inline date squares */}
+                          {upcomingScheduled.map((ticket, idx) => {
+                            const d = new Date(ticket.scheduled_date!)
+                            return (
+                              <button
+                                key={ticket.id}
+                                onClick={() => openTicket(ticket.id)}
+                                className={cn(
+                                  'flex items-center gap-3 py-2.5 w-full text-left cursor-pointer hover:bg-muted/30 transition-colors',
+                                  idx < upcomingScheduled.length - 1 && 'border-b border-border/40'
+                                )}
+                              >
+                                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center">
+                                  <span className="text-base font-semibold text-primary leading-none">{d.getDate()}</span>
+                                  <span className="text-[10px] text-primary/70 uppercase mt-0.5">{format(d, 'MMM')}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{ticket.address || '—'}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                                </div>
+                              </button>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -824,7 +824,7 @@ export default function DashboardPage() {
             {/* Recent activity */}
             <div className="flex flex-col min-h-0 overflow-hidden flex-1">
               <div className="flex items-center px-6 pt-6 pb-3 min-w-0 flex-shrink-0">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex-1 min-w-0">Recent activity</span>
+                <span className="text-sm font-semibold text-muted-foreground flex-1 min-w-0">Recent activity</span>
                 <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -859,13 +859,13 @@ export default function DashboardPage() {
                       </div>
                     )
                     return event.ticket_id && !isGrouped ? (
-                      <Link
+                      <button
                         key={`${event.event_type}-${event.occurred_at}-${idx}`}
-                        href={`/tickets?id=${event.ticket_id}`}
-                        className="flex px-4 py-2 min-w-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => openTicket(event.ticket_id!)}
+                        className="flex px-4 py-2 min-w-0 hover:bg-muted/30 transition-colors cursor-pointer w-full text-left"
                       >
                         {inner}
-                      </Link>
+                      </button>
                     ) : (
                       <div
                         key={`${event.event_type}-${event.occurred_at}-${idx}`}
@@ -898,10 +898,9 @@ export default function DashboardPage() {
                     key={ticket.id}
                     className="p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
                   >
-                    <Link
-                      href={`/tickets?id=${ticket.id}`}
-                      className="block"
-                      onClick={() => setAwaitingType(null)}
+                    <button
+                      className="block w-full text-left cursor-pointer"
+                      onClick={() => { openTicket(ticket.id); setAwaitingType(null) }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -912,7 +911,7 @@ export default function DashboardPage() {
                           {formatDate(ticket.date_logged)}
                         </span>
                       </div>
-                    </Link>
+                    </button>
                     <div className="mt-3 flex items-center justify-between gap-2">
                       {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
                       {awaitingType === 'handoff' && ticket.handoff && (
@@ -920,7 +919,7 @@ export default function DashboardPage() {
                           href={`/tickets?id=${ticket.id}&action=complete`}
                           onClick={() => setAwaitingType(null)}
                         >
-                          <InteractiveHoverButton text="Review" className="w-24 text-xs h-7 p-1" />
+                          <InteractiveHoverButton text="Review" size="sm" />
                         </Link>
                       )}
                     </div>
@@ -1073,6 +1072,6 @@ export default function DashboardPage() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
+    </PageShell>
   )
 }
