@@ -17,7 +17,7 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        'flex items-center justify-between border-b border-border/40 flex-shrink-0',
+        'flex items-center justify-between border-b border-foreground/10 flex-shrink-0',
         size === 'sm' ? 'px-5 py-3' : 'px-5 py-4',
         className
       )}

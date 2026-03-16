@@ -23,6 +23,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from '@/lib/constants'
@@ -77,11 +78,13 @@ interface PrefillData extends Partial<TicketFormData> {
 }
 
 interface TicketFormProps {
+  open?: boolean                  // Sheet control — when provided, form renders inside Sheet
+  onClose?: () => void            // Sheet close handler
   initialData?: PrefillData      // Legacy support
   prefill?: PrefillData          // Alias for initialData (clearer naming)
   onSubmit?: (data: TicketFormData) => Promise<void>  // External handler
   onSuccess?: () => void         // Simple callback when form handles creation
-  onCancel: () => void
+  onCancel?: () => void          // Close handler for non-Sheet usage (dashboard)
   onDismiss?: () => void         // Archive/dismiss handoff without completing
   onAllocateLandlord?: () => void // Allocate ticket to landlord instead of dispatching
   ticketId?: string | null       // Existing ticket ID (review/handoff mode)
@@ -101,6 +104,8 @@ const PRIORITY_OPTIONS = TICKET_PRIORITIES.map((p) => ({
 }))
 
 export function TicketForm({
+  open,
+  onClose,
   initialData,
   prefill,
   onSubmit,
@@ -593,16 +598,9 @@ export function TicketForm({
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
+  // Shared form body — fields + indicators
+  const formFields = (
+    <>
       {/* Handoff indicator */}
       {isHandoff && formData.priority === 'Emergency' && (
         <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg flex items-start gap-2">
@@ -925,49 +923,55 @@ export function TicketForm({
           </p>
         </div>
       </div>
+    </>
+  )
 
-      {/* Footer */}
-      <div className="flex items-center gap-3 pt-4 border-t">
-        {(isReview || isHandoff) && landlordName && landlordPhone && ticketId && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 gap-1.5"
-            disabled={allocatingLandlord || submitting}
-            onClick={async () => {
-              setAllocatingLandlord(true)
-              const { data, error } = await supabase.rpc('c1_allocate_to_landlord', { p_ticket_id: ticketId })
-              if (error) {
-                toast.error(error.message || 'Failed to allocate to landlord')
-                setAllocatingLandlord(false)
-                return
-              }
-              toast.success(`Allocated to ${landlordName}`)
+  // Shared footer — action buttons
+  const formFooter = (
+    <div className="flex items-center gap-3">
+      {(isReview || isHandoff) && landlordName && landlordPhone && ticketId && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 gap-1.5"
+          disabled={allocatingLandlord || submitting}
+          onClick={async () => {
+            setAllocatingLandlord(true)
+            const { data, error } = await supabase.rpc('c1_allocate_to_landlord', { p_ticket_id: ticketId })
+            if (error) {
+              toast.error(error.message || 'Failed to allocate to landlord')
               setAllocatingLandlord(false)
-              onAllocateLandlord?.()
-            }}
-          >
-            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Building2 className="h-3.5 w-3.5" /> Allocate to Landlord</>}
-          </Button>
-        )}
-        <div className="flex-1" />
-        {(isHandoff || isReview) && onDismiss && (
-          <InteractiveHoverButton
-            text="Dismiss"
-            variant="secondary"
-            onClick={onDismiss}
-            disabled={submitting || allocatingLandlord}
-            className="w-32 text-sm h-10"
-          />
-        )}
+              return
+            }
+            toast.success(`Allocated to ${landlordName}`)
+            setAllocatingLandlord(false)
+            onAllocateLandlord?.()
+          }}
+        >
+          {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Building2 className="h-3.5 w-3.5" /> Allocate to Landlord</>}
+        </Button>
+      )}
+      <div className="flex-1" />
+      {(isHandoff || isReview) && onDismiss && (
         <InteractiveHoverButton
-          text={submitting ? 'Creating...' : finalSubmitLabel}
-          onClick={handleSubmit}
+          text="Dismiss"
+          variant="secondary"
+          onClick={onDismiss}
           disabled={submitting || allocatingLandlord}
-          className="w-40 text-sm h-10"
+          size="sm"
         />
-      </div>
+      )}
+      <InteractiveHoverButton
+        text={submitting ? 'Creating...' : finalSubmitLabel}
+        onClick={handleSubmit}
+        disabled={submitting || allocatingLandlord}
+      />
+    </div>
+  )
 
+  // Shared inline dialogs
+  const inlineDialogs = (
+    <>
       {/* Add Tenant Dialog */}
       <Dialog open={addTenantOpen} onOpenChange={setAddTenantOpen}>
         <DialogContent className="max-w-md">
@@ -1018,7 +1022,6 @@ export function TicketForm({
               text={savingNew ? 'Adding...' : 'Add Tenant'}
               onClick={handleAddTenant}
               disabled={savingNew}
-              className="w-32 text-sm h-9"
             />
           </DialogFooter>
         </DialogContent>
@@ -1085,11 +1088,76 @@ export function TicketForm({
               text={savingNew ? 'Adding...' : 'Add Contractor'}
               onClick={handleAddContractor}
               disabled={savingNew}
-              className="w-36 text-sm h-9"
             />
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  // Sheet mode — self-contained drawer
+  if (open != null && onClose) {
+    return (
+      <Sheet open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+        <SheetContent
+          side="right"
+          hideCloseButton={true}
+          title={isReview ? 'Review & Dispatch' : isHandoff ? 'Complete Ticket' : 'New Ticket'}
+          className="w-[50vw] min-w-[600px] max-w-none p-0 flex flex-col overflow-x-hidden"
+        >
+          {/* Header */}
+          <div className="border-b border-border/40 px-6 py-5 flex-shrink-0 flex items-start justify-between gap-4">
+            <h2 className="text-lg font-bold text-foreground leading-snug">
+              {isReview ? 'Review & Dispatch' : isHandoff ? 'Complete Ticket' : 'New Ticket'}
+            </h2>
+            <Button variant="ghost" size="icon" onClick={onClose} className="-mt-1 -mr-2 flex-shrink-0 h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Scrollable form body */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6">
+                {formFields}
+              </div>
+
+              {/* Pinned footer */}
+              <div className="border-t border-border/40 px-6 py-4 flex-shrink-0">
+                {formFooter}
+              </div>
+            </>
+          )}
+
+          {inlineDialogs}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  // Fallback — plain div wrapper (dashboard still uses this path)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {formFields}
+
+      {/* Footer */}
+      <div className="pt-4 border-t">
+        {formFooter}
+      </div>
+
+      {inlineDialogs}
     </div>
   )
 }

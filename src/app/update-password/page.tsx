@@ -143,7 +143,7 @@ export default function UpdatePasswordPage() {
                 type="submit"
                 text={loading ? 'Setting up...' : 'Set password'}
                 disabled={loading}
-                className="w-full h-11 font-medium"
+                className="w-full font-medium"
               />
             </form>
           </>

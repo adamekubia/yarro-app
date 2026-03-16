@@ -10,6 +10,7 @@ import { usePM } from '@/contexts/pm-context'
 import { DateRangeProvider } from '@/contexts/date-range-context'
 import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
 
 export default function DashboardLayout({
   children,
@@ -115,6 +116,7 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-auto">
           <DateRangeProvider>
             <ErrorBoundary>
+              <TicketDrawerProvider />
               {children}
             </ErrorBoundary>
           </DateRangeProvider>

@@ -627,7 +627,7 @@ export default function ContractorsPage() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
-          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
+          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} />
         </>
       }
     >

@@ -88,7 +88,7 @@ function formatStatus(status: string): string {
 }
 
 export function StatusBadge({ status, variant = 'default', size = 'sm', className }: StatusBadgeProps) {
-  const key = status.toLowerCase()
+  const key = status.toLowerCase().replace(/_/g, ' ')
   const style = badgeStyles[key] || badgeStyles.default
   const priorityDesc = PRIORITY_DESCRIPTIONS[status] || PRIORITY_DESCRIPTIONS[status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()]
 

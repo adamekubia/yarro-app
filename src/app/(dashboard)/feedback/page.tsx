@@ -204,7 +204,7 @@ export default function FeedbackPage() {
                     text={sent ? 'Sent!' : sending ? 'Sending...' : 'Send Feedback'}
                     onClick={handleSubmit}
                     disabled={sending || sent || !message.trim()}
-                    className={cn('w-44 text-sm h-10', sent && 'bg-success text-success-foreground')}
+                    className={cn(sent && 'bg-success text-success-foreground')}
                   />
                   {!message.trim() && (
                     <p className="text-xs text-muted-foreground">Write something above to send</p>

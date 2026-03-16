@@ -250,7 +250,7 @@ export function Sidebar() {
           {/* Activity Section */}
           <div className="pt-4 mt-4 border-t border-sidebar-border/40">
             {!collapsed && (
-              <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
+              <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50">
                 Activity
               </p>
             )}
@@ -262,7 +262,7 @@ export function Sidebar() {
           {/* Resources Section */}
           <div className="pt-4 mt-4 border-t border-sidebar-border/40">
             {!collapsed && (
-              <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
+              <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50">
                 Resources
               </p>
             )}

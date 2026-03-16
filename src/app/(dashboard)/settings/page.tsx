@@ -99,7 +99,6 @@ export default function SettingsPage() {
             type="submit"
             text={saving ? 'Updating...' : 'Update Password'}
             disabled={saving || !newPassword}
-            className="w-40 text-sm h-9"
           />
         </form>
       </div>

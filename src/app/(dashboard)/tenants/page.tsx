@@ -485,7 +485,7 @@ export default function TenantsPage() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
-          <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
+          <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} />
         </>
       }
     >

@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -102,6 +103,7 @@ export default function PropertiesPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const openTicket = useOpenTicket()
   const [properties, setProperties] = useState<PropertyHub[]>([])
   const [selectedProperty, setSelectedProperty] = useState<PropertyHub | null>(null)
   const [loading, setLoading] = useState(true)
@@ -532,7 +534,7 @@ export default function PropertiesPage() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
-          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
+          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} />
         </>
       }
     >
@@ -639,11 +641,10 @@ export default function PropertiesPage() {
                 ) : (
                   <div className="space-y-1.5">
                     {getTickets(selectedProperty.open_tickets).map((ticket) => (
-                      <Link
+                      <button
                         key={ticket.id}
-                        href={`/tickets?id=${ticket.id}`}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        onClick={handleCloseDrawer}
+                        onClick={() => { openTicket(ticket.id); handleCloseDrawer() }}
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors w-full text-left cursor-pointer"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <Ticket className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
@@ -652,7 +653,7 @@ export default function PropertiesPage() {
                           </span>
                         </div>
                         <StatusBadge status={ticket.job_stage} />
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}

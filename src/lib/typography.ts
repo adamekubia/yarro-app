@@ -11,7 +11,7 @@ export const typography = {
   pageSubtitle: 'text-sm text-muted-foreground mt-1',
 
   // Section and card headings
-  sectionTitle:  'text-sm font-semibold text-muted-foreground uppercase tracking-widest',
+  sectionTitle:  'text-xs font-semibold text-muted-foreground tracking-normal',
   cardTitle:     'text-base font-semibold text-foreground',
   cardSubtitle:  'text-xs text-muted-foreground',
 
