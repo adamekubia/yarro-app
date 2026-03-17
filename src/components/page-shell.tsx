@@ -51,7 +51,7 @@ export function PageShell({
         {/* Page header — always padded horizontally */}
         <div className={cn(
           'flex-shrink-0 flex items-start justify-between gap-4 px-8',
-          headerBorder ? 'pb-6 border-b border-foreground/10' : 'mb-6'
+          headerBorder ? 'pb-6 border-b border-foreground/10' : noPadding ? '' : 'mb-6'
         )}>
           <div className="min-w-0">
             <h1 className={typography.pageTitle}>{title}</h1>
