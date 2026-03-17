@@ -85,9 +85,9 @@
   --danger-foreground: #ffffff;
 
   /* Light Theme — Apple Zinc + Yarro Blue */
-  --background: #FAFAFA;
+  --background: #F7F7F8;
   --foreground: #18181B;
-  --card: #FAFAFA;
+  --card: #FFFFFF;
   --card-foreground: #18181B;
   --popover: #FFFFFF;
   --popover-foreground: #18181B;
@@ -95,7 +95,7 @@
   --primary-foreground: #FFFFFF;
   --secondary: #F4F4F5;
   --secondary-foreground: #18181B;
-  --muted: #F4F4F5;
+  --muted: #F7F7F8;
   --muted-foreground: #71717A;
   --accent: #F4F4F5;
   --accent-foreground: #18181B;
@@ -112,7 +112,7 @@
   --chart-5: #fa710f;
 
   /* Sidebar — Light */
-  --sidebar: #FAFAFA;
+  --sidebar: #FFFFFF;
   --sidebar-foreground: #18181B;
   --sidebar-primary: #0059FF;
   --sidebar-primary-foreground: #FFFFFF;

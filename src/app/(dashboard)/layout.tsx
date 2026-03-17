@@ -95,7 +95,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-background">
+    <div className="flex h-screen bg-muted">
       <div className="hidden lg:flex">
         <Sidebar />
       </div>
