@@ -401,9 +401,14 @@ export default function PropertiesPage() {
     {
       key: 'tenants',
       header: 'Tenants',
-      render: (p) => (
-        <Badge variant="outline">{getTenants(p.tenants).length}</Badge>
-      ),
+      render: (p) => {
+        const count = getTenants(p.tenants).length
+        return (
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
+        )
+      },
     },
     {
       key: 'open_tickets',
@@ -411,9 +416,11 @@ export default function PropertiesPage() {
       render: (p) => {
         const count = getTickets(p.open_tickets).length
         return count > 0 ? (
-          <Badge className="bg-primary">{count}</Badge>
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
         ) : (
-          <span className="text-muted-foreground">-</span>
+          <span className="text-muted-foreground">—</span>
         )
       },
     },
