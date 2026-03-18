@@ -74,7 +74,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
         <div className="space-y-4">
           <DetailCell label="Quote" value={formatCurrency(completion.quote_amount)} mono />
-          <DetailCell label="Markup" value={formatCurrency(completion.markup_amount)} mono />
+          <DetailCell label="Markup" value={formatCurrency(Math.abs(completion.markup_amount || 0))} mono />
           <DetailCell label="Total" value={formatCurrency(completion.total_amount)} mono highlight />
         </div>
         <div className="space-y-4">

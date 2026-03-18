@@ -78,7 +78,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
   const router = useRouter()
   const images = basic.images || []
   const markup = basic.final_amount && basic.contractor_quote
-    ? basic.final_amount - basic.contractor_quote
+    ? Math.abs(basic.final_amount - basic.contractor_quote)
     : null
 
   return (

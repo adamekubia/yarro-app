@@ -61,7 +61,7 @@ function parseCurrency(val: string | null): number | null {
   if (!val) return null;
   const cleaned = val.replace(/[^0-9.]/g, "");
   const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
+  return isNaN(num) ? null : Math.abs(num);
 }
 
 /** Ensure tenant_token exists — generate + persist if missing */
