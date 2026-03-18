@@ -48,6 +48,7 @@ interface Contractor {
   active: boolean
   property_ids: string[] | null
   created_at: string
+  contact_method: string
 }
 
 interface ContractorEditable {
@@ -390,13 +391,23 @@ export default function ContractorsPage() {
       render: (c) => c.contractor_email || '-',
     },
     {
-      key: 'property_ids',
-      header: 'Properties',
-      render: (c) => (
-        <span className="text-muted-foreground">
-          {c.property_ids?.length || 0}
-        </span>
-      ),
+      key: 'contact_method',
+      header: 'Contact Method',
+      sortable: true,
+      render: (row) => {
+        if (row.contact_method === 'whatsapp') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success border border-success/20">
+            WhatsApp
+          </span>
+        )
+        if (row.contact_method === 'email') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+            Email
+          </span>
+        )
+        return <span className="text-muted-foreground">—</span>
+      },
+      getValue: (row) => row.contact_method,
     },
     {
       key: 'actions',
