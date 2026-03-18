@@ -362,14 +362,15 @@ export default function ContractorsPage() {
       sortable: true,
       render: (c) => {
         const cats = c.categories?.length ? c.categories : (c.category ? [c.category] : [])
+        if (cats.length === 0) return <span className="text-muted-foreground">—</span>
         return (
-          <div className="flex flex-wrap gap-1">
-            {cats.map((cat) => (
-              <Badge key={cat} variant="outline" className="text-xs">
-                <Wrench className="h-3 w-3 mr-1" />
-                {cat}
-              </Badge>
-            ))}
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border">
+              {cats[0]}
+            </span>
+            {cats.length > 1 && (
+              <span className="text-xs text-muted-foreground">+{cats.length - 1}</span>
+            )}
           </div>
         )
       },
@@ -392,9 +393,9 @@ export default function ContractorsPage() {
       key: 'property_ids',
       header: 'Properties',
       render: (c) => (
-        <Badge variant="secondary">
+        <span className="text-muted-foreground">
           {c.property_ids?.length || 0}
-        </Badge>
+        </span>
       ),
     },
   ]
@@ -633,7 +634,7 @@ export default function ContractorsPage() {
     >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={filteredContractors}
           columns={columns}

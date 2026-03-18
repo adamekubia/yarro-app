@@ -352,9 +352,9 @@ export default function TenantsPage() {
       header: 'Role',
       sortable: true,
       render: (t) => (
-        <Badge variant="outline" className="capitalize">
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border capitalize">
           {t.role_tag || 'tenant'}
-        </Badge>
+        </span>
       ),
     },
   ]
