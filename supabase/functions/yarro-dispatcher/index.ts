@@ -59,6 +59,7 @@ async function handleContractorSms(
     ticketId: ticket.id,
     recipientPhone: contractor.phone,
     recipientRole: "contractor",
+    recipientId: contractor.id,
     messageType: "contractor_dispatch",
     templateSid: TEMPLATES.contractor_quote,
     variables,

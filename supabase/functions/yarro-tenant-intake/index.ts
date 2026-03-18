@@ -491,6 +491,21 @@ Deno.serve(async (req: Request) => {
         };
       }
 
+      // Dedup: check if an open ticket already exists for this conversation
+      const { data: existingTicket } = await supabase
+        .from("c1_tickets")
+        .select("id")
+        .eq("conversation_id", ctx.conversation.id)
+        .neq("status", "closed")
+        .eq("archived", false)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingTicket) {
+        console.log(`[${FN}] Duplicate prevented — open ticket ${existingTicket.id} already exists for conversation ${ctx.conversation.id}`);
+        return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
+      }
+
       // Create ticket
       const { data: ticket, error: ticketError } = await supabase.rpc("c1_create_ticket", {
         _conversation_id: ctx.conversation.id,
