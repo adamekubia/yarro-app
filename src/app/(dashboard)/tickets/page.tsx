@@ -17,10 +17,17 @@ import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
+import { Ticket, RefreshCw, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SlaBadge } from '@/components/sla-badge'
 
 interface TicketRow {
@@ -378,6 +385,35 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
+  const handleArchiveRow = async (ticket: TicketRow) => {
+    const archivedAt = new Date().toISOString()
+
+    const { error: ticketError } = await supabase
+      .from('c1_tickets')
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
+      .eq('id', ticket.id)
+
+    if (ticketError) {
+      toast.error('Failed to archive ticket')
+      return
+    }
+
+    await supabase
+      .from('c1_messages')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('ticket_id', ticket.id)
+
+    if (ticket.conversation_id) {
+      await supabase
+        .from('c1_conversations')
+        .update({ archived: true, archived_at: archivedAt })
+        .eq('id', ticket.conversation_id)
+    }
+
+    toast.success('Ticket archived')
+    await fetchTickets()
+  }
+
   const handleDismissTicket = async () => {
     const dismissId = handoffTicketId || reviewTicketId
     if (!dismissId || !selectedTicketBasic) return
@@ -508,32 +544,52 @@ export default function TicketsPage() {
       width: '48px',
       render: (ticket) => {
         const isOpen = ticket.status === 'open' && !ticket.archived
-        const isHandoff = ticket.handoff && isOpen
-        if (isHandoff) {
-          return (
-            <InteractiveHoverButton
-              text="Review"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedTicketBasic(ticket)
-                setHandoffTicketId(ticket.id)
-                setCreateDrawerOpen(true)
-              }}
-            />
-          )
-        }
-        if (!isOpen) return null
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 ml-auto"
-            title={ticket.on_hold ? 'Resume' : 'Hold'}
-            onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
-          >
-            {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/tickets?id=${ticket.id}`)
+                }}
+              >
+                View
+              </DropdownMenuItem>
+              {isOpen && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleHold(ticket)
+                    }}
+                  >
+                    {ticket.on_hold ? 'Resume' : 'Hold'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleArchiveRow(ticket)
+                    }}
+                  >
+                    Archive
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
     },
@@ -813,7 +869,7 @@ export default function TicketsPage() {
       </div>
 
       {/* Scrollable data region — single table */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div className="flex-1 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={visibleRows}
           columns={columns}
