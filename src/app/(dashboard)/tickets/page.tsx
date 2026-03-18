@@ -869,13 +869,13 @@ export default function TicketsPage() {
       </div>
 
       {/* Scrollable data region — single table */}
-      <div className="flex-1 overflow-hidden bg-card rounded-xl border border-border">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={visibleRows}
           columns={columns}
           searchKeys={[]}
           hideToolbar
-          disableBodyScroll
+          fillHeight
           getRowId={t => t.id}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
