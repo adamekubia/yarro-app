@@ -61,8 +61,8 @@ export function TicketDetailModal({
   const isLandlordAllocated = basic?.landlord_allocated === true && isOpen
   const landlordOutcome = basic?.landlord_outcome || null
   const isCompleted = isOpen && !isOOH && !isLandlordAllocated && (basic?.next_action_reason === 'completed' || basic?.next_action_reason === 'job_not_completed')
-  // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
-  const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
+  // Show conversation tab if we have conversation data, outbound log, or a conversation_id
+  const showConversationTab = hasConversation || hasOutboundLog || !!(context?.conversation_id || basic?.conversation_id)
 
   const [closingTicket, setClosingTicket] = useState(false)
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
@@ -318,17 +318,7 @@ export function TicketDetailModal({
 
               {activeTab === 'conversation' && showConversationTab && (
                 <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
-                  {conversation ? (
-                    <TicketConversationTab conversation={conversation} />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <div className="text-center">
-                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm">No conversation linked to this ticket</p>
-                        <p className="text-xs mt-1 opacity-60">Manual tickets don&apos;t have WhatsApp conversations</p>
-                      </div>
-                    </div>
-                  )}
+                  <TicketConversationTab conversation={conversation || null} outboundLog={outboundLog} />
                 </div>
               )}
 
