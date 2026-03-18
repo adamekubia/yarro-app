@@ -37,20 +37,20 @@ export function PageShell({
     >
       {topBar ? (
         <div className="flex-shrink-0 flex flex-col px-8">
-          <div className={cn(
-            'flex items-center justify-between gap-4 h-16',
-            headerBorder ? 'border-b border-foreground/10' : ''
-          )}>
+          <div className="flex items-center h-16">
             <div className="min-w-0">
               <h1 className={typography.pageTitle}>{title}</h1>
               {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}
             </div>
+          </div>
+          <div className={cn(
+            'flex items-center justify-between h-12 gap-3',
+            headerBorder ? 'border-b border-foreground/10' : ''
+          )}>
+            {topBar}
             {actions && (
               <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
             )}
-          </div>
-          <div className="flex items-center h-12 gap-3">
-            {topBar}
           </div>
         </div>
       ) : (
