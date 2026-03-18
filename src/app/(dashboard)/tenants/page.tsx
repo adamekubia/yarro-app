@@ -507,7 +507,7 @@ export default function TenantsPage() {
             placeholder="Search tenants..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+            className="h-9 w-80 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
           />
         </>
       }

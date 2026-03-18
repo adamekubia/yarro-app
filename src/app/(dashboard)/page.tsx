@@ -650,7 +650,7 @@ export default function DashboardPage() {
       topBar={
         <div className="relative min-w-0 w-1/2">
           <div className={cn(
-            'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-64',
+            'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-80',
             searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'
           )}>
             <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />

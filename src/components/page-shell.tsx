@@ -37,9 +37,6 @@ export function PageShell({
     >
       {topBar ? (
         <div className="flex-shrink-0 flex flex-col px-8">
-          <div className="flex items-center h-14 gap-3">
-            {topBar}
-          </div>
           <div className={cn(
             'flex items-center justify-between gap-4 h-16',
             headerBorder ? 'border-b border-foreground/10' : ''
@@ -51,6 +48,9 @@ export function PageShell({
             {actions && (
               <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
             )}
+          </div>
+          <div className="flex items-center h-12 gap-3">
+            {topBar}
           </div>
         </div>
       ) : (

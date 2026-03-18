@@ -675,7 +675,7 @@ export default function TicketsPage() {
           placeholder="Search tickets..."
           value={search}
           onChange={setSearch}
-          className="w-64"
+          className="w-80"
         />
       }
       actions={
