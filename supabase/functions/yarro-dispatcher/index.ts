@@ -48,10 +48,9 @@ async function handleContractorSms(
     "1": manager.business_name || "Your property manager",
     "2": contractor.property_address || "Address not available",
     "3": contractor.issue_description || "Maintenance issue reported",
-    "4": mediaSummary,
-    "5": contractor.priority || "Standard",
-    "6": accessInfo,
-    "7": portalToken,
+    "4": contractor.priority || "Standard",
+    "5": accessInfo,
+    "6": portalToken,
   };
 
   // Send + log + alert via sendAndLog

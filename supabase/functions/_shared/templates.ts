@@ -15,7 +15,7 @@ export const TEMPLATES = {
   allocate_landlord: "HXeabe4ebe93c1f8d2401c0516bfd376ec",        // 2c_landlord_allocate
 
   // ─── Contractor Dispatch (yarro-dispatcher) ───
-  contractor_quote: "HX0a758deb4c7bc64d041f339135726fb3",     // 2_contractor_quote
+  contractor_quote: "HX15ae5e2d079ff7b0401bd09a767098ab",     // 2_contractor_quote_portal
   pm_quote: "HXfc449642c7c47ae1f85f3d903ee336e1",             // 3_pm_quote
   landlord_quote: "HXc667c8008203a80708c1a1596e4805ea",       // 3b_landlord_quote
   no_more_contractors: "HX158401383297f8b6f9d4848e507ea1b0",   // 2d_no_contractors
