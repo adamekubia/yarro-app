@@ -700,7 +700,7 @@ export function OnboardingWizard() {
                 text={saving ? 'Saving...' : state.step === 'contractors' ? 'Complete' : 'Next'}
                 onClick={handleNext}
                 disabled={saving}
-                className="w-28 text-sm h-8"
+                size="sm"
               />
             </div>
           </div>
@@ -775,7 +775,7 @@ export function OnboardingWizard() {
             <p className="text-xs text-muted-foreground">Batch ID: {state.batchId}</p>
             <div className="flex justify-center gap-3 pt-4">
               <Button variant="outline" onClick={resetWizard}>Import More</Button>
-              <InteractiveHoverButton text="Go to Dashboard" onClick={() => window.location.href = '/'} className="w-40 text-sm h-10" />
+              <InteractiveHoverButton text="Go to Dashboard" onClick={() => window.location.href = '/'} />
             </div>
           </div>
         )}

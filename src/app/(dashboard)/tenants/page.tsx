@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -14,7 +14,6 @@ import {
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,8 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
@@ -80,6 +81,17 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [properties, setProperties] = useState<PropertyOption[]>([])
+  const [search, setSearch] = useState('')
+  const filteredTenants = useMemo(() => {
+    if (!search) return tenants
+    const lower = search.toLowerCase()
+    return tenants.filter(t =>
+      t.full_name?.toLowerCase().includes(lower) ||
+      t.phone?.toLowerCase().includes(lower) ||
+      t.email?.toLowerCase().includes(lower) ||
+      t.address?.toLowerCase().includes(lower)
+    )
+  }, [tenants, search])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
@@ -338,13 +350,44 @@ export default function TenantsPage() {
       ),
     },
     {
-      key: 'role_tag',
-      header: 'Role',
-      sortable: true,
-      render: (t) => (
-        <Badge variant="outline" className="capitalize">
-          {t.role_tag || 'tenant'}
-        </Badge>
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedTenant(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedTenant(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]
@@ -454,35 +497,34 @@ export default function TenantsPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Tenants
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage tenant contacts across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
-        </div>
-      </div>
+    <PageShell
+      title="Tenants"
+      topBar={
+        <>
+          {/* TODO: replace with shared SearchInput component */}
+          <input
+            type="text"
+            placeholder="Search tenants..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+          />
+        </>
+      }
+      actions={
+        <>
+          <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} />
+        </>
+      }
+    >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
-          data={tenants}
+          data={filteredTenants}
           columns={columns}
-          searchPlaceholder="Search tenants..."
-          searchKeys={['full_name', 'phone', 'email', 'address']}
+          hideToolbar
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(t) => t.id}
           fillHeight
           emptyMessage={
@@ -628,6 +670,6 @@ export default function TenantsPage() {
         itemName={selectedTenant?.full_name || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

@@ -10,23 +10,24 @@ import { DataTable, Column } from '@/components/data-table'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogBody,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
+import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
+import { Ticket, RefreshCw, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SlaBadge } from '@/components/sla-badge'
 
 interface TicketRow {
@@ -384,6 +385,35 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
+  const handleArchiveRow = async (ticket: TicketRow) => {
+    const archivedAt = new Date().toISOString()
+
+    const { error: ticketError } = await supabase
+      .from('c1_tickets')
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
+      .eq('id', ticket.id)
+
+    if (ticketError) {
+      toast.error('Failed to archive ticket')
+      return
+    }
+
+    await supabase
+      .from('c1_messages')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('ticket_id', ticket.id)
+
+    if (ticket.conversation_id) {
+      await supabase
+        .from('c1_conversations')
+        .update({ archived: true, archived_at: archivedAt })
+        .eq('id', ticket.conversation_id)
+    }
+
+    toast.success('Ticket archived')
+    await fetchTickets()
+  }
+
   const handleDismissTicket = async () => {
     const dismissId = handoffTicketId || reviewTicketId
     if (!dismissId || !selectedTicketBasic) return
@@ -440,8 +470,8 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => (
         <div className="min-w-0 max-w-[400px]">
-          <p className="font-medium truncate">{ticket.issue_description || 'No description'}</p>
-          <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+          <p className="text-sm font-medium truncate">{ticket.address || 'No address'}</p>
+          <p className="text-xs text-muted-foreground truncate">{ticket.issue_description || 'No description'}</p>
         </div>
       ),
     },
@@ -514,32 +544,52 @@ export default function TicketsPage() {
       width: '48px',
       render: (ticket) => {
         const isOpen = ticket.status === 'open' && !ticket.archived
-        const isHandoff = ticket.handoff && isOpen
-        if (isHandoff) {
-          return (
-            <InteractiveHoverButton
-              text="Review"
-              className="w-20 text-xs h-7"
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedTicketBasic(ticket)
-                setHandoffTicketId(ticket.id)
-                setCreateDrawerOpen(true)
-              }}
-            />
-          )
-        }
-        if (!isOpen) return null
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 ml-auto"
-            title={ticket.on_hold ? 'Resume' : 'Hold'}
-            onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
-          >
-            {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/tickets?id=${ticket.id}`)
+                }}
+              >
+                View
+              </DropdownMenuItem>
+              {isOpen && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleHold(ticket)
+                    }}
+                  >
+                    {ticket.on_hold ? 'Resume' : 'Hold'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleArchiveRow(ticket)
+                    }}
+                  >
+                    Archive
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
     },
@@ -618,19 +668,18 @@ export default function TicketsPage() {
   }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Ticket className="h-5 w-5" />
-            Tickets
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage maintenance tickets across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageShell
+      title="Tickets"
+      topBar={
+        <CommandSearchInput
+          placeholder="Search tickets..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
+      actions={
+        <>
           <Button
             variant="ghost"
             size="icon"
@@ -641,12 +690,12 @@ export default function TicketsPage() {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           <InteractiveHoverButton
-            text="Create"
-            className="w-24 text-xs h-7"
+            text="Create ticket"
             onClick={() => setCreateDrawerOpen(true)}
           />
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
@@ -691,7 +740,7 @@ export default function TicketsPage() {
                   </div>
                   <InteractiveHoverButton
                     text="Triage"
-                    className="w-24 text-xs h-8"
+                    size="sm"
                     onClick={() => {
                       setSelectedTicketBasic(ticket)
                       setReviewTicketId(ticket.id)
@@ -705,7 +754,7 @@ export default function TicketsPage() {
         )
       })()}
 
-      {/* Filters + Date + Search */}
+      {/* Filters + Date */}
       <div className="flex-shrink-0 flex items-center gap-3 mb-3">
         <Popover>
           <PopoverTrigger asChild>
@@ -817,23 +866,16 @@ export default function TicketsPage() {
         </Popover>
 
         <DateFilter value={dateRange} onChange={setDateRange} />
-
-        <CommandSearchInput
-          placeholder="Search tickets..."
-          value={search}
-          onChange={setSearch}
-          className="flex-1 min-w-[160px]"
-        />
       </div>
 
       {/* Scrollable data region — single table */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={visibleRows}
           columns={columns}
           searchKeys={[]}
           hideToolbar
-          disableBodyScroll
+          fillHeight
           getRowId={t => t.id}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
@@ -865,40 +907,30 @@ export default function TicketsPage() {
         }}
       />
 
-      {/* Create / Complete / Review Ticket Modal */}
-      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>
-              {reviewTicketId ? 'Review & Dispatch' : handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <TicketForm
-              initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
-                property_id: selectedTicketBasic.property_id || '',
-                tenant_id: selectedTicketBasic.tenant_id || '',
-                issue_description: selectedTicketBasic.issue_description || '',
-                category: selectedTicketBasic.category || '',
-                priority: selectedTicketBasic.priority || 'Medium',
-                contractor_id: selectedTicketBasic.contractor_id || null,
-                availability: selectedTicketBasic.availability || '',
-                access: selectedTicketBasic.access || '',
-                images: (selectedTicketBasic as { images?: string[] }).images || [],
-                conversation_id: selectedTicketBasic.conversation_id || undefined,
-              } : undefined}
-              isHandoff={!!handoffTicketId}
-              isReview={!!reviewTicketId}
-              ticketId={reviewTicketId || handoffTicketId || null}
-              onSubmit={handleCreateTicket}
-              onCancel={handleCloseCreateDrawer}
-              onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
-              onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
-              submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
-            />
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+      {/* Create / Complete / Review Ticket Drawer */}
+      <TicketForm
+        open={createDrawerOpen}
+        onClose={handleCloseCreateDrawer}
+        initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
+          property_id: selectedTicketBasic.property_id || '',
+          tenant_id: selectedTicketBasic.tenant_id || '',
+          issue_description: selectedTicketBasic.issue_description || '',
+          category: selectedTicketBasic.category || '',
+          priority: selectedTicketBasic.priority || 'Medium',
+          contractor_id: selectedTicketBasic.contractor_id || null,
+          availability: selectedTicketBasic.availability || '',
+          access: selectedTicketBasic.access || '',
+          images: (selectedTicketBasic as { images?: string[] }).images || [],
+          conversation_id: selectedTicketBasic.conversation_id || undefined,
+        } : undefined}
+        isHandoff={!!handoffTicketId}
+        isReview={!!reviewTicketId}
+        ticketId={reviewTicketId || handoffTicketId || null}
+        onSubmit={handleCreateTicket}
+        onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
+        onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
+        submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
+      />
 
       {/* Archive Confirmation Dialog */}
       <ConfirmDeleteDialog
@@ -912,6 +944,6 @@ export default function TicketsPage() {
         confirmingLabel="Archiving..."
       />
 
-    </div>
+    </PageShell>
   )
 }

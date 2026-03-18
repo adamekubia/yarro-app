@@ -195,7 +195,7 @@ export default function LoginPage() {
                   type="submit"
                   text={loading ? 'Signing in...' : 'Sign in'}
                   disabled={loading}
-                  className="w-full h-11 font-medium"
+                  className="w-full font-medium"
                 />
               </form>
             </>
@@ -246,7 +246,7 @@ export default function LoginPage() {
                     type="submit"
                     text={loading ? 'Sending...' : 'Send reset link'}
                     disabled={loading}
-                    className="w-full h-11 font-medium"
+                    className="w-full font-medium"
                   />
                 </form>
               )}

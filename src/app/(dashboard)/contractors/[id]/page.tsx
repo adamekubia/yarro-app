@@ -184,8 +184,8 @@ export default function ContractorDetailPage() {
               </div>
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Phone</p>
@@ -195,7 +195,7 @@ export default function ContractorDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Mail className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Email</p>
@@ -205,7 +205,7 @@ export default function ContractorDetailPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <Tag className="h-4 w-4 text-warning" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Categories</p>
@@ -242,8 +242,8 @@ export default function ContractorDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className={`h-8 w-8 rounded-lg ${editedData.active ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center shrink-0 mt-0.5`}>
-                    <div className={`h-2.5 w-2.5 rounded-full ${editedData.active ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                  <div className={`h-8 w-8 rounded-lg ${editedData.active ? 'bg-success/10' : 'bg-danger/10'} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <div className={`h-2.5 w-2.5 rounded-full ${editedData.active ? 'bg-success' : 'bg-danger'}`} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Status</p>
@@ -254,14 +254,14 @@ export default function ContractorDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-1">Contact Method</p>
                     <div className="flex rounded-md border border-input overflow-hidden w-fit">
-                      <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-emerald-600 text-white' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
-                      <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-blue-600 text-white' : 'bg-background hover:bg-muted'}`}>Email</button>
+                      <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                      <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
                     </div>
                   </div>
                 </div>
@@ -312,8 +312,8 @@ export default function ContractorDetailPage() {
               {/* Meta info grid — icon + label + value */}
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
@@ -323,7 +323,7 @@ export default function ContractorDetailPage() {
 
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <Mail className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
@@ -333,7 +333,7 @@ export default function ContractorDetailPage() {
 
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <Tag className="h-4 w-4 text-warning" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Categories</p>
@@ -342,8 +342,8 @@ export default function ContractorDetailPage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className={`h-8 w-8 rounded-lg ${contractor.active ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center shrink-0 mt-0.5`}>
-                    <div className={`h-2.5 w-2.5 rounded-full ${contractor.active ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                  <div className={`h-8 w-8 rounded-lg ${contractor.active ? 'bg-success/10' : 'bg-danger/10'} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <div className={`h-2.5 w-2.5 rounded-full ${contractor.active ? 'bg-success' : 'bg-danger'}`} />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
@@ -351,8 +351,8 @@ export default function ContractorDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageCircle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageCircle className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Contact Method</p>

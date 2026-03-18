@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -26,8 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal } from 'lucide-react'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
+import { PageShell } from '@/components/page-shell'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
@@ -101,10 +103,20 @@ export default function PropertiesPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const openTicket = useOpenTicket()
   const [properties, setProperties] = useState<PropertyHub[]>([])
   const [selectedProperty, setSelectedProperty] = useState<PropertyHub | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredProperties = useMemo(() => {
+    if (!search) return properties
+    const lower = search.toLowerCase()
+    return properties.filter(p =>
+      p.address?.toLowerCase().includes(lower) ||
+      p.landlord_name?.toLowerCase().includes(lower)
+    )
+  }, [properties, search])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
@@ -391,9 +403,14 @@ export default function PropertiesPage() {
     {
       key: 'tenants',
       header: 'Tenants',
-      render: (p) => (
-        <Badge variant="outline">{getTenants(p.tenants).length}</Badge>
-      ),
+      render: (p) => {
+        const count = getTenants(p.tenants).length
+        return (
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
+        )
+      },
     },
     {
       key: 'open_tickets',
@@ -401,11 +418,54 @@ export default function PropertiesPage() {
       render: (p) => {
         const count = getTickets(p.open_tickets).length
         return count > 0 ? (
-          <Badge className="bg-primary">{count}</Badge>
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
         ) : (
-          <span className="text-muted-foreground">-</span>
+          <span className="text-muted-foreground">—</span>
         )
       },
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 
@@ -503,35 +563,34 @@ export default function PropertiesPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Properties
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your property portfolio
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
-        </div>
-      </div>
+    <PageShell
+      title="Properties"
+      topBar={
+        <>
+          {/* TODO: replace with shared SearchInput component */}
+          <input
+            type="text"
+            placeholder="Search properties..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+          />
+        </>
+      }
+      actions={
+        <>
+          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} />
+        </>
+      }
+    >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
-          data={properties}
+          data={filteredProperties}
           columns={columns}
-          searchPlaceholder="Search properties..."
-          searchKeys={['address', 'landlord_name']}
+          hideToolbar
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(p) => p.property_id || ''}
           emptyMessage="No properties found"
           loading={loading}
@@ -626,11 +685,10 @@ export default function PropertiesPage() {
                 ) : (
                   <div className="space-y-1.5">
                     {getTickets(selectedProperty.open_tickets).map((ticket) => (
-                      <Link
+                      <button
                         key={ticket.id}
-                        href={`/tickets?id=${ticket.id}`}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        onClick={handleCloseDrawer}
+                        onClick={() => { openTicket(ticket.id); handleCloseDrawer() }}
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors w-full text-left cursor-pointer"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <Ticket className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
@@ -639,7 +697,7 @@ export default function PropertiesPage() {
                           </span>
                         </div>
                         <StatusBadge status={ticket.job_stage} />
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -740,6 +798,6 @@ export default function PropertiesPage() {
         itemName={selectedProperty?.address || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

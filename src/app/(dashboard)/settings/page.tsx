@@ -6,7 +6,8 @@ import { usePM } from '@/contexts/pm-context'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { User, Mail, Building2, Lock, Settings } from 'lucide-react'
+import { User, Mail, Building2, Lock } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
 
 export default function SettingsPage() {
   const { propertyManager } = usePM()
@@ -40,16 +41,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          Settings
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Account and preferences
-        </p>
-      </div>
+    <PageShell title="Settings" subtitle="Account and preferences" scrollable>
+      <div className="max-w-2xl">
 
       {/* Account Info */}
       <div className="bg-card rounded-xl border p-6 space-y-4 mb-6">
@@ -106,10 +99,10 @@ export default function SettingsPage() {
             type="submit"
             text={saving ? 'Updating...' : 'Update Password'}
             disabled={saving || !newPassword}
-            className="w-40 text-sm h-9"
           />
         </form>
       </div>
-    </div>
+      </div>
+    </PageShell>
   )
 }

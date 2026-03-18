@@ -156,7 +156,7 @@ export function KanbanBoard({ tickets, onTicketClick, onHandoffReview }: KanbanB
                   action={
                     <InteractiveHoverButton
                       text="Review"
-                      className="w-20 text-xs h-6 p-1"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         onHandoffReview?.(ticket.id)
