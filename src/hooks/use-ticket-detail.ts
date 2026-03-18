@@ -40,7 +40,6 @@ export interface TicketContext {
   landlord_name: string
   landlord_email: string
   landlord_phone: string
-  landlord_id: string | null
   access_instructions: string
   emergency_access_contact: string
   auto_approve_limit: number

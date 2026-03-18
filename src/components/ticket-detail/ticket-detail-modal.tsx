@@ -14,8 +14,6 @@ import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
 import { TicketDispatchTab } from './ticket-dispatch-tab'
 import { TicketCompletionTab } from './ticket-completion-tab'
-import { TicketMessagesTab } from './ticket-messages-tab'
-import { TicketActivityTab } from './ticket-activity-tab'
 
 interface TicketDetailModalProps {
   ticketId: string | null
@@ -285,18 +283,6 @@ export function TicketDetailModal({
                     </span>
                   </button>
                 )}
-                {hasOutboundLog && (
-                  <button onClick={() => setActiveTab('messages')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                    <span className={cn(
-                      'text-sm font-medium transition-colors',
-                      activeTab === 'messages'
-                        ? 'text-primary'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}>
-                      Messages
-                    </span>
-                  </button>
-                )}
                 {(hasDispatch || hasOutboundLog || ledger.length > 0) && (
                   <button onClick={() => setActiveTab('dispatch')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
                     <span className={cn(
@@ -318,18 +304,6 @@ export function TicketDetailModal({
                         : 'text-muted-foreground hover:text-foreground'
                     )}>
                       Completion
-                    </span>
-                  </button>
-                )}
-                {ledger.length > 0 && (
-                  <button onClick={() => setActiveTab('activity')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                    <span className={cn(
-                      'text-sm font-medium transition-colors',
-                      activeTab === 'activity'
-                        ? 'text-primary'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}>
-                      Activity
                     </span>
                   </button>
                 )}
@@ -358,11 +332,6 @@ export function TicketDetailModal({
                 </div>
               )}
 
-              {activeTab === 'messages' && hasOutboundLog && (
-                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-                  <TicketMessagesTab outboundLog={outboundLog} />
-                </div>
-              )}
 
               {activeTab === 'dispatch' && (hasDispatch || hasOutboundLog || ledger.length > 0) && (
                 <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
@@ -376,11 +345,6 @@ export function TicketDetailModal({
                 </div>
               )}
 
-              {activeTab === 'activity' && ledger.length > 0 && (
-                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-                  <TicketActivityTab ledger={ledger} />
-                </div>
-              )}
             </div>
           ) : (
             <div className="text-center flex-1 flex items-center justify-center text-muted-foreground">
