@@ -812,7 +812,7 @@ export default function RulesPage() {
                 value={draft.min_booking_lead_hours}
                 onValueChange={(v) => updateDraft({ min_booking_lead_hours: v })}
               >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
