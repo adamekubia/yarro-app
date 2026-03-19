@@ -15,12 +15,12 @@ interface EmailContent {
 const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   // ─── Contractor Messages ───
 
-  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=media, 5=priority, 6=access, 7=portalToken
+  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=priority, 5=access, 6=portalToken
   contractor_dispatch: (v) => ({
     subject: `New Job Request — ${v["3"] || "Maintenance issue"}`,
     heading: "New Job Request",
     body: `You have a new maintenance job request from ${v["1"] || "your property manager"} at ${v["2"] || "a property"}.`,
-    cta: v["7"] ? { text: "View Details & Submit Quote", url: `https://app.yarro.ai/contractor/${v["7"]}` } : undefined,
+    cta: v["6"] ? { text: "View Details & Submit Quote", url: `https://app.yarro.ai/contractor/${v["6"]}` } : undefined,
   }),
 
   // scheduling finalize-job: 1=address, 2=issue, 3=quote, 4=access, 5=contractorToken
