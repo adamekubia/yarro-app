@@ -2,7 +2,7 @@
 
 import { format, formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Users, Wrench, Crown, Phone, Building2, CalendarClock } from 'lucide-react'
+import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import Link from 'next/link'
 import { formatCurrency } from '@/hooks/use-ticket-detail'
@@ -465,30 +465,48 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         </>
       )}
 
-      {/* ── Photos (conditional) ── */}
+      {/* ── Media (conditional) ── */}
       {images.length > 0 && (
         <>
           <div className="border-t border-border/40" />
           <div className="px-6 py-4">
             <p className="text-sm font-semibold text-foreground mb-3">
-              Photos ({images.length})
+              Media ({images.length})
             </p>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {images.map((url, index) => (
-                <a
-                  key={index}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block group"
-                >
-                  <img
-                    src={url}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                  />
-                </a>
-              ))}
+              {images.map((url, index) => {
+                const isVideo = /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes('/video/')
+                return isVideo ? (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group relative"
+                  >
+                    <div className="w-full h-20 rounded-lg border bg-muted flex items-center justify-center group-hover:opacity-80 transition-opacity">
+                      <div className="w-8 h-8 rounded-full bg-foreground/80 flex items-center justify-center">
+                        <Play className="w-4 h-4 text-background fill-background ml-0.5" />
+                      </div>
+                    </div>
+                    <span className="absolute bottom-1 left-1.5 text-[9px] font-medium bg-foreground/70 text-background px-1 rounded">VIDEO</span>
+                  </a>
+                ) : (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                )
+              })}
             </div>
           </div>
         </>

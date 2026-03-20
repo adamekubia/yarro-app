@@ -231,7 +231,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
         <div className="flex items-center gap-6">
           <button
             onClick={() => setLeftTab('todo')}
-            className="flex items-center transition-colors group focus:outline-none"
+            className="flex items-center gap-1.5 transition-colors group focus:outline-none"
           >
             <span className={cn(
               'text-base font-semibold transition-colors',
@@ -241,10 +241,18 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             )}>
               To-do
             </span>
+            {actionable.length > 0 && (
+              <span className={cn(
+                'text-xs font-medium transition-colors',
+                leftTab === 'todo' ? 'text-primary/60' : 'text-muted-foreground/50'
+              )}>
+                {actionable.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className="flex items-center transition-colors group focus:outline-none"
+            className="flex items-center gap-1.5 transition-colors group focus:outline-none"
           >
             <span className={cn(
               'text-base font-semibold transition-colors',
@@ -254,6 +262,14 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             )}>
               In Progress
             </span>
+            {inProgressTickets.length > 0 && (
+              <span className={cn(
+                'text-xs font-medium transition-colors',
+                leftTab === 'in_progress' ? 'text-primary/60' : 'text-muted-foreground/50'
+              )}>
+                {inProgressTickets.length}
+              </span>
+            )}
           </button>
         </div>
       </div>
