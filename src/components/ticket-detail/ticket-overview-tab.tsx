@@ -484,12 +484,18 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
                     rel="noopener noreferrer"
                     className="block group relative"
                   >
-                    <div className="w-full h-20 rounded-lg border bg-muted flex items-center justify-center group-hover:opacity-80 transition-opacity">
-                      <div className="w-8 h-8 rounded-full bg-foreground/80 flex items-center justify-center">
-                        <Play className="w-4 h-4 text-background fill-background ml-0.5" />
+                    <video
+                      src={url}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-foreground/70 flex items-center justify-center">
+                        <Play className="w-3.5 h-3.5 text-background fill-background ml-0.5" />
                       </div>
                     </div>
-                    <span className="absolute bottom-1 left-1.5 text-[9px] font-medium bg-foreground/70 text-background px-1 rounded">VIDEO</span>
                   </a>
                 ) : (
                   <a
