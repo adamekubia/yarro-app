@@ -31,6 +31,7 @@ export const TEMPLATES = {
 
   // ─── Job Reminder (yarro-job-reminder) ───
   contractor_job_reminder: "HXda58fda394cba7fc4e91d2b42bd9ee36", // 6_contractor_job
+  tenant_job_reminder: "HXe685750335d1aba51926fdd0852b747a",     // 6b_tenant_job_reminder
 
   // ─── Completion (yarro-completion) ───
   pm_job_completed: "HX3a0180411b1dca11e958c23b6945f4d4",        // 7_pm_job_completed
