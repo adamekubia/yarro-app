@@ -29,6 +29,7 @@ const STAGE_MAP: Record<string, string> = {
   pm_job_booked: 'Booking Confirmed',
   ll_job_booked: 'Booking Confirmed',
   contractor_job_reminder: 'Day-of Reminder',
+  tenant_job_reminder: 'Day-of Reminder',
   contractor_completion_reminder: 'Completion Reminder',
   pm_completion_overdue: 'Completion Overdue',
   pm_job_completed: 'Job Completed',
