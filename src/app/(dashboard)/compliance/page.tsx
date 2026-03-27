@@ -178,7 +178,7 @@ export default function CompliancePage() {
         searchKeys={['certificate_type', 'property_address', 'issued_by', 'status']}
         getRowId={(row) => row.id}
         onRowClick={(row) => {
-          window.location.href = `/properties/${row.property_id}`
+          window.location.href = `/compliance/${row.id}`
         }}
         loading={loading}
         emptyMessage={
