@@ -71,6 +71,35 @@ Always work on a task branch.
 
 ---
 
+## Architecture Rules
+
+### Backend-First — Non Negotiable
+All business logic lives in Supabase RPCs, not the frontend.
+
+Rules:
+- Never put business logic in React components or hooks
+- Never compute derived state (status, counts, summaries) in the frontend
+- Always write an RPC for operations involving business logic
+- Direct table access (.from().select()) only for simple reads
+  with no logic involved
+- Every new feature starts with the RPC, then the UI consumes it
+
+### RPC Pattern
+1. Write the SQL function in a new migration file
+2. Test it in Supabase dashboard SQL editor first
+3. Deploy via: supabase db push
+4. Regenerate types: supabase gen types typescript --project-id qedsceehrrvohsjmbodc > src/types/database.ts
+5. Build the UI to consume it
+
+### Why This Matters For Yarro
+- Security: logic never exposed to frontend
+- Consistency: one source of truth for all clients
+- Audit trail: database-level logging on every operation
+- Performance: one round trip instead of many
+- Scale: mobile app, API, WhatsApp bot all call same RPCs
+
+---
+
 ## Caution Zones
 
 These files are complex and have non-obvious behavior. Read thoroughly before modifying and back up first.
@@ -81,7 +110,7 @@ These files are complex and have non-obvious behavior. Read thoroughly before mo
 | `supabase/functions/yarro-tenant-intake/prompts.ts` | 1,550 lines of AI prompts. Backend code parses exact emoji + phrases. See `.claude/docs/hmo-pivot-plan.md` Section 10 for the list of load-bearing phrases |
 | `src/contexts/pm-context.tsx` | Auth state provider — has race-condition fixes for Supabase GitHub issue #35754. Two-layer pattern (authUser + PM record) is intentional |
 | `src/middleware.ts` + `src/lib/supabase/` | Auth session management — cookie refresh on every request. `getSession()` vs `getUser()` choice is deliberate |
-| `types/database.ts` | Auto-generated from Supabase. Manual edits get overwritten on next type generation |
+| `src/types/database.ts` | Auto-generated from Supabase. Manual edits get overwritten on next type generation |
 | `src/hooks/use-ticket-detail.ts` | Large hook (600+ lines) tightly coupled to DB schema. Fetches 5-7 queries in parallel |
 | Database RPCs (`c1_context_logic`, `c1_create_ticket`, etc.) | Core business logic in PostgreSQL. Backed up in `.backups/supabase-export-2026-03-26/` |
 
@@ -97,7 +126,6 @@ These files are complex and have non-obvious behavior. Read thoroughly before mo
 1. Commit with clear prefixed messages: `feat:`, `fix:`, `style:`, `refactor:`
 2. **Before pushing, always run:** `npm run build` (pre-push hook enforces this)
 3. Push to `origin` (your fork)
-4. Always work on a task branch — never commit directly to `main` or `feat/hmo-compliance`
 
 ---
 
