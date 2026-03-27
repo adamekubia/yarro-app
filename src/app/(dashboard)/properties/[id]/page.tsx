@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { PropertyComplianceSection } from '@/components/property-compliance-section'
+import { PropertyRoomsSection } from '@/components/property-rooms-section'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -566,6 +567,14 @@ export default function PropertyDetailPage() {
             <>
               <div className="border-t border-border/40 mt-8 flex-shrink-0" />
               <PropertyComplianceSection propertyId={propertyId} pmId={propertyManager.id} />
+            </>
+          )}
+
+          {/* Rooms — independent of edit mode */}
+          {propertyManager && (
+            <>
+              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
+              <PropertyRoomsSection propertyId={propertyId} pmId={propertyManager.id} />
             </>
           )}
 

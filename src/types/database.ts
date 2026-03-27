@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           certificate_number: string | null
           certificate_type: Database["public"]["Enums"]["certificate_type"]
+          contractor_id: string | null
           created_at: string
           document_url: string | null
           expiry_date: string | null
@@ -27,12 +28,15 @@ export type Database = {
           notes: string | null
           property_id: string
           property_manager_id: string | null
+          reminder_days_before: number | null
+          reminder_sent_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
           certificate_number?: string | null
           certificate_type: Database["public"]["Enums"]["certificate_type"]
+          contractor_id?: string | null
           created_at?: string
           document_url?: string | null
           expiry_date?: string | null
@@ -42,12 +46,15 @@ export type Database = {
           notes?: string | null
           property_id: string
           property_manager_id?: string | null
+          reminder_days_before?: number | null
+          reminder_sent_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           certificate_number?: string | null
           certificate_type?: Database["public"]["Enums"]["certificate_type"]
+          contractor_id?: string | null
           created_at?: string
           document_url?: string | null
           expiry_date?: string | null
@@ -57,10 +64,19 @@ export type Database = {
           notes?: string | null
           property_id?: string
           property_manager_id?: string | null
+          reminder_days_before?: number | null
+          reminder_sent_at?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "c1_compliance_certificates_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "c1_contractors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "c1_compliance_certificates_property_id_fkey"
             columns: ["property_id"]
@@ -1742,6 +1758,15 @@ export type Database = {
         Returns: undefined
       }
       c1_landlord_timeout_check: { Args: never; Returns: number }
+      c1_log_compliance_event: {
+        Args: {
+          p_event_type: string
+          p_metadata?: Json
+          p_pm_id: string
+          p_property_label?: string
+        }
+        Returns: undefined
+      }
       c1_log_event: {
         Args: {
           p_actor_name?: string
@@ -1930,6 +1955,7 @@ export type Database = {
         Returns: {
           certificate_number: string
           certificate_type: string
+          contractor_id: string
           created_at: string
           document_url: string
           expiry_date: string
@@ -1939,6 +1965,8 @@ export type Database = {
           notes: string
           property_id: string
           property_manager_id: string
+          reminder_days_before: number
+          reminder_sent_at: string
           status: string
           updated_at: string
         }[]
@@ -1948,17 +1976,91 @@ export type Database = {
         Args: {
           p_certificate_number?: string
           p_certificate_type: string
+          p_contractor_id?: string
           p_expiry_date?: string
           p_issued_by?: string
           p_issued_date?: string
           p_notes?: string
           p_pm_id: string
           p_property_id: string
+          p_reminder_days_before?: number
         }
         Returns: string
       }
+      get_compliance_expiring: {
+        Args: { p_days_ahead?: number; p_pm_id?: string }
+        Returns: {
+          cert_id: string
+          certificate_type: string
+          contractor_contact_method: string
+          contractor_email: string
+          contractor_id: string
+          contractor_name: string
+          contractor_phone: string
+          days_remaining: number
+          expiry_date: string
+          pm_email: string
+          pm_name: string
+          pm_phone: string
+          property_address: string
+          property_id: string
+          property_manager_id: string
+          reminder_days_before: number
+        }[]
+      }
       get_pm_id: { Args: never; Returns: string }
+      get_rooms_for_property: {
+        Args: { p_pm_id: string; p_property_id: string }
+        Returns: {
+          created_at: string
+          current_tenant_id: string
+          floor: string
+          id: string
+          is_vacant: boolean
+          monthly_rent: number
+          property_id: string
+          rent_due_day: number
+          rent_frequency: string
+          room_name: string
+          room_number: string
+          tenancy_end_date: string
+          tenancy_start_date: string
+          tenant_name: string
+        }[]
+      }
       norm_uk_postcode: { Args: { p_in: string }; Returns: string }
+      room_assign_tenant: {
+        Args: {
+          p_pm_id: string
+          p_room_id: string
+          p_tenancy_end?: string
+          p_tenancy_start: string
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
+      room_delete: {
+        Args: { p_pm_id: string; p_room_id: string }
+        Returns: boolean
+      }
+      room_remove_tenant: {
+        Args: { p_pm_id: string; p_room_id: string }
+        Returns: undefined
+      }
+      room_upsert: {
+        Args: {
+          p_floor?: string
+          p_monthly_rent?: number
+          p_pm_id: string
+          p_property_id: string
+          p_rent_due_day?: number
+          p_rent_frequency?: string
+          p_room_id?: string
+          p_room_name?: string
+          p_room_number: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
