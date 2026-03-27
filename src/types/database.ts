@@ -966,6 +966,89 @@ export type Database = {
         }
         Relationships: []
       }
+      c1_rooms: {
+        Row: {
+          created_at: string | null
+          current_tenant_id: string | null
+          floor: string | null
+          id: string
+          is_vacant: boolean | null
+          monthly_rent: number | null
+          property_id: string
+          property_manager_id: string
+          rent_due_day: number | null
+          rent_frequency: string
+          room_name: string | null
+          room_number: string
+          tenancy_end_date: string | null
+          tenancy_start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_tenant_id?: string | null
+          floor?: string | null
+          id?: string
+          is_vacant?: boolean | null
+          monthly_rent?: number | null
+          property_id: string
+          property_manager_id: string
+          rent_due_day?: number | null
+          rent_frequency?: string
+          room_name?: string | null
+          room_number: string
+          tenancy_end_date?: string | null
+          tenancy_start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_tenant_id?: string | null
+          floor?: string | null
+          id?: string
+          is_vacant?: boolean | null
+          monthly_rent?: number | null
+          property_id?: string
+          property_manager_id?: string
+          rent_due_day?: number | null
+          rent_frequency?: string
+          room_name?: string | null
+          room_number?: string
+          tenancy_end_date?: string | null
+          tenancy_start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_rooms_current_tenant_id_fkey"
+            columns: ["current_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_properties_hub"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "c1_rooms_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       c1_tenants: {
         Row: {
           _audit_log: Json | null
@@ -980,6 +1063,7 @@ export type Database = {
           property_id: string | null
           property_manager_id: string | null
           role_tag: string | null
+          room_id: string | null
           verified_by: string | null
         }
         Insert: {
@@ -995,6 +1079,7 @@ export type Database = {
           property_id?: string | null
           property_manager_id?: string | null
           role_tag?: string | null
+          room_id?: string | null
           verified_by?: string | null
         }
         Update: {
@@ -1010,6 +1095,7 @@ export type Database = {
           property_id?: string | null
           property_manager_id?: string | null
           role_tag?: string | null
+          room_id?: string | null
           verified_by?: string | null
         }
         Relationships: [
@@ -1018,6 +1104,13 @@ export type Database = {
             columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_tenants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "c1_rooms"
             referencedColumns: ["id"]
           },
           {
@@ -1095,6 +1188,7 @@ export type Database = {
           reschedule_requested: boolean | null
           reschedule_status: string | null
           resolved_at: string | null
+          room_id: string | null
           scheduled_date: string | null
           sla_due_at: string | null
           status: string
@@ -1165,6 +1259,7 @@ export type Database = {
           reschedule_requested?: boolean | null
           reschedule_status?: string | null
           resolved_at?: string | null
+          room_id?: string | null
           scheduled_date?: string | null
           sla_due_at?: string | null
           status?: string
@@ -1235,6 +1330,7 @@ export type Database = {
           reschedule_requested?: boolean | null
           reschedule_status?: string | null
           resolved_at?: string | null
+          room_id?: string | null
           scheduled_date?: string | null
           sla_due_at?: string | null
           status?: string
@@ -1260,6 +1356,13 @@ export type Database = {
             columns: ["property_manager_id"]
             isOneToOne: false
             referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_tickets_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "c1_rooms"
             referencedColumns: ["id"]
           },
           {
@@ -1542,6 +1645,7 @@ export type Database = {
           reschedule_requested: boolean | null
           reschedule_status: string | null
           resolved_at: string | null
+          room_id: string | null
           scheduled_date: string | null
           sla_due_at: string | null
           status: string
