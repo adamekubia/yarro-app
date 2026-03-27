@@ -4,12 +4,11 @@ import { Trash2 } from 'lucide-react'
 import { StatusBadge } from '@/components/status-badge'
 import {
   CERTIFICATE_LABELS,
-  computeCertificateStatus,
   type ComplianceCertificate,
 } from '@/lib/constants'
 
 interface CertificateRowProps {
-  certificate: Pick<ComplianceCertificate, 'id' | 'certificate_type' | 'expiry_date' | 'issued_by'>
+  certificate: Pick<ComplianceCertificate, 'id' | 'certificate_type' | 'expiry_date' | 'issued_by'> & { status?: string }
   onDelete?: (id: string) => void
 }
 
@@ -23,7 +22,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 export function CertificateRow({ certificate, onDelete }: CertificateRowProps) {
-  const status = computeCertificateStatus(certificate.expiry_date)
+  const status = certificate.status ?? 'missing'
   const label = CERTIFICATE_LABELS[certificate.certificate_type] || certificate.certificate_type
 
   return (

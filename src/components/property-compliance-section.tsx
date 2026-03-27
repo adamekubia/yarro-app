@@ -25,17 +25,16 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
   const [deleteTarget, setDeleteTarget] = useState<ComplianceCertificate | null>(null)
 
   const fetchCertificates = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('c1_compliance_certificates')
-      .select('*')
-      .eq('property_id', propertyId)
-      .order('expiry_date', { ascending: true, nullsFirst: true })
+    const { data, error } = await supabase.rpc('compliance_get_certificates', {
+      p_property_id: propertyId,
+      p_pm_id: pmId,
+    })
 
     if (error) {
       toast.error('Failed to load certificates')
       return
     }
-    setCertificates(data || [])
+    setCertificates((data as unknown as ComplianceCertificate[]) || [])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable, same pattern as other pages
   }, [propertyId])
@@ -45,43 +44,33 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
   }, [fetchCertificates])
 
   const handleAdd = async (formData: CertificateFormData) => {
-    // If replacing an existing cert of this type, delete it first
-    const existing = certificates.find(
+    const wasReplacement = certificates.some(
       (c) => c.certificate_type === formData.certificate_type
     )
-    if (existing) {
-      const { error: deleteError } = await supabase
-        .from('c1_compliance_certificates')
-        .delete()
-        .eq('id', existing.id)
-      if (deleteError) throw new Error('Failed to replace existing certificate')
-    }
 
-    const { error } = await supabase.from('c1_compliance_certificates').insert({
-      property_id: propertyId,
-      property_manager_id: pmId,
-      certificate_type: formData.certificate_type,
-      issued_date: formData.issued_date,
-      expiry_date: formData.expiry_date,
-      certificate_number: formData.certificate_number,
-      issued_by: formData.issued_by,
-      notes: formData.notes,
+    const { error } = await supabase.rpc('compliance_upsert_certificate', {
+      p_property_id: propertyId,
+      p_pm_id: pmId,
+      p_certificate_type: formData.certificate_type,
+      p_issued_date: formData.issued_date,
+      p_expiry_date: formData.expiry_date,
+      p_certificate_number: formData.certificate_number,
+      p_issued_by: formData.issued_by,
+      p_notes: formData.notes,
     })
 
     if (error) throw new Error('Failed to add certificate')
 
-    toast.success(
-      existing ? 'Certificate replaced' : 'Certificate added'
-    )
+    toast.success(wasReplacement ? 'Certificate replaced' : 'Certificate added')
     await fetchCertificates()
   }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
-    const { error } = await supabase
-      .from('c1_compliance_certificates')
-      .delete()
-      .eq('id', deleteTarget.id)
+    const { error } = await supabase.rpc('compliance_delete_certificate', {
+      p_cert_id: deleteTarget.id,
+      p_pm_id: pmId,
+    })
 
     if (error) {
       toast.error('Failed to delete certificate')

@@ -1817,6 +1817,42 @@ export type Database = {
         }
         Returns: string
       }
+      compliance_delete_certificate: {
+        Args: { p_cert_id: string; p_pm_id: string }
+        Returns: boolean
+      }
+      compliance_get_certificates: {
+        Args: { p_pm_id: string; p_property_id: string }
+        Returns: {
+          certificate_number: string
+          certificate_type: string
+          created_at: string
+          document_url: string
+          expiry_date: string
+          id: string
+          issued_by: string
+          issued_date: string
+          notes: string
+          property_id: string
+          property_manager_id: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      compliance_get_summary: { Args: { p_pm_id: string }; Returns: Json }
+      compliance_upsert_certificate: {
+        Args: {
+          p_certificate_number?: string
+          p_certificate_type: string
+          p_expiry_date?: string
+          p_issued_by?: string
+          p_issued_date?: string
+          p_notes?: string
+          p_pm_id: string
+          p_property_id: string
+        }
+        Returns: string
+      }
       get_pm_id: { Args: never; Returns: string }
       norm_uk_postcode: { Args: { p_in: string }; Returns: string }
       show_limit: { Args: never; Returns: number }

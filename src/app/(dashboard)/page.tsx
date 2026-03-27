@@ -38,7 +38,6 @@ import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button
 import { formatDistanceToNow, format } from 'date-fns'
 import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
-import { computeCertificateStatus } from '@/lib/constants'
 
 interface DashboardStats {
   totalTickets: number
@@ -473,23 +472,18 @@ export default function DashboardPage() {
         p_limit: 15,
         p_cursor: null,
       } as never),
-      // Compliance certificates — lightweight query for dashboard summary
-      supabase
-        .from('c1_compliance_certificates')
-        .select('expiry_date')
-        .eq('property_manager_id', propertyManager.id),
+      // Compliance summary — RPC returns counts by status
+      supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
     ])
 
-    // Process compliance summary
-    const certs = complianceRes?.data || []
-    const summary = { expired: 0, expiring: 0, valid: 0, total: certs.length }
-    for (const cert of certs) {
-      const status = computeCertificateStatus(cert.expiry_date)
-      if (status === 'expired') summary.expired++
-      else if (status === 'expiring') summary.expiring++
-      else if (status === 'valid') summary.valid++
-    }
-    setComplianceSummary(summary)
+    // Process compliance summary — RPC returns { expired, expiring, valid, missing, total }
+    const summaryData = complianceRes?.data as Record<string, number> | null
+    setComplianceSummary({
+      expired: summaryData?.expired ?? 0,
+      expiring: summaryData?.expiring ?? 0,
+      valid: summaryData?.valid ?? 0,
+      total: summaryData?.total ?? 0,
+    })
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
