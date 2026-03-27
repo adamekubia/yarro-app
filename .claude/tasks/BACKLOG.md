@@ -26,3 +26,5 @@ Review each morning when writing the day's PRD.
 - [2026-03-27] Migrate compliance CRUD to RPCs — move insert/update/delete from property-compliance-section.tsx to Supabase RPCs (backend-first rule) [priority: high]
 - [2026-03-27] Migrate certificate status computation to RPC — replace client-side computeCertificateStatus with DB-level status, return expiring/expired counts from RPC [priority: high]
 - [2026-03-27] Migrate dashboard compliance summary to RPC — replace direct query + client-side aggregation with a single RPC returning expired/expiring/valid counts [priority: high]
+- [2026-03-27] UI warmth pass — soften corporate feel, friendlier tone/copy, approachable styling for landlords and smaller agencies (aligned with new ICP) [priority: medium]
+- [2026-03-27] Repo cleanup — prune stale branches (local + remote), tidy GitHub repo settings/description [priority: low]

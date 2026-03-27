@@ -159,23 +159,31 @@ Run this before telling Adam a change is complete:
 
 ## Current Project: HMO Pivot
 
-Yarro PM is pivoting to focus on HMO (Houses in Multiple Occupation) property management.
+Yarro PM is pivoting to focus on HMO (Houses in Multiple Occupation) property management. Phase 1 (compliance tracking) is complete. Phase 2 (HMO layer) is a 10-day sprint targeting demo-ready by ~11 April 2026.
 
-See these docs for full context:
-- `.claude/docs/hmo-pivot-plan.md` — phased build plan, what stays/changes/is new
-- `.claude/docs/code-issues.md` — known code quality issues to fix incrementally
+### Build Specs
 
-**Build order:**
-1. ~~Phase 1: Compliance tracking (certificates, expiry dates, dashboard card)~~ **DONE**
-2. **Phase 2: Room layer (rooms table, room assignment, size validation)** ← active
-3. Phase 3: Room-aware tickets
-4. Phase 4: Compliance automation + room-aware intake
+Product specs and build order live in `docs/`:
+
+- `docs/PRD.md` — product requirements, core loop, demo scope
+- `docs/BUILD-ORDER.md` — 10-day sprint plan, daily goals, done-when criteria
+- `docs/schema/TECH-LEDGER.md` — full data schema, new tables, RPCs, edge functions
+- `docs/modules/01-room-layer.md` — room layer spec (Days 1–4)
+- `docs/modules/02-compliance-automation.md` — compliance automation spec (Days 6–7)
+- `docs/modules/03-rent-tracking.md` — rent tracking spec (Days 8–9)
+- `docs/modules/04-whatsapp-room-awareness.md` — WhatsApp room awareness spec (Day 5)
+
+Before starting any build task, read the relevant module file + `docs/schema/TECH-LEDGER.md`.
+
+### Known Issues
+
+- `.claude/docs/code-issues.md` — code quality issues to fix incrementally
 
 ---
 
 ## Product Vision
 
-Yarro targets UK HMO letting agencies (100–500 units). Full context: `.claude/docs/product-vision.md`
+Yarro targets R2R operators and small HMO landlords (3–20 units). Full context: `docs/PRD.md`
 
 **Build decisions should always ask:**
 - Does this serve an HMO agency specifically or is it generic?
@@ -220,11 +228,13 @@ One paragraph of what happened.
 
 | File | When to Read |
 |------|-------------|
+| `docs/PRD.md` | Product requirements, core loop, demo scope |
+| `docs/BUILD-ORDER.md` | Sprint plan, daily goals, what to build next |
+| `docs/schema/TECH-LEDGER.md` | Data schema, RPCs, edge functions |
+| `docs/modules/01–04-*.md` | Detailed spec for each feature module |
 | `.claude/docs/architecture.md` | Understanding how Yarro works |
 | `.claude/docs/patterns.md` | Before creating or modifying components |
-| `.claude/docs/hmo-pivot-plan.md` | HMO pivot phases, build order, what stays/changes |
 | `.claude/docs/code-issues.md` | Known code quality issues and priorities |
-| `.claude/docs/product-vision.md` | Product positioning, ICP, HMO context |
 | `.claude/docs/infrastructure.md` | Service credentials and URLs |
 | `.claude/docs/setup-guide.md` | Environment setup reference |
 | `.claude/docs/git-workflow.md` | Git operations reference |
