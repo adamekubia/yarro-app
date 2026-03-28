@@ -310,12 +310,12 @@ export function CertificateFormDialog({
                 <p className="text-sm text-muted-foreground mb-1.5">
                   Auto-dispatch contractor for renewal
                 </p>
-                <Select value={contractorId} onValueChange={setContractorId}>
+                <Select value={contractorId || 'none'} onValueChange={(v) => setContractorId(v === 'none' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="None (notify me only)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (notify me only)</SelectItem>
+                    <SelectItem value="none">None (notify me only)</SelectItem>
                     {contractors.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.contractor_name}
