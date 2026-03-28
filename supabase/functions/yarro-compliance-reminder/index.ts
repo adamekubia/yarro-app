@@ -125,8 +125,6 @@ async function processCert(
       messageType: "compliance_expiry_operator",
       templateSid: TEMPLATES.compliance_expiry_operator,
       variables,
-      // Force email channel since WhatsApp template is pending approval
-      channel: "email",
       recipientEmail: cert.pm_email || undefined,
     });
 

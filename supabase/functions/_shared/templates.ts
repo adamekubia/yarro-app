@@ -49,8 +49,7 @@ export const TEMPLATES = {
   pm_reschedule_approved: "HXe65aba3e4c039787600546a41f151c54",     // 8d_pm_reschedule_approved
 
   // ─── Compliance Reminders (yarro-compliance-reminder) ───
-  // WhatsApp template pending Twilio approval — email-only for now
-  compliance_expiry_operator: "PLACEHOLDER_PENDING_TWILIO_APPROVAL",
+  compliance_expiry_operator: "HX8f836e6e12955e849bf09b00e9f71295",  // compliance_expiry_operator_contractor
 
   // ─── Followups (yarro-followups) ───
   contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder
