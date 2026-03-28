@@ -14,6 +14,7 @@ import {
   User,
   Search,
   ShieldCheck,
+  Banknote,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -413,6 +414,9 @@ export default function DashboardPage() {
   const [complianceSummary, setComplianceSummary] = useState<{
     expired: number; expiring: number; valid: number; total: number
   }>({ expired: 0, expiring: 0, valid: 0, total: 0 })
+  const [rentSummary, setRentSummary] = useState<{
+    paid: number; outstanding: number; overdue: number; partial: number; total: number
+  }>({ paid: 0, outstanding: 0, overdue: 0, partial: 0, total: 0 })
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -420,7 +424,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, rentRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -474,6 +478,8 @@ export default function DashboardPage() {
       } as never),
       // Compliance summary — RPC returns counts by status
       supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
+      // Rent dashboard summary — portfolio-wide current month
+      supabase.rpc('get_rent_dashboard_summary', { p_pm_id: propertyManager.id }),
     ])
 
     // Process compliance summary — RPC returns { expired, expiring, valid, missing, total }
@@ -483,6 +489,16 @@ export default function DashboardPage() {
       expiring: summaryData?.expiring ?? 0,
       valid: summaryData?.valid ?? 0,
       total: summaryData?.total ?? 0,
+    })
+
+    // Process rent summary — portfolio-wide current month
+    const rentData = rentRes?.data as Record<string, number> | null
+    setRentSummary({
+      paid: rentData?.paid ?? 0,
+      outstanding: rentData?.outstanding ?? 0,
+      overdue: rentData?.overdue ?? 0,
+      partial: rentData?.partial ?? 0,
+      total: rentData?.total ?? 0,
     })
 
     const tickets = ticketsRes.data
@@ -883,6 +899,54 @@ export default function DashboardPage() {
                         <span className="w-2 h-2 rounded-full bg-success" />
                         <span className="text-sm text-muted-foreground">{complianceSummary.valid} valid</span>
                       </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Rent summary — current month, portfolio-wide */}
+            <div className="flex flex-col min-w-0 bg-card border border-border rounded-xl overflow-hidden flex-shrink-0">
+              <div className="flex items-center px-6 pt-3 pb-3 flex-shrink-0 border-b border-foreground/10">
+                <span className="text-base font-semibold text-muted-foreground flex items-center gap-2 flex-1 min-w-0">
+                  <Banknote className="h-4 w-4" />
+                  Rent &mdash; {format(new Date(), 'MMMM yyyy')}
+                </span>
+                <Link href="/properties" className="flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+                    View all
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="px-6 py-4">
+                {rentSummary.total === 0 ? (
+                  <p className="text-sm text-muted-foreground/50">No rent entries this month</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {rentSummary.paid > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-success" />
+                        <span className="text-sm text-muted-foreground">{rentSummary.paid} paid</span>
+                      </div>
+                    )}
+                    {rentSummary.outstanding > 0 && (
+                      <Link href="/properties" className="flex items-center gap-2 hover:underline">
+                        <span className="w-2 h-2 rounded-full bg-warning" />
+                        <span className="text-sm font-medium text-warning">{rentSummary.outstanding} outstanding</span>
+                      </Link>
+                    )}
+                    {rentSummary.partial > 0 && (
+                      <Link href="/properties" className="flex items-center gap-2 hover:underline">
+                        <span className="w-2 h-2 rounded-full bg-warning" />
+                        <span className="text-sm font-medium text-warning">{rentSummary.partial} partial</span>
+                      </Link>
+                    )}
+                    {rentSummary.overdue > 0 && (
+                      <Link href="/properties" className="flex items-center gap-2 hover:underline">
+                        <span className="w-2 h-2 rounded-full bg-danger" />
+                        <span className="text-sm font-medium text-danger">{rentSummary.overdue} overdue</span>
+                      </Link>
                     )}
                   </div>
                 )}

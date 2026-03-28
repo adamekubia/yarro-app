@@ -2099,6 +2099,7 @@ export type Database = {
         }[]
       }
       get_pm_id: { Args: never; Returns: string }
+      get_rent_dashboard_summary: { Args: { p_pm_id: string }; Returns: Json }
       get_rent_summary_for_property: {
         Args: {
           p_month: number

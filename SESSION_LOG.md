@@ -6,7 +6,33 @@
 
 ---
 
-## Latest: 2026-03-28 — WhatsApp Room Awareness + Demo Seed (Day 5)
+## Latest: 2026-03-28 — Rent Tracking (Days 8-9)
+
+### Summary
+Built room-level rent tracking for HMO properties. Created `c1_rent_ledger` table with RLS, `ON DELETE RESTRICT` to protect financial records, and unique constraint on `(room_id, due_date)` for idempotent generation. Built 3 RPCs: `create_rent_ledger_entries` (idempotent via ON CONFLICT DO NOTHING), `get_rent_summary_for_property` (pure read with derived `effective_status` — no write side-effects), and `mark_rent_paid` (ownership check, partial/full detection). Built `PropertyRentSection` component with month navigation, generate button, summary stats, status badges (paid/overdue/pending/partial/vacant), and "Mark Paid" action. Built `RentPaymentDialog` with pre-filled amount, payment method select, and notes. Wired into property detail page after Rooms section.
+
+### Changes Made
+- Created `supabase/migrations/20260329100000_rent_ledger.sql` — c1_rent_ledger table, RLS, indexes, grants, trigger
+- Created `supabase/migrations/20260329110000_rent_rpcs.sql` — 3 RPCs (create_rent_ledger_entries, get_rent_summary_for_property, mark_rent_paid)
+- Created `src/components/property-rent-section.tsx` — rent section with month nav, generate, table, status badges
+- Created `src/components/rent-payment-dialog.tsx` — payment recording dialog
+- Modified `src/app/(dashboard)/properties/[id]/page.tsx` — added PropertyRentSection after Rooms
+- Regenerated `src/types/database.ts`
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [x] Migrations applied to remote
+- [x] Committed and pushed to `feat/hmo-compliance`
+
+### Next Session Pickup
+1. Set up compliance-reminder cron (Days 6-7) — daily at 08:00 UTC
+2. Dashboard rent card — portfolio-wide paid/outstanding/overdue for current month
+3. Day 10: QA + demo prep — full demo flow rehearsal
+
+---
+
+## 2026-03-28 — WhatsApp Room Awareness + Demo Seed (Day 5)
 
 ### Summary
 Seeded demo data (1 HMO property at 14 Brixton Hill, 5 rooms, 4 tenants, 5 compliance certs with mixed statuses). Fixed property detail page layout — sections were overlapping due to flex overflow constraints. Then built Day 5: WhatsApp room awareness. Extended c1_context_logic to return room data for known tenants, extended c1_create_ticket to auto-populate room_id from tenant's current room assignment (with INNER JOIN to prevent FK violations on stale room_ids), and threaded room context through the edge function to GPT-4o's user prompt. Live WhatsApp test confirmed: ticket created with room_id populated correctly.
