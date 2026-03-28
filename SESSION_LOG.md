@@ -6,7 +6,34 @@
 
 ---
 
-## Latest: 2026-03-28 — Room Layer Complete (Phase 2, Days 1-4)
+## Latest: 2026-03-28 — WhatsApp Room Awareness + Demo Seed (Day 5)
+
+### Summary
+Seeded demo data (1 HMO property at 14 Brixton Hill, 5 rooms, 4 tenants, 5 compliance certs with mixed statuses). Fixed property detail page layout — sections were overlapping due to flex overflow constraints. Then built Day 5: WhatsApp room awareness. Extended c1_context_logic to return room data for known tenants, extended c1_create_ticket to auto-populate room_id from tenant's current room assignment (with INNER JOIN to prevent FK violations on stale room_ids), and threaded room context through the edge function to GPT-4o's user prompt. Live WhatsApp test confirmed: ticket created with room_id populated correctly.
+
+### Changes Made
+- Created `supabase/seed-demo-data.sql` — demo seed script for SQL editor
+- Created `supabase/migrations/20260329000000_whatsapp_room_awareness.sql` — full CREATE OR REPLACE for c1_context_logic (room lookup + return) and c1_create_ticket (room_id in INSERT)
+- Modified `supabase/functions/yarro-tenant-intake/prompts.ts` — extended ContextForPrompt + MessageContext interfaces, added room to buildUserPrompt
+- Modified `supabase/functions/yarro-tenant-intake/index.ts` — pass ctx.room to both prompt builders
+- Modified `src/app/(dashboard)/properties/[id]/page.tsx` — fixed overflow-hidden → overflow-y-auto, removed flex-1 min-h-0 from view-mode wrapper
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [x] Migration applied to remote
+- [x] Edge function deployed
+- [x] Live WhatsApp test passed (room_id on ticket confirmed)
+- [x] Committed and pushed to `feat/hmo-compliance`
+
+### Next Session Pickup
+1. Days 8-9: Rent tracking — c1_rent_ledger table, per-room rent config, payment logging, rent summary UI
+2. Set up cron schedule for compliance-reminder (daily at 08:00 UTC)
+3. Day 10: QA + demo prep
+
+---
+
+## 2026-03-28 — Room Layer Complete (Phase 2, Days 1-4)
 
 ### Summary
 Built the full room layer for HMO support. Created c1_rooms table with generated is_vacant column, 5 RPCs (get, upsert, delete, assign_tenant, remove_tenant) with row locking and dual-sync between c1_rooms.current_tenant_id and c1_tenants.room_id. Built rooms section on property detail page (table with vacancy styling, orange badges for expiring tenancies), tenant assignment dialog, rooms column on properties list, read-only room display on tenant detail, and room_number display in ticket overview. Extended v_properties_hub view with room counts. All merged into feat/hmo-compliance and pushed.
