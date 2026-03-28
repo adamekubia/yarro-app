@@ -32,6 +32,7 @@ import {
   Mail,
   Shield,
   BadgeCheck,
+  BedDouble,
 } from 'lucide-react'
 
 // --- Types ---
@@ -44,6 +45,7 @@ interface TenantDetail {
   role_tag: string | null
   verified_by: string | null
   property_id: string | null
+  room_id: string | null
   created_at: string
 }
 
@@ -108,6 +110,7 @@ export default function TenantDetailPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [room, setRoom] = useState<{ id: string; room_number: string; room_name: string | null } | null>(null)
 
   const fetchTenant = useCallback(async () => {
     if (!tenantId) return
@@ -139,6 +142,13 @@ export default function TenantDetailPage() {
   }, [propertyManager, tenantId])
 
   useEffect(() => { fetchProperty() }, [tenant?.property_id])
+
+  // Fetch room when tenant has room_id
+  useEffect(() => {
+    if (!tenant?.room_id) { setRoom(null); return }
+    supabase.from('c1_rooms').select('id, room_number, room_name').eq('id', tenant.room_id).single()
+      .then(({ data }) => { if (data) setRoom(data); else setRoom(null) })
+  }, [tenant?.room_id, supabase])
 
   const handleSave = useCallback(async (data: TenantEditable, auditEntry: { at: string; by: string; changes: Record<string, { from: unknown; to: unknown }> }) => {
     const errors = validateTenant(data)
@@ -268,6 +278,19 @@ export default function TenantDetailPage() {
                 </Select>
                 {validationErrors.property_id && <p className="text-xs text-destructive mt-1">{validationErrors.property_id}</p>}
               </div>
+
+              {/* Room (read-only — managed from property page) */}
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Room</h3>
+                {room ? (
+                  <p className="text-sm">
+                    {room.room_number}{room.room_name ? ` — ${room.room_name}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/50">No room assigned</p>
+                )}
+                <p className="text-xs text-muted-foreground/60 mt-1">Manage room assignments from the property page</p>
+              </div>
             </>
           ) : (
             <>
@@ -319,6 +342,23 @@ export default function TenantDetailPage() {
                   </Link>
                 ) : (
                   <p className="text-sm text-muted-foreground">No property assigned</p>
+                )}
+              </div>
+
+              {/* Room */}
+              <div className="mt-6">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Room</h3>
+                {room ? (
+                  <div className="flex items-center gap-3 py-2.5 -mx-3 px-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <BedDouble className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-[15px] font-medium">
+                      {room.room_number}{room.room_name ? ` — ${room.room_name}` : ''}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No room assigned</p>
                 )}
               </div>
             </>

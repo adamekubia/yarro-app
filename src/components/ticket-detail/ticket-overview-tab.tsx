@@ -2,7 +2,7 @@
 
 import { format, formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play } from 'lucide-react'
+import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play, BedDouble } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import Link from 'next/link'
 import { formatCurrency } from '@/hooks/use-ticket-detail'
@@ -274,6 +274,21 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
                 )}
               </div>
             )
+          )}
+
+          {/* Room */}
+          {basic.room_number && (
+            <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <BedDouble className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{basic.room_number}</p>
+                  <p className="text-xs text-muted-foreground">Room</p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Landlord */}
