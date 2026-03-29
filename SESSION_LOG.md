@@ -6,7 +6,84 @@
 
 ---
 
-## Latest: 2026-03-28 — Rent Reminder Cron + Compliance Cron Cleanup
+## Latest: 2026-03-29 — Dashboard UI Redesign (PRD v3) — Halfway Point
+
+### Summary
+Major dashboard redesign session on `style/demo-polish` branch. Analysed PRD v2 against the codebase, found significant errors (wrong palette, duplicate components, hardcoded values), and rewrote as PRD v3. Then built the first half of the redesign through multiple feedback rounds with Adam.
+
+**What was built:**
+- **Rethemed** from warm stone to cool blue palette (`#F4F8FC` canvas, `#E2E8F0` borders, `#64748B` muted text)
+- **Sidebar redesigned** — dark navy (`#162B45`), collapsible nested groups (Portfolio, Maintenance, Finances, Documents, Automation), per-child border-l active indicator, icons on group parents only, account avatar at bottom, starts collapsed
+- **Dashboard layout** — replaced PageShell with direct layout, added 4 StatCards (needs attention, in progress, compliance, rent), replaced tabbed TodoPanel + 4 right-column cards with two equal panels (Needs Action + In Progress)
+- **Header bar** — bg-secondary for contrast, search bar with hover Cmd+K, labeled Help + Feedback icons, create button far right
+- **Greeting** — task-count based ("Good morning. You've got 2 tasks today.")
+- **Extracted** TodoPanel to `src/components/dashboard/todo-panel.tsx`, created `StatCard` at `src/components/dashboard/stat-card.tsx`
+
+### Changes Made
+- Modified `src/app/globals.css` — cool blue palette, dark navy sidebar tokens, scrollbar colours
+- Modified `src/lib/typography.ts` — added `statValue` token
+- Rewritten `src/components/sidebar.tsx` — dark navy, collapsible groups, per-child active line
+- Modified `src/components/dashboard-header.tsx` — labeled Help/Feedback icons, bg-secondary, h-14
+- Created `src/components/dashboard/stat-card.tsx` — stat row card component
+- Created `src/components/dashboard/todo-panel.tsx` — extracted from page.tsx with filter helpers
+- Modified `src/app/(dashboard)/page.tsx` — replaced PageShell, added stat row, two-column Needs Action + In Progress layout, removed old right-column panels
+- Created `docs/yarro-dashboard-prd-v2.md` — original PRD (preserved)
+- Created `docs/yarro-dashboard-prd-v3.md` — corrected PRD with design system references
+
+### Status
+- [x] Build passes
+- [x] Tested locally with Adam — iterative feedback applied
+- [x] Committed and pushed to `style/demo-polish`
+
+### Next Session Pickup
+1. **Continue dashboard polish** — Adam had more feedback items queued. This is the halfway point.
+2. **Other pages** may need checking with new cool blue palette (properties, tickets, compliance, tenants, forms)
+3. **Page-by-page design system migration** — raw typography/spacing/colors still need converting to tokens across the app
+4. **Demo prep** — full demo flow rehearsal once UI is polished
+
+---
+
+## 2026-03-28 — UI Redesign: Warm Palette + Global Header
+
+### Summary
+Major UI overhaul on `style/demo-polish` branch. Two phases completed:
+
+**Phase A — Warm Palette (complete):** Swapped cold zinc palette to warm stone tones (GoCardless-inspired). Removed dark/blue themes entirely, deleted ThemeProvider + theme-toggle, uninstalled next-themes. Updated all shadcn primitives (card rounded-2xl no shadow, button rounded-lg, inputs rounded-lg, tooltip semantic tokens). Stripped all `dark:` classes from 22+ files. Added `--info` semantic token. Increased base radius to 0.625rem.
+
+**Phase B — Global Header + Cleanup (complete):** Added `DashboardHeader` component with Cmd+K command palette and `+` create dropdown. Wired into dashboard layout. Removed CTA pill button variant. Deleted 5 stale components. Added `?create=true` handling on 4 list pages.
+
+### Status
+- [x] Build passes
+- [x] Committed and pushed
+
+---
+
+## 2026-03-28 — Twilio Rent Reminder Templates
+
+### Summary
+Drafted copy for 3 rent reminder WhatsApp templates (before, due, overdue). Adam created 2 of 3 in Twilio Console. Replaced placeholder SIDs for `rent_reminder_before` and `rent_reminder_overdue` in `templates.ts`. Added full Section 10 (Rent Reminders) to `TEMPLATES.md` with all 3 entries documented. `rent_reminder_due` still has a placeholder SID — awaiting Twilio creation.
+
+### Changes Made
+- Modified `supabase/functions/_shared/templates.ts` — replaced 2 of 3 placeholder SIDs with real Twilio Content Template SIDs
+- Modified `supabase/functions/_shared/TEMPLATES.md` — added Section 10 (Rent Reminders) with all 3 template entries
+
+### Status
+- [x] Build passes
+- [x] Committed and pushed to `style/demo-polish`
+
+### Adam's Pending Task
+Create `rent_reminder_due` template in Twilio Console and replace the last PLACEHOLDER SID in `templates.ts`.
+Then redeploy: `supabase functions deploy yarro-rent-reminder`
+
+### Next Session Pickup
+1. Replace last placeholder SID (`rent_reminder_due`) when Adam creates it in Twilio
+2. Redeploy `yarro-rent-reminder` edge function after all 3 SIDs are live
+3. Day 10: QA + demo prep — full demo flow rehearsal
+4. Final polish before demo deadline (~11 April 2026)
+
+---
+
+## 2026-03-28 — Rent Reminder Cron + Compliance Cron Cleanup
 
 ### Summary
 Confirmed compliance reminder cron was already deployed (migration just untracked in git — committed it). Then built the rent reminder cron: renamed `c1_log_compliance_event` → `c1_log_system_event` for reuse across ticket-less events, created `get_rent_reminders_due()` RPC with 3-window UNION query (3 days before, due date, 3 days overdue), built `yarro-rent-reminder` edge function with placeholder guard for missing Twilio templates, and registered `pg_cron` job at 09:00 UTC. All deployed and merged to `feat/hmo-compliance`.
@@ -27,13 +104,6 @@ Confirmed compliance reminder cron was already deployed (migration just untracke
 - [x] Edge functions deployed (yarro-rent-reminder + yarro-compliance-reminder)
 - [x] Cron jobs verified (compliance 08:00 UTC, rent 09:00 UTC)
 - [x] Committed and pushed to `feat/hmo-compliance`
-
-### Adam's Pending Task
-Create 3 Twilio Content API templates and replace PLACEHOLDER SIDs in `supabase/functions/_shared/templates.ts`:
-- `rent_reminder_before` — 1=name, 2=amount, 3=due_date
-- `rent_reminder_due` — 1=name, 2=amount
-- `rent_reminder_overdue` — 1=name, 2=amount, 3=due_date
-Then redeploy: `supabase functions deploy yarro-rent-reminder`
 
 ### Next Session Pickup
 1. Day 10: QA + demo prep — full demo flow rehearsal
