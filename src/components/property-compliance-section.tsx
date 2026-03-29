@@ -139,6 +139,7 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
         onSubmit={handleAdd}
         existingTypes={existingTypes}
         pmId={pmId}
+        propertyId={propertyId}
       />
 
       <ConfirmDeleteDialog

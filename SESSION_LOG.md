@@ -6,7 +6,62 @@
 
 ---
 
-## Latest: 2026-03-29 — Dashboard UI Redesign (PRD v3) — Halfway Point
+## Latest: 2026-03-29 — Demo Test Plan Execution + Compliance Overhaul
+
+### Summary
+Started executing the integrated test plan (`.claude/tasks/2026-03-30-test-plan.md`) on `style/demo-polish` branch. Completed Phase 0 (environment check), Phase 1 (auth & nav), Phase 2 (CRUD smoke tests), and partial Phase 3 (rent flow, dashboard). Hit three compliance blockers and fixed them all — this turned into a significant compliance feature build.
+
+**What was built:**
+- **Certificate verification system** — new status flow: Missing → Review → Valid. Certs need human verification (Verify button) before showing as valid. Only appears when both expiry date AND document are present.
+- **Edit certificate** — detail page now has Edit button, opens pre-filled form. Handles the RPC's delete-and-reinsert pattern by redirecting to the new cert ID.
+- **Add certificate from compliance list** — Add button on compliance page with property picker dropdown. Property picker only shows when adding from list page (hidden on property detail page where property is known).
+- **Review hint banner** — blue info banner on detail page tells you exactly what's missing before you can verify ("add an expiry date", "the document", or both).
+- **Document deletion resets verification** — removing a doc flips cert back to Review status.
+- **Dashboard compliance % tied to verification** — RPC updated to only count verified certs as "valid". Unverified certs reduce the compliance percentage. Card subtitle shows "X needs review".
+
+### Changes Made
+- Modified `src/components/certificate-form-dialog.tsx` — added `initialData`, `propertyId` props, property picker, edit mode
+- Modified `src/app/(dashboard)/compliance/[id]/page.tsx` — Edit button, Verify button, review hint, doc delete resets status, redirect after edit
+- Modified `src/app/(dashboard)/compliance/page.tsx` — Add button with property picker, status computation includes review/verified
+- Modified `src/components/property-compliance-section.tsx` — passes `propertyId` to form dialog
+- Modified `src/components/status-badge.tsx` — added `review` style (blue)
+- Modified `src/app/(dashboard)/page.tsx` — compliance card accounts for review count
+- Created `supabase/migrations/20260330010000_compliance_status_review.sql` — added review/verified to status constraint
+- Created `supabase/migrations/20260330020000_compliance_summary_review.sql` — updated compliance_get_summary RPC
+- Updated `.claude/tasks/2026-03-30-test-plan.md` — fixed `cert_type` → `certificate_type`, added review tweaks
+
+### Test Plan Progress
+- [x] Phase 0 — Environment & Data Readiness (all pass)
+- [x] Phase 1 — Auth & Navigation (all pass, dark mode N/A — removed)
+- [x] Phase 2 — CRUD Smoke Tests (all pass)
+- [~] Phase 3 — Integrated Scenarios (Rent flow pass, Compliance blocked → fixed, Dashboard partial)
+- [ ] Phase 4 — Demo Rehearsal
+- [ ] Phase 5 — Visual Sweep
+
+### Failure Log (from testing)
+| Test # | Issue | Bucket | Severity | Fixed? |
+|--------|-------|--------|----------|--------|
+| 2.2 | Property detail shows "AdamEkubia" as landlord instead of "James Okafor" | VISUAL | M | No |
+| 2.32 | Extra certs from duplicate property "7 Elm Grove / 14 medow lande" | VISUAL | M | No |
+| E.2–E.6 | StatCard labels/numbers don't convey practical meaning | VISUAL | M | No |
+| A.1 | No edit/verify/add for compliance certs | BLOCKER | H | Yes |
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [ ] Committed and pushed
+
+### Next Session Pickup
+1. **Resume test plan at Phase 3 Scenario A** — compliance lifecycle (trigger cron, check audit trail)
+2. **Phase 3 Scenarios C & D** — WhatsApp intake + manual ticket lifecycle (may skip C if Twilio not set up)
+3. **Phase 4** — full 10-minute demo rehearsal
+4. **Phase 5** — visual sweep + batch fix the 3 VISUAL issues logged
+5. **Commit all changes** — compliance overhaul + test plan fixes on `style/demo-polish`
+6. **Existing certs need marking as verified** — run `UPDATE c1_compliance_certificates SET status = 'verified' WHERE expiry_date IS NOT NULL;` if not done yet
+
+---
+
+## 2026-03-29 — Dashboard UI Redesign (PRD v3) — Halfway Point
 
 ### Summary
 Major dashboard redesign session on `style/demo-polish` branch. Analysed PRD v2 against the codebase, found significant errors (wrong palette, duplicate components, hardcoded values), and rewrote as PRD v3. Then built the first half of the redesign through multiple feedback rounds with Adam.

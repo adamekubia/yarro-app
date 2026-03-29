@@ -34,6 +34,11 @@ interface Contractor {
   categories: string[] | null
 }
 
+interface Property {
+  id: string
+  address: string
+}
+
 interface CertificateFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -42,6 +47,10 @@ interface CertificateFormDialogProps {
   existingTypes: CertificateType[]
   /** PM ID for fetching contractors */
   pmId: string
+  /** Pre-fill form for editing an existing certificate */
+  initialData?: Partial<CertificateFormData>
+  /** When provided, property is fixed (editing from property page). When omitted, show property picker. */
+  propertyId?: string
 }
 
 export interface CertificateFormData {
@@ -53,6 +62,7 @@ export interface CertificateFormData {
   notes: string | null
   reminder_days_before: number
   contractor_id: string | null
+  property_id?: string
 }
 
 export function CertificateFormDialog({
@@ -61,8 +71,14 @@ export function CertificateFormDialog({
   onSubmit,
   existingTypes,
   pmId,
+  initialData,
+  propertyId,
 }: CertificateFormDialogProps) {
+  const isEditing = !!initialData?.certificate_type
+  const needsPropertyPicker = !propertyId && !isEditing
   const supabase = createClient()
+  const [selectedPropertyId, setSelectedPropertyId] = useState('')
+  const [properties, setProperties] = useState<Property[]>([])
   const [certificateType, setCertificateType] = useState<CertificateType | ''>('')
   const [issuedDate, setIssuedDate] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
@@ -75,6 +91,21 @@ export function CertificateFormDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showReplace, setShowReplace] = useState(false)
+
+  // Fetch properties when property picker is needed
+  useEffect(() => {
+    if (!needsPropertyPicker || !open || !pmId) return
+    async function fetchProperties() {
+      const { data } = await supabase
+        .from('c1_properties')
+        .select('id, address')
+        .eq('property_manager_id', pmId)
+        .order('address')
+      if (data) setProperties(data)
+    }
+    fetchProperties()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, needsPropertyPicker, pmId])
 
   // Fetch contractors when cert type changes (filtered by relevant categories)
   useEffect(() => {
@@ -120,6 +151,21 @@ export function CertificateFormDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
   }, [certificateType, pmId])
 
+  // Pre-fill form when initialData changes (edit mode)
+  useEffect(() => {
+    if (open && initialData) {
+      setCertificateType(initialData.certificate_type || '')
+      setIssuedDate(initialData.issued_date || '')
+      setExpiryDate(initialData.expiry_date || '')
+      setCertificateNumber(initialData.certificate_number || '')
+      setIssuedBy(initialData.issued_by || '')
+      setNotes(initialData.notes || '')
+      setReminderDays(String(initialData.reminder_days_before ?? 60))
+      setContractorId(initialData.contractor_id || '')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const resetForm = () => {
     setCertificateType('')
     setIssuedDate('')
@@ -130,6 +176,7 @@ export function CertificateFormDialog({
     setReminderDays('60')
     setContractorId('')
     setContractors([])
+    setSelectedPropertyId('')
     setError(null)
     setShowReplace(false)
   }
@@ -140,6 +187,7 @@ export function CertificateFormDialog({
   }
 
   const validate = (): string | null => {
+    if (needsPropertyPicker && !selectedPropertyId) return 'Property is required'
     if (!certificateType) return 'Certificate type is required'
     if (!expiryDate) return 'Expiry date is required'
     if (issuedDate && expiryDate && new Date(expiryDate) <= new Date(issuedDate)) {
@@ -155,8 +203,8 @@ export function CertificateFormDialog({
       return
     }
 
-    // Check for duplicate — show confirmation before replacing
-    if (existingTypes.includes(certificateType as CertificateType) && !showReplace) {
+    // Check for duplicate — show confirmation before replacing (skip in edit mode)
+    if (!isEditing && existingTypes.includes(certificateType as CertificateType) && !showReplace) {
       setShowReplace(true)
       return
     }
@@ -173,6 +221,7 @@ export function CertificateFormDialog({
         notes: notes || null,
         reminder_days_before: Number(reminderDays),
         contractor_id: contractorId || null,
+        property_id: propertyId || selectedPropertyId || undefined,
       })
       handleOpenChange(false)
     } catch (e) {
@@ -194,7 +243,7 @@ export function CertificateFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Certificate</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Certificate' : 'Add Certificate'}</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-4">
           {error && (
@@ -212,6 +261,24 @@ export function CertificateFormDialog({
             </div>
           )}
 
+          {needsPropertyPicker && (
+            <div>
+              <p className="text-sm text-muted-foreground mb-1.5">Property *</p>
+              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                <SelectTrigger className={!selectedPropertyId && error ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select property..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {properties.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.address}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <p className="text-sm text-muted-foreground mb-1.5">Certificate Type *</p>
             <Select
@@ -221,6 +288,7 @@ export function CertificateFormDialog({
                 setShowReplace(false)
                 setContractorId('')
               }}
+              disabled={isEditing}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select certificate type..." />
@@ -333,7 +401,7 @@ export function CertificateFormDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {showReplace ? 'Replace Certificate' : 'Add Certificate'}
+            {isEditing ? 'Save Changes' : showReplace ? 'Replace Certificate' : 'Add Certificate'}
           </Button>
         </DialogFooter>
       </DialogContent>

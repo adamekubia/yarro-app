@@ -18,7 +18,13 @@ import {
   ExternalLink,
   Loader2,
   ShieldCheck,
+  Pencil,
+  CheckCircle,
 } from 'lucide-react'
+import {
+  CertificateFormDialog,
+  type CertificateFormData,
+} from '@/components/certificate-form-dialog'
 
 interface CertificateDetail {
   id: string
@@ -67,6 +73,7 @@ export default function CertificateDetailPage() {
   const [propertyAddress, setPropertyAddress] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   const fetchCertificate = useCallback(async () => {
     if (!propertyManager) return
@@ -84,7 +91,9 @@ export default function CertificateDetailPage() {
       return
     }
 
-    // Compute status
+    // Compute display status
+    // Expired/expiring always override (urgent signals)
+    // Otherwise: verified → valid, has info → review, nothing → missing
     let status = 'missing'
     if (data.expiry_date) {
       const expiry = new Date(data.expiry_date)
@@ -92,7 +101,10 @@ export default function CertificateDetailPage() {
       const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       if (expiry < now) status = 'expired'
       else if (days <= 30) status = 'expiring'
-      else status = 'valid'
+      else if (data.status === 'verified') status = 'valid'
+      else status = 'review'
+    } else if (data.document_url || data.issued_by || data.certificate_number) {
+      status = 'review'
     }
 
     setCertificate({ ...data, status } as CertificateDetail)
@@ -181,7 +193,7 @@ export default function CertificateDetailPage() {
 
     const { error } = await supabase
       .from('c1_compliance_certificates')
-      .update({ document_url: null })
+      .update({ document_url: null, status: 'review' })
       .eq('id', certificate.id)
       .eq('property_manager_id', certificate.property_manager_id)
 
@@ -191,6 +203,24 @@ export default function CertificateDetailPage() {
     }
 
     toast.success('Document removed')
+    await fetchCertificate()
+  }
+
+  const handleVerify = async () => {
+    if (!certificate) return
+
+    const { error } = await supabase
+      .from('c1_compliance_certificates')
+      .update({ status: 'verified' })
+      .eq('id', certificate.id)
+      .eq('property_manager_id', certificate.property_manager_id)
+
+    if (error) {
+      toast.error('Failed to verify certificate')
+      return
+    }
+
+    toast.success('Certificate verified')
     await fetchCertificate()
   }
 
@@ -233,7 +263,28 @@ export default function CertificateDetailPage() {
               </Link>
             </div>
           </div>
-          <StatusBadge status={certificate.status} />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditOpen(true)}
+              className="gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+            {certificate.status === 'review' && certificate.expiry_date && certificate.document_url && (
+              <Button
+                size="sm"
+                onClick={handleVerify}
+                className="gap-1.5"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                Verify
+              </Button>
+            )}
+            <StatusBadge status={certificate.status} />
+          </div>
         </div>
       </div>
 
@@ -250,6 +301,18 @@ export default function CertificateDetailPage() {
           {certificate.status === 'expired'
             ? `This certificate expired on ${formatDate(certificate.expiry_date)}. ${daysUntilExpiry(certificate.expiry_date)}.`
             : `This certificate is expiring soon — ${daysUntilExpiry(certificate.expiry_date)}.`}
+        </div>
+      )}
+
+      {/* Review hint — what's needed before verification */}
+      {certificate.status === 'review' && (!certificate.expiry_date || !certificate.document_url) && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 mb-6 text-sm text-primary">
+          To verify this certificate, add:
+          {!certificate.expiry_date && !certificate.document_url
+            ? ' an expiry date and upload the document.'
+            : !certificate.expiry_date
+              ? ' an expiry date.'
+              : ' the document.'}
         </div>
       )}
 
@@ -276,6 +339,46 @@ export default function CertificateDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit dialog */}
+      <CertificateFormDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        existingTypes={[certificate.certificate_type]}
+        pmId={certificate.property_manager_id}
+        initialData={{
+          certificate_type: certificate.certificate_type,
+          issued_date: certificate.issued_date,
+          expiry_date: certificate.expiry_date || '',
+          certificate_number: certificate.certificate_number,
+          issued_by: certificate.issued_by,
+          notes: certificate.notes,
+          reminder_days_before: 60,
+          contractor_id: null,
+        }}
+        onSubmit={async (formData) => {
+          const { data: newId, error } = await supabase.rpc('compliance_upsert_certificate', {
+            p_property_id: certificate.property_id,
+            p_pm_id: certificate.property_manager_id,
+            p_certificate_type: formData.certificate_type,
+            p_issued_date: formData.issued_date,
+            p_expiry_date: formData.expiry_date,
+            p_certificate_number: formData.certificate_number,
+            p_issued_by: formData.issued_by,
+            p_notes: formData.notes,
+            p_reminder_days_before: formData.reminder_days_before,
+            p_contractor_id: formData.contractor_id,
+          })
+          if (error) throw new Error('Failed to update certificate')
+          toast.success('Certificate updated')
+          // RPC deletes + re-inserts with new ID — redirect to it
+          if (newId && newId !== certId) {
+            router.replace(`/compliance/${newId}`)
+          } else {
+            await fetchCertificate()
+          }
+        }}
+      />
 
       {/* Document section */}
       <div className="bg-card rounded-xl border border-border p-6">

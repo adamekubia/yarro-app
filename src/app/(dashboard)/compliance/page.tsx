@@ -7,8 +7,14 @@ import { PageShell } from '@/components/page-shell'
 import { DataTable, Column } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, Plus } from 'lucide-react'
 import { CommandSearchInput } from '@/components/command-search-input'
+import { Button } from '@/components/ui/button'
+import {
+  CertificateFormDialog,
+  type CertificateFormData,
+} from '@/components/certificate-form-dialog'
+import { toast } from 'sonner'
 import Link from 'next/link'
 
 interface ComplianceRow {
@@ -39,6 +45,7 @@ export default function CompliancePage() {
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({ expired: 0, expiring: 0, valid: 0, total: 0 })
   const [search, setSearch] = useState('')
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
   const filteredCertificates = useMemo(() => {
     if (!search) return certificates
     const lower = search.toLowerCase()
@@ -56,7 +63,7 @@ export default function CompliancePage() {
     const [certsRes, summaryRes] = await Promise.all([
       supabase
         .from('c1_compliance_certificates')
-        .select('id, property_id, certificate_type, expiry_date, issued_date, issued_by, certificate_number, c1_properties(address)')
+        .select('id, property_id, certificate_type, expiry_date, issued_date, issued_by, certificate_number, document_url, status, c1_properties(address)')
         .eq('property_manager_id', propertyManager.id)
         .order('expiry_date', { ascending: true, nullsFirst: true }),
       supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
@@ -64,14 +71,17 @@ export default function CompliancePage() {
 
     if (certsRes.data) {
       const rows: ComplianceRow[] = certsRes.data.map((cert) => {
-        let status = 'missing'
+        let displayStatus = 'missing'
         if (cert.expiry_date) {
           const expiry = new Date(cert.expiry_date)
           const now = new Date()
           const daysUntil = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-          if (expiry < now) status = 'expired'
-          else if (daysUntil <= 30) status = 'expiring'
-          else status = 'valid'
+          if (expiry < now) displayStatus = 'expired'
+          else if (daysUntil <= 30) displayStatus = 'expiring'
+          else if (cert.status === 'verified') displayStatus = 'valid'
+          else displayStatus = 'review'
+        } else if (cert.document_url || cert.issued_by || cert.certificate_number) {
+          displayStatus = 'review'
         }
         return {
           id: cert.id,
@@ -81,7 +91,7 @@ export default function CompliancePage() {
           issued_date: cert.issued_date,
           issued_by: cert.issued_by,
           certificate_number: cert.certificate_number,
-          status,
+          status: displayStatus,
           property_address: (cert.c1_properties as unknown as { address: string })?.address || 'Unknown',
         }
       })
@@ -103,6 +113,25 @@ export default function CompliancePage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const handleAddCertificate = async (formData: CertificateFormData) => {
+    if (!propertyManager || !formData.property_id) throw new Error('Missing property')
+    const { error } = await supabase.rpc('compliance_upsert_certificate', {
+      p_property_id: formData.property_id,
+      p_pm_id: propertyManager.id,
+      p_certificate_type: formData.certificate_type,
+      p_issued_date: formData.issued_date,
+      p_expiry_date: formData.expiry_date,
+      p_certificate_number: formData.certificate_number,
+      p_issued_by: formData.issued_by,
+      p_notes: formData.notes,
+      p_reminder_days_before: formData.reminder_days_before,
+      p_contractor_id: formData.contractor_id,
+    })
+    if (error) throw new Error('Failed to add certificate')
+    toast.success('Certificate added')
+    await fetchData()
+  }
 
   const columns: Column<ComplianceRow>[] = [
     {
@@ -159,12 +188,18 @@ export default function CompliancePage() {
       title="Compliance"
       count={filteredCertificates.length}
       actions={
-        <CommandSearchInput
-          placeholder="Search certificates..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
-        />
+        <div className="flex items-center gap-2">
+          <CommandSearchInput
+            placeholder="Search certificates..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
+          <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            Add
+          </Button>
+        </div>
       }
     >
       <DataTable
@@ -184,6 +219,16 @@ export default function CompliancePage() {
         }
         fillHeight
       />
+
+      {propertyManager && (
+        <CertificateFormDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onSubmit={handleAddCertificate}
+          existingTypes={[]}
+          pmId={propertyManager.id}
+        />
+      )}
     </PageShell>
   )
 }

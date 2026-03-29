@@ -140,8 +140,8 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [complianceSummary, setComplianceSummary] = useState<{
-    expired: number; expiring: number; valid: number; total: number
-  }>({ expired: 0, expiring: 0, valid: 0, total: 0 })
+    expired: number; expiring: number; valid: number; review: number; total: number
+  }>({ expired: 0, expiring: 0, valid: 0, review: 0, total: 0 })
   const [occupancySummary, setOccupancySummary] = useState<{
     total_rooms: number; occupied: number; vacant: number; ending_soon: number
   }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
@@ -224,6 +224,7 @@ export default function DashboardPage() {
       expired: summaryData?.expired ?? 0,
       expiring: summaryData?.expiring ?? 0,
       valid: summaryData?.valid ?? 0,
+      review: summaryData?.review ?? 0,
       total: summaryData?.total ?? 0,
     })
 
@@ -474,8 +475,8 @@ export default function DashboardPage() {
           <StatCard
             label="Compliance"
             value={complianceSummary.total > 0 ? `${Math.round((complianceSummary.valid / complianceSummary.total) * 100)}%` : '—'}
-            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
-            accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
+            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.review > 0 ? `${complianceSummary.review} needs review` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
+            accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.review > 0 ? 'warning' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
             icon={ShieldCheck}
           />
           <StatCard
