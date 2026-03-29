@@ -15,7 +15,6 @@ import {
   Users,
   Search,
   ShieldCheck,
-  Banknote,
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -145,9 +144,6 @@ export default function DashboardPage() {
   const [occupancySummary, setOccupancySummary] = useState<{
     total_rooms: number; occupied: number; vacant: number; ending_soon: number
   }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
-  const [incomeSummary, setIncomeSummary] = useState<{
-    expected_amount: number; collected_amount: number; outstanding_amount: number; overdue_amount: number
-  }>({ expected_amount: 0, collected_amount: 0, outstanding_amount: 0, overdue_amount: 0 })
   const [aiActionsCount, setAiActionsCount] = useState(0)
   const supabase = createClient()
 
@@ -156,7 +152,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, incomeRes, aiActionsRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -212,8 +208,6 @@ export default function DashboardPage() {
       supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
       // Occupancy — portfolio-wide room vacancy
       supabase.rpc('get_occupancy_summary' as never, { p_pm_id: propertyManager.id } as never),
-      // Rent income — £ amounts for current month
-      supabase.rpc('get_rent_income_summary' as never, { p_pm_id: propertyManager.id } as never),
       // AI actions — system/AI events this month
       supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
     ])
@@ -235,15 +229,6 @@ export default function DashboardPage() {
       occupied: occData?.occupied ?? 0,
       vacant: occData?.vacant ?? 0,
       ending_soon: occData?.ending_soon ?? 0,
-    })
-
-    // Process rent income summary — £ amounts for current month
-    const incData = incomeRes?.data as Record<string, number> | null
-    setIncomeSummary({
-      expected_amount: incData?.expected_amount ?? 0,
-      collected_amount: incData?.collected_amount ?? 0,
-      outstanding_amount: incData?.outstanding_amount ?? 0,
-      overdue_amount: incData?.overdue_amount ?? 0,
     })
 
     // Process AI actions count
@@ -461,7 +446,7 @@ export default function DashboardPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-6">
         {/* Stat row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-shrink-0">
           <StatCard
             label="Occupancy"
             value={occupancySummary.total_rooms > 0 ? `${Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100)}%` : '—'}
@@ -478,13 +463,6 @@ export default function DashboardPage() {
             subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.review > 0 ? `${complianceSummary.review} needs review` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
             accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.review > 0 ? 'warning' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
             icon={ShieldCheck}
-          />
-          <StatCard
-            label="Monthly income"
-            value={incomeSummary.expected_amount > 0 ? `£${incomeSummary.collected_amount.toLocaleString('en-GB')}` : '—'}
-            subtitle={incomeSummary.overdue_amount > 0 ? `£${incomeSummary.overdue_amount.toLocaleString('en-GB')} overdue` : incomeSummary.outstanding_amount > 0 ? `£${incomeSummary.outstanding_amount.toLocaleString('en-GB')} of £${incomeSummary.expected_amount.toLocaleString('en-GB')} outstanding` : incomeSummary.expected_amount > 0 ? 'All collected' : 'No rent due'}
-            accentColor={incomeSummary.overdue_amount > 0 ? 'danger' : incomeSummary.outstanding_amount > 0 ? 'warning' : 'success'}
-            icon={Banknote}
           />
           <StatCard
             label="AI actions"
