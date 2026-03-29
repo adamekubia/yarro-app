@@ -7,6 +7,7 @@ import { spacing } from '@/styles/spacing'
 interface PageShellProps {
   title: string
   subtitle?: string
+  count?: number
   actions?: React.ReactNode
   headerExtra?: React.ReactNode
   topBar?: React.ReactNode
@@ -20,6 +21,7 @@ interface PageShellProps {
 export function PageShell({
   title,
   subtitle,
+  count,
   actions,
   headerExtra,
   topBar,
@@ -40,7 +42,14 @@ export function PageShell({
         <div className={cn('flex-shrink-0 flex flex-col', spacing.pagePaddingX)}>
           <div className="flex items-center h-16">
             <div className="min-w-0">
-              <h1 className={typography.pageTitle}>{title}</h1>
+              <h1 className={typography.pageTitle}>
+                {title}
+                {count != null && (
+                  <span className="ml-3 inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">
+                    {count}
+                  </span>
+                )}
+              </h1>
               {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}
             </div>
           </div>
@@ -60,7 +69,14 @@ export function PageShell({
           headerBorder ? 'border-b border-foreground/10' : ''
         )}>
           <div className="min-w-0">
-            <h1 className={typography.pageTitle}>{title}</h1>
+            <h1 className={typography.pageTitle}>
+              {title}
+              {count != null && (
+                <span className="ml-3 inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">
+                  {count}
+                </span>
+              )}
+            </h1>
             {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}
           </div>
           {actions && (

@@ -13,11 +13,10 @@ import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
-import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
+import { Ticket, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
@@ -93,7 +92,6 @@ export default function TicketsPage() {
   const [reviewTicketId, setReviewTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
-  const [search, setSearch] = useState('')
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
   const [selectedType, setSelectedType] = useState<TypeFilter[]>([])
@@ -601,14 +599,13 @@ export default function TicketsPage() {
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
   // Active filter state
-  const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0 || search.trim() !== ''
-  const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length + (search.trim() ? 1 : 0)
+  const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0
+  const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length
 
   const clearFilters = () => {
     setSelectedLifecycle([])
     setSelectedWorkflow([])
     setSelectedType([])
-    setSearch('')
   }
 
   // Visible rows — single memoized pipeline; handoffs + pending_review filtered out (they live in banners)
@@ -654,45 +651,126 @@ export default function TicketsPage() {
       )
     }
 
-    // 4. Search
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(t =>
-        t.issue_description?.toLowerCase().includes(q) ||
-        t.address?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q)
-      )
-    }
-
     return result
-  }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
+  }, [tickets, selectedLifecycle, selectedWorkflow, selectedType])
 
   return (
     <PageShell
       title="Tickets"
-      topBar={
-        <CommandSearchInput
-          placeholder="Search tickets..."
-          value={search}
-          onChange={setSearch}
-          className="w-80"
-        />
-      }
+      count={visibleRows.length}
       actions={
         <>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => fetchTickets()}
-            disabled={loading}
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton
-            text="Create ticket"
-            onClick={() => setCreateDrawerOpen(true)}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'h-9 px-3 rounded-md border text-sm flex items-center gap-2 transition-colors',
+                  hasActiveFilters
+                    ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
+                    : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-border'
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="text-xs tabular-nums opacity-70">{activeFilterCount}</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-4">
+
+              {/* Lifecycle */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lifecycle</p>
+                {(['open', 'closed', 'archived'] as const).map(lc => (
+                  <label key={lc} className="flex items-center gap-2 py-1 cursor-pointer text-sm capitalize">
+                    <input
+                      type="checkbox"
+                      checked={selectedLifecycle.includes(lc)}
+                      onChange={() => {
+                        const isAdding = !selectedLifecycle.includes(lc)
+                        if (isAdding && (lc === 'closed' || lc === 'archived') && selectedWorkflow.length > 0) {
+                          setSelectedWorkflow([])
+                        }
+                        setSelectedLifecycle(prev =>
+                          prev.includes(lc) ? prev.filter(x => x !== lc) : [...prev, lc]
+                        )
+                      }}
+                      className="rounded border-border"
+                    />
+                    {lc.charAt(0).toUpperCase() + lc.slice(1)}
+                  </label>
+                ))}
+              </div>
+
+              {/* Workflow — only when Open lifecycle is selected */}
+              {selectedLifecycle.includes('open') && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow</p>
+                  {([
+                    { key: 'needsMgr',  label: 'Needs action' },
+                    { key: 'waiting',   label: 'Waiting'      },
+                    { key: 'scheduled', label: 'Scheduled'    },
+                  ] as { key: WorkflowFilter; label: string }[]).map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedWorkflow.includes(key)}
+                        onChange={() => {
+                          const isAdding = !selectedWorkflow.includes(key)
+                          if (isAdding) {
+                            setSelectedLifecycle(prev => {
+                              const withOpen = prev.includes('open') ? prev : [...prev, 'open']
+                              return withOpen.filter(lc => lc === 'open')
+                            })
+                          }
+                          setSelectedWorkflow(prev =>
+                            prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                          )
+                        }}
+                        className="rounded border-border"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {/* Type */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Type</p>
+                {([
+                  { key: 'auto',   label: 'WhatsApp (auto)' },
+                  { key: 'manual', label: 'Manual'          },
+                ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedType.includes(key)}
+                      onChange={() =>
+                        setSelectedType(prev =>
+                          prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                        )
+                      }
+                      className="rounded border-border"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Clear filters
+                </button>
+              )}
+
+            </PopoverContent>
+          </Popover>
+          <DateFilter value={dateRange} onChange={setDateRange} />
         </>
       }
     >
@@ -754,127 +832,11 @@ export default function TicketsPage() {
         )
       })()}
 
-      {/* Filters + Date */}
-      <div className="flex-shrink-0 flex items-center gap-3 mb-3">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                'h-9 px-3 rounded-md border text-sm flex items-center gap-2 transition-colors',
-                hasActiveFilters
-                  ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
-                  : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-border'
-              )}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="text-xs tabular-nums opacity-70">{activeFilterCount}</span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-72 p-4 space-y-4">
-
-            {/* Lifecycle */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lifecycle</p>
-              {(['open', 'closed', 'archived'] as const).map(lc => (
-                <label key={lc} className="flex items-center gap-2 py-1 cursor-pointer text-sm capitalize">
-                  <input
-                    type="checkbox"
-                    checked={selectedLifecycle.includes(lc)}
-                    onChange={() => {
-                      const isAdding = !selectedLifecycle.includes(lc)
-                      if (isAdding && (lc === 'closed' || lc === 'archived') && selectedWorkflow.length > 0) {
-                        setSelectedWorkflow([])
-                      }
-                      setSelectedLifecycle(prev =>
-                        prev.includes(lc) ? prev.filter(x => x !== lc) : [...prev, lc]
-                      )
-                    }}
-                    className="rounded border-border"
-                  />
-                  {lc.charAt(0).toUpperCase() + lc.slice(1)}
-                </label>
-              ))}
-            </div>
-
-            {/* Workflow — only when Open lifecycle is selected */}
-            {selectedLifecycle.includes('open') && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow</p>
-                {([
-                  { key: 'needsMgr',  label: 'Needs action' },
-                  { key: 'waiting',   label: 'Waiting'      },
-                  { key: 'scheduled', label: 'Scheduled'    },
-                ] as { key: WorkflowFilter; label: string }[]).map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedWorkflow.includes(key)}
-                      onChange={() => {
-                        const isAdding = !selectedWorkflow.includes(key)
-                        if (isAdding) {
-                          setSelectedLifecycle(prev => {
-                            const withOpen = prev.includes('open') ? prev : [...prev, 'open']
-                            return withOpen.filter(lc => lc === 'open')
-                          })
-                        }
-                        setSelectedWorkflow(prev =>
-                          prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
-                        )
-                      }}
-                      className="rounded border-border"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {/* Type */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Type</p>
-              {([
-                { key: 'auto',   label: 'Auto'   },
-                { key: 'manual', label: 'Manual' },
-              ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedType.includes(key)}
-                    onChange={() => setSelectedType(prev =>
-                      prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
-                    )}
-                    className="rounded border-border"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-              >
-                Clear filters
-              </button>
-            )}
-
-          </PopoverContent>
-        </Popover>
-
-        <DateFilter value={dateRange} onChange={setDateRange} />
-      </div>
-
       {/* Scrollable data region — single table */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
           data={visibleRows}
           columns={columns}
-          searchKeys={[]}
-          hideToolbar
           fillHeight
           getRowId={t => t.id}
           getRowClassName={getRowClassName}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -14,7 +14,6 @@ import {
   DetailField,
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import Link from 'next/link'
 import { Building2, Contact, MoreHorizontal } from 'lucide-react'
 import { EditableField } from '@/components/editable-field'
@@ -66,16 +65,6 @@ export default function LandlordsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const filteredLandlords = useMemo(() => {
-    if (!search) return landlords
-    const lower = search.toLowerCase()
-    return landlords.filter(l =>
-      l.full_name?.toLowerCase().includes(lower) ||
-      l.phone?.toLowerCase().includes(lower) ||
-      l.email?.toLowerCase().includes(lower)
-    )
-  }, [landlords, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -418,31 +407,14 @@ export default function LandlordsPage() {
   return (
     <PageShell
       title="Landlords"
-      topBar={
-        <>
-          {/* TODO: replace with shared SearchInput component */}
-          <input
-            type="text"
-            placeholder="Search landlords..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-80 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
-          />
-        </>
-      }
-      actions={
-        <>
-          <InteractiveHoverButton text="Add Landlord" onClick={handleAddClick} />
-        </>
-      }
+      count={landlords.length}
     >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={filteredLandlords}
+          data={landlords}
           columns={columns}
-          hideToolbar
           onRowClick={handleRowClick}
           getRowId={(l) => l.id}
           fillHeight

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -15,7 +15,6 @@ import {
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -93,16 +92,6 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const filteredContractors = useMemo(() => {
-    if (!search) return contractors
-    const lower = search.toLowerCase()
-    return contractors.filter(c =>
-      c.contractor_name?.toLowerCase().includes(lower) ||
-      c.category?.toLowerCase().includes(lower) ||
-      c.contractor_email?.toLowerCase().includes(lower)
-    )
-  }, [contractors, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -671,31 +660,14 @@ export default function ContractorsPage() {
   return (
     <PageShell
       title="Contractors"
-      topBar={
-        <>
-          {/* TODO: replace with shared SearchInput component */}
-          <input
-            type="text"
-            placeholder="Search contractors..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-80 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
-          />
-        </>
-      }
-      actions={
-        <>
-          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} />
-        </>
-      }
+      count={contractors.length}
     >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={filteredContractors}
+          data={contractors}
           columns={columns}
-          hideToolbar
           onRowClick={handleRowClick}
           getRowId={(c) => c.id}
           fillHeight

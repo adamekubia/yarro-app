@@ -145,6 +145,7 @@ export default function CompliancePage() {
   return (
     <PageShell
       title="Compliance"
+      count={certificates.length}
       subtitle={`${summary.total} certificates across all properties`}
       headerExtra={
         summary.total > 0 ? (
@@ -174,8 +175,6 @@ export default function CompliancePage() {
       <DataTable
         data={certificates}
         columns={columns}
-        searchPlaceholder="Search certificates..."
-        searchKeys={['certificate_type', 'property_address', 'issued_by', 'status']}
         getRowId={(row) => row.id}
         onRowClick={(row) => {
           window.location.href = `/compliance/${row.id}`
