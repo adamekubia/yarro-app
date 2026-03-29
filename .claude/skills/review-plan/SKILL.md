@@ -14,12 +14,23 @@ Run while still in plan mode, after Claude has proposed a plan and before accept
 
 ## Process
 
-### Step 1 — Read the plan in context
-The plan is in the current conversation. Read it carefully. Extract every claim it makes:
-- File paths it will read or modify
-- Functions, RPCs, components it references or creates
-- Tables, columns, types it depends on
-- The order of operations
+### Step 1 — Comprehend the plan
+
+Before judging anything, understand the plan deeply. This is the foundation — a shallow read produces shallow reviews.
+
+**1a. Read the plan and its source context.**
+The plan is in the conversation. So is the context it was created from — the user's request, any docs or specs referenced, prior discussion. Read all of it. Don't skip the "why" to get to the "what".
+
+**1b. Build a mental model.**
+Work through the plan and answer these questions internally before moving on:
+- **Intent**: What is this plan actually trying to achieve? What problem does it solve for the end user (HMO landlord / R2R operator)?
+- **Architecture**: Where does new logic live? Is it in RPCs (where business logic belongs) or in the frontend (where it shouldn't be)? What's the data flow from database → RPC → API → UI?
+- **Scope boundary**: What does this plan change, and what does it deliberately leave alone? Are those boundaries sensible?
+- **Downstream effects**: If this plan ships, what else in the system is affected? Other pages that read the same data? RPCs that touch the same tables? The WhatsApp intake flow? The audit trail?
+- **Real-world implications**: Think about what happens when this runs in production with real tenants, real landlords, real compliance deadlines. What if data is messy, late, or missing? What if a user does something unexpected?
+
+**1c. State your understanding.**
+Before presenting findings, write a brief summary (3–5 sentences) of what the plan does and why. This forces clarity and gives Adam a chance to correct misunderstandings before the review proceeds.
 
 ### Step 2 — Verify code references
 This is the only step that touches the codebase. For everything the plan references as **already existing**:
@@ -33,33 +44,42 @@ Don't verify things the plan is **creating** — only things it **depends on**. 
 Keep this fast. A few targeted greps, not a full codebase scan.
 
 ### Step 3 — Scrutinise the plan
-This is the core of the review. Go through the plan step by step and pressure-test it:
+Now that you understand the plan's intent and have verified its assumptions, pressure-test it. Think from a different angle than the one that created the plan — the planner was focused on "how do I build this?", your job is "what happens when this meets reality?"
+
+**Architecture violations — does this respect the Yarro system design?**
+- Business logic in React components or hooks that should be an RPC (backend-first rule is non-negotiable)
+- Derived state computed in the frontend (status calculations, counts, summaries) instead of the database
+- Direct table access (`.from().select()`) where an RPC should exist because there's logic involved
+- Frontend making multiple round-trips when one RPC could do the job
+- Remember: the frontend is a display layer. It calls RPCs and renders results. If the plan has the frontend deciding, computing, or orchestrating business logic, that's wrong.
+
+**Downstream impact — what breaks or changes elsewhere?**
+- Other pages, components, or hooks that read the same tables or call the same RPCs
+- The WhatsApp intake flow if it touches tenant/ticket/compliance data
+- The audit trail — does this operation get logged? Should it?
+- Type generation — if schema changes, everything downstream needs `supabase gen types`
+- RLS policies — new tables or changed access patterns need policy review
+
+**Real-world resilience — what happens in production?**
+- What if the data is messy, incomplete, or late? (Real landlords don't fill everything in perfectly)
+- What if a compliance deadline passes while this feature is partially built?
+- What if two users act on the same record at the same time?
+- What if a tenant's situation changes mid-flow? (moves rooms, leaves early, disputed charges)
+- Operations that should be atomic but are written as separate steps
+- Missing constraints (NOT NULL, CHECK, UNIQUE, FK) the app will rely on
+- Destructive migrations on tables with existing data
 
 **Gaps — what's missing?**
 - Steps that assume happy paths without handling errors
 - Missing loading, error, or empty states in UI work
 - Data that won't survive a page refresh (React state only, not persisted)
-- Business logic in the frontend that should be an RPC (backend-first rule)
 - Schema changes without `supabase gen types` regeneration step
 - New tables without RLS policies
-
-**Shortcuts — where is it cutting corners?**
-- Direct table access (`.from().select()`) where an RPC should exist
-- `any` types or type assertions that paper over real mismatches
-- Hardcoded values that should be constants or config
-- Copy-pasted logic instead of reusing existing utilities
-- Skipping validation at system boundaries
 
 **Ordering — are the steps in the right sequence?**
 - Does it reference something before creating it?
 - Are database changes deployed before frontend code that depends on them?
 - Are types regenerated before the UI code that needs them?
-
-**Robustness — will this hold up?**
-- Operations that should be atomic but are written as separate steps
-- Race conditions (especially around auth, state, or concurrent mutations)
-- Missing constraints (NOT NULL, CHECK, UNIQUE, FK) the app will rely on
-- Destructive migrations on tables with existing data
 
 **Completeness — does it actually deliver what it promises?**
 - Does every stated goal map to a concrete step?
@@ -73,6 +93,9 @@ Output the review directly in the conversation. Don't write to files.
 
 ```
 ## Plan Review
+
+### Understanding
+[3–5 sentence summary of what the plan does, why it exists, and what context it was built from. This proves comprehension before critique.]
 
 **Verdict:** [Ready to build | Fix before building | Needs rethink]
 
