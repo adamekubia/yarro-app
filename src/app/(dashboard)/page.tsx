@@ -6,7 +6,6 @@ import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import {
-  ArrowRight,
   AlertTriangle,
   X,
   MessageSquare,
@@ -16,6 +15,8 @@ import {
   Search,
   ShieldCheck,
   Zap,
+  Banknote,
+  CalendarDays,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -139,8 +140,14 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [complianceSummary, setComplianceSummary] = useState<{
-    expired: number; expiring: number; valid: number; review: number; total: number
-  }>({ expired: 0, expiring: 0, valid: 0, review: 0, total: 0 })
+    actions_needed: number; expired: number; expiring_unscheduled: number;
+    review: number; missing: number; renewal_scheduled: number; valid: number;
+    compliant_properties: number; total_properties: number; total_required: number
+  }>({
+    actions_needed: 0, expired: 0, expiring_unscheduled: 0,
+    review: 0, missing: 0, renewal_scheduled: 0, valid: 0,
+    compliant_properties: 0, total_properties: 0, total_required: 0,
+  })
   const [occupancySummary, setOccupancySummary] = useState<{
     total_rooms: number; occupied: number; vacant: number; ending_soon: number
   }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
@@ -152,7 +159,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -210,16 +217,23 @@ export default function DashboardPage() {
       supabase.rpc('get_occupancy_summary' as never, { p_pm_id: propertyManager.id } as never),
       // AI actions — system/AI events this month
       supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
+      // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
+      supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
     ])
 
-    // Process compliance summary — RPC returns { expired, expiring, valid, missing, total }
+    // Process compliance summary — RPC returns action-based counts
     const summaryData = complianceRes?.data as Record<string, number> | null
     setComplianceSummary({
+      actions_needed: summaryData?.actions_needed ?? 0,
       expired: summaryData?.expired ?? 0,
-      expiring: summaryData?.expiring ?? 0,
-      valid: summaryData?.valid ?? 0,
+      expiring_unscheduled: summaryData?.expiring_unscheduled ?? 0,
       review: summaryData?.review ?? 0,
-      total: summaryData?.total ?? 0,
+      missing: summaryData?.missing ?? 0,
+      renewal_scheduled: summaryData?.renewal_scheduled ?? 0,
+      valid: summaryData?.valid ?? 0,
+      compliant_properties: summaryData?.compliant_properties ?? 0,
+      total_properties: summaryData?.total_properties ?? 0,
+      total_required: summaryData?.total_required ?? 0,
     })
 
     // Process occupancy summary — portfolio-wide room vacancy
@@ -330,8 +344,14 @@ export default function DashboardPage() {
       setAllTickets(mappedTickets)
     }
 
-    const todoData = (todoRes.data as unknown as TodoItem[] | null) ?? []
-    setTodoItems(todoData)
+    // Merge ticket todos + extras (compliance, rent, tenancy, handoff), sort by priority_score
+    const ticketTodos = (todoRes.data as unknown as TodoItem[] | null) ?? []
+    const extraTodos = (todoExtrasRes.data as unknown as TodoItem[] | null) ?? []
+    const merged = [
+      ...ticketTodos.map(t => ({ ...t, source_type: t.source_type || 'ticket' as const })),
+      ...extraTodos,
+    ].sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0))
+    setTodoItems(merged)
 
     const eventsPayload = (eventsRes.data as unknown as { events: RecentEvent[] } | null)
     setRecentEvents(eventsPayload?.events ?? [])
@@ -459,9 +479,9 @@ export default function DashboardPage() {
           />
           <StatCard
             label="Compliance"
-            value={complianceSummary.total > 0 ? `${Math.round((complianceSummary.valid / complianceSummary.total) * 100)}%` : '—'}
-            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.review > 0 ? `${complianceSummary.review} needs review` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
-            accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.review > 0 ? 'warning' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
+            value={complianceSummary.actions_needed > 0 ? `${complianceSummary.actions_needed} actions` : complianceSummary.total_required > 0 ? 'All clear' : '—'}
+            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring_unscheduled > 0 ? `${complianceSummary.expiring_unscheduled} expiring` : complianceSummary.missing > 0 ? `${complianceSummary.missing} missing` : complianceSummary.total_required > 0 ? `${complianceSummary.compliant_properties}/${complianceSummary.total_properties} properties compliant` : 'No certificates'}
+            accentColor={complianceSummary.expired > 0 || complianceSummary.missing > 0 ? 'danger' : complianceSummary.expiring_unscheduled > 0 || complianceSummary.review > 0 ? 'warning' : 'success'}
             icon={ShieldCheck}
           />
           <StatCard
@@ -476,7 +496,7 @@ export default function DashboardPage() {
         {/* Main Content — two-column layout: Needs Action + In Progress */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 lg:items-stretch">
 
-          {/* Left column — Needs Action */}
+          {/* Left column — Needs Action (unified: tickets + compliance + rent + tenancy + handoff) */}
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
               <span className="text-base font-semibold text-foreground">Needs action</span>
@@ -498,15 +518,59 @@ export default function DashboardPage() {
                     : item.priority_bucket === 'HIGH'
                     ? 'border-l-[3px] border-l-warning'
                     : ''
-                  const isHandoff = item.next_action_reason === 'handoff_review'
-                  const isPendingReview = item.next_action_reason === 'pending_review'
-                  const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-                  const actionHref = isHandoff
-                    ? `/tickets?id=${item.ticket_id}&action=complete`
-                    : isPendingReview
-                    ? `/tickets?id=${item.ticket_id}&action=review`
+                  const src = item.source_type || 'ticket'
+
+                  // Source icon for non-ticket items
+                  const SourceIcon = src === 'compliance' ? ShieldCheck
+                    : src === 'rent' ? Banknote
+                    : src === 'tenancy' ? CalendarDays
+                    : src === 'handoff' ? MessageSquare
                     : null
-                  const ctaText = ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
+
+                  // CTA text
+                  const ctaText = (() => {
+                    if (src === 'compliance') {
+                      if (item.next_action_reason === 'compliance_expired') return 'Renew'
+                      if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
+                      if (item.next_action_reason === 'compliance_missing') return 'Add'
+                      return 'View'
+                    }
+                    if (src === 'rent') return item.next_action_reason === 'rent_partial' ? 'Follow up' : 'Chase'
+                    if (src === 'tenancy') return item.next_action_reason === 'tenancy_expired' ? 'Update' : 'Review'
+                    if (src === 'handoff') return 'Create ticket'
+                    // Ticket CTAs
+                    return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
+                  })()
+
+                  // Navigation per source
+                  const getHref = (): string | null => {
+                    if (src === 'compliance') {
+                      return item.next_action_reason === 'compliance_missing'
+                        ? `/properties/${item.property_id}`
+                        : `/compliance/${item.entity_id}`
+                    }
+                    if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
+                    // Ticket navigation
+                    if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
+                    if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
+                    return null
+                  }
+                  const href = getHref()
+
+                  // Handoff source items open the handoff dialog instead of navigating
+                  const handleHandoffClick = () => {
+                    if (src === 'handoff') {
+                      const convo = handoffConversations.find(c => c.id === item.entity_id)
+                      if (convo) {
+                        setSelectedHandoff(convo)
+                        setCreateTicketOpen(true)
+                      }
+                      return
+                    }
+                    // Ticket fallback — open ticket detail
+                    const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                    openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
+                  }
 
                   const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
                   const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
@@ -514,6 +578,9 @@ export default function DashboardPage() {
 
                   const rowContent = (
                     <>
+                      {SourceIcon && (
+                        <SourceIcon className="h-4 w-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
@@ -534,11 +601,11 @@ export default function DashboardPage() {
 
                   const rowClass = cn("flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer", borderAccent)
 
-                  if (actionHref) {
-                    return <Link key={item.id} href={actionHref} className={rowClass}>{rowContent}</Link>
+                  if (href) {
+                    return <Link key={item.id} href={href} className={rowClass}>{rowContent}</Link>
                   }
                   return (
-                    <button key={item.id} onClick={() => openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)} className={cn(rowClass, 'w-full text-left')}>
+                    <button key={item.id} onClick={handleHandoffClick} className={cn(rowClass, 'w-full text-left')}>
                       {rowContent}
                     </button>
                   )

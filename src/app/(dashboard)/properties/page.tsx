@@ -35,7 +35,6 @@ import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import type { Json } from '@/types/database'
-import { computeCertificateStatus } from '@/lib/constants'
 
 interface PropertyHub {
   property_id: string | null
@@ -267,23 +266,29 @@ export default function PropertiesPage() {
   }
 
   const fetchComplianceStatuses = async () => {
-    const { data } = await supabase
-      .from('c1_compliance_certificates')
-      .select('property_id, expiry_date')
-      .eq('property_manager_id', propertyManager!.id)
+    const { data } = await supabase.rpc('compliance_get_all_statuses', {
+      p_pm_id: propertyManager!.id,
+    })
 
     if (!data) return
 
     // Group by property_id and find the worst status per property
-    // Severity order: expired > expiring > valid
-    const severityRank = { expired: 3, expiring: 2, valid: 1, missing: 0 }
+    const severityRank: Record<string, number> = {
+      expired: 5, missing: 4, expiring_soon: 3, review: 2,
+      renewal_scheduled: 1, valid: 0,
+    }
     const statusMap = new Map<string, 'valid' | 'expiring' | 'expired' | 'missing'>()
 
-    for (const cert of data) {
-      const status = computeCertificateStatus(cert.expiry_date)
-      const current = statusMap.get(cert.property_id)
-      if (!current || severityRank[status] > severityRank[current]) {
-        statusMap.set(cert.property_id, status)
+    for (const row of data as unknown as Array<{ property_id: string; display_status: string }>) {
+      const displayToLegacy: Record<string, 'valid' | 'expiring' | 'expired' | 'missing'> = {
+        valid: 'valid', expiring_soon: 'expiring', expired: 'expired',
+        missing: 'missing', review: 'expiring', renewal_scheduled: 'valid',
+      }
+      const mapped = displayToLegacy[row.display_status] || 'missing'
+      const current = statusMap.get(row.property_id)
+      const currentRank = current ? (severityRank[current] ?? 0) : -1
+      if ((severityRank[row.display_status] ?? 0) > currentRank) {
+        statusMap.set(row.property_id, mapped)
       }
     }
     setComplianceByProperty(statusMap)

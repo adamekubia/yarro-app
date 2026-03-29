@@ -100,6 +100,55 @@ export type Database = {
           },
         ]
       }
+      c1_compliance_requirements: {
+        Row: {
+          certificate_type: Database["public"]["Enums"]["certificate_type"]
+          created_at: string
+          id: string
+          is_required: boolean
+          property_id: string
+          property_manager_id: string
+        }
+        Insert: {
+          certificate_type: Database["public"]["Enums"]["certificate_type"]
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          property_id: string
+          property_manager_id: string
+        }
+        Update: {
+          certificate_type?: Database["public"]["Enums"]["certificate_type"]
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          property_id?: string
+          property_manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_compliance_requirements_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_compliance_requirements_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_properties_hub"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "c1_compliance_requirements_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       c1_contractors: {
         Row: {
           _audit_log: Json | null
@@ -848,6 +897,7 @@ export type Database = {
           landlord_name: string | null
           landlord_phone: string | null
           property_manager_id: string | null
+          property_type: string | null
           require_landlord_approval: boolean
         }
         Insert: {
@@ -868,6 +918,7 @@ export type Database = {
           landlord_name?: string | null
           landlord_phone?: string | null
           property_manager_id?: string | null
+          property_type?: string | null
           require_landlord_approval?: boolean
         }
         Update: {
@@ -888,6 +939,7 @@ export type Database = {
           landlord_name?: string | null
           landlord_phone?: string | null
           property_manager_id?: string | null
+          property_type?: string | null
           require_landlord_approval?: boolean
         }
         Relationships: [
@@ -1233,6 +1285,7 @@ export type Database = {
           archived_at: string | null
           availability: string | null
           category: string | null
+          compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
           contractor_ids: string[] | null
@@ -1304,6 +1357,7 @@ export type Database = {
           archived_at?: string | null
           availability?: string | null
           category?: string | null
+          compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
           contractor_ids?: string[] | null
@@ -1375,6 +1429,7 @@ export type Database = {
           archived_at?: string | null
           availability?: string | null
           category?: string | null
+          compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
           contractor_ids?: string[] | null
@@ -1439,6 +1494,13 @@ export type Database = {
           was_handoff?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "c1_tickets_compliance_certificate_id_fkey"
+            columns: ["compliance_certificate_id"]
+            isOneToOne: false
+            referencedRelation: "c1_compliance_certificates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "c1_tickets_ooh_contact_id_fkey"
             columns: ["ooh_contact_id"]
@@ -1671,6 +1733,7 @@ export type Database = {
           p_access?: string
           p_availability?: string
           p_category?: string
+          p_compliance_certificate_id?: string
           p_contractor_ids?: string[]
           p_images?: Json
           p_issue_description?: string
@@ -1692,6 +1755,7 @@ export type Database = {
           archived_at: string | null
           availability: string | null
           category: string | null
+          compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
           contractor_ids: string[] | null
@@ -1839,15 +1903,6 @@ export type Database = {
         Returns: undefined
       }
       c1_landlord_timeout_check: { Args: never; Returns: number }
-      c1_log_compliance_event: {
-        Args: {
-          p_event_type: string
-          p_metadata?: Json
-          p_pm_id: string
-          p_property_label?: string
-        }
-        Returns: undefined
-      }
       c1_log_event: {
         Args: {
           p_actor_name?: string
@@ -1872,6 +1927,15 @@ export type Database = {
           p_twilio_sid?: string
         }
         Returns: string
+      }
+      c1_log_system_event: {
+        Args: {
+          p_event_type: string
+          p_metadata?: Json
+          p_pm_id: string
+          p_property_label?: string
+        }
+        Returns: undefined
       }
       c1_manager_decision_from_app: {
         Args: { p_approved: boolean; p_markup?: string; p_ticket_id: string }
@@ -2031,6 +2095,23 @@ export type Database = {
         Args: { p_cert_id: string; p_pm_id: string }
         Returns: boolean
       }
+      compliance_get_all_statuses: {
+        Args: { p_pm_id: string }
+        Returns: {
+          cert_id: string
+          certificate_number: string
+          certificate_type: string
+          days_remaining: number
+          display_status: string
+          document_url: string
+          expiry_date: string
+          issued_by: string
+          issued_date: string
+          property_address: string
+          property_id: string
+          renewal_ticket_id: string
+        }[]
+      }
       compliance_get_certificates: {
         Args: { p_pm_id: string; p_property_id: string }
         Returns: {
@@ -2052,7 +2133,35 @@ export type Database = {
           updated_at: string
         }[]
       }
+      compliance_get_property_status: {
+        Args: { p_pm_id: string; p_property_id: string }
+        Returns: {
+          cert_id: string
+          certificate_number: string
+          certificate_type: string
+          contractor_id: string
+          days_remaining: number
+          display_status: string
+          document_url: string
+          expiry_date: string
+          issued_by: string
+          reminder_days_before: number
+          renewal_ticket_id: string
+        }[]
+      }
       compliance_get_summary: { Args: { p_pm_id: string }; Returns: Json }
+      compliance_get_todos: {
+        Args: { p_pm_id: string }
+        Returns: {
+          action: string
+          cert_id: string
+          cert_type: string
+          days_remaining: number
+          property_address: string
+          property_id: string
+          urgency_label: string
+        }[]
+      }
       compliance_upsert_certificate: {
         Args: {
           p_certificate_number?: string
@@ -2068,6 +2177,10 @@ export type Database = {
         }
         Returns: string
       }
+      compliance_upsert_requirements: {
+        Args: { p_pm_id: string; p_property_id: string; p_requirements: Json }
+        Returns: undefined
+      }
       create_rent_ledger_entries: {
         Args: {
           p_month: number
@@ -2077,6 +2190,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_ai_actions_count: { Args: { p_pm_id: string }; Returns: Json }
       get_compliance_expiring: {
         Args: { p_days_ahead?: number; p_pm_id?: string }
         Returns: {
@@ -2098,8 +2212,28 @@ export type Database = {
           reminder_days_before: number
         }[]
       }
+      get_occupancy_summary: { Args: { p_pm_id: string }; Returns: Json }
       get_pm_id: { Args: never; Returns: string }
       get_rent_dashboard_summary: { Args: { p_pm_id: string }; Returns: Json }
+      get_rent_income_summary: { Args: { p_pm_id: string }; Returns: Json }
+      get_rent_reminders_due: {
+        Args: never
+        Returns: {
+          amount_due: number
+          amount_paid: number
+          due_date: string
+          ledger_id: string
+          property_address: string
+          property_manager_id: string
+          reminder_level: number
+          room_id: string
+          room_number: string
+          status: string
+          tenant_id: string
+          tenant_name: string
+          tenant_phone: string
+        }[]
+      }
       get_rent_summary_for_property: {
         Args: {
           p_month: number

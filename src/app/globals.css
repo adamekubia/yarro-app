@@ -156,6 +156,26 @@
   background: #94A3B8;
 }
 
+/* Print styles — hide app chrome, show only content */
+@media print {
+  nav, aside, header,
+  [data-sidebar], [data-slot="sidebar"] {
+    display: none !important;
+  }
+
+  main, [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
 /* Fix browser autofill styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

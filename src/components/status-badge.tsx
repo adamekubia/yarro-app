@@ -76,11 +76,14 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   availability_collection: { border: 'border-primary/60',  text: 'text-primary' },
 
   // Compliance certificate statuses
-  valid:    { border: 'border-success/40',  text: 'text-success' },
-  expiring: { border: 'border-warning/40',  text: 'text-warning' },
-  expired:  { border: 'border-danger/40',   text: 'text-danger' },
-  missing:  { border: 'border-border',      text: 'text-muted-foreground' },
-  review:   { border: 'border-primary/40',  text: 'text-primary' },
+  valid:             { border: 'border-success/40',  text: 'text-success' },
+  expiring:          { border: 'border-warning/40',  text: 'text-warning' },
+  'expiring soon':   { border: 'border-warning/40',  text: 'text-warning' },
+  expired:           { border: 'border-danger/40',   text: 'text-danger' },
+  missing:           { border: 'border-border',      text: 'text-muted-foreground' },
+  review:            { border: 'border-primary/40',  text: 'text-primary' },
+  verified:          { border: 'border-success/40',  text: 'text-success' },
+  'renewal scheduled': { border: 'border-primary/40', text: 'text-primary' },
 
   // Default
   default: { border: 'border-border', text: 'text-muted-foreground' },

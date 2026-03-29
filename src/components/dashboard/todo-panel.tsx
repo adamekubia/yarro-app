@@ -11,9 +11,14 @@ import { formatDistanceToNow } from 'date-fns'
 // Types (shared — exported for use in page.tsx)
 // ─────────────────────────────────────────────────────────
 
+export type TodoSourceType = 'ticket' | 'compliance' | 'rent' | 'tenancy' | 'handoff'
+
 export interface TodoItem {
   id: string
   ticket_id: string
+  source_type?: TodoSourceType
+  entity_id?: string
+  property_id?: string
   issue_summary: string
   property_label: string
   action_type: string
@@ -23,6 +28,7 @@ export interface TodoItem {
   waiting_since: string
   priority_bucket: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'
   priority: string | null
+  priority_score?: number
   sla_breached: boolean
 }
 
@@ -50,8 +56,9 @@ export interface TicketSummary {
 // Constants
 // ─────────────────────────────────────────────────────────
 
-// CTA button text per action type
+// CTA button text per action_label
 const ACTION_CTA: Record<string, string> = {
+  // Ticket CTAs
   'Review issue': 'Triage',
   'Needs attention': 'Review',
   'Landlord declined': 'Review',
@@ -64,6 +71,25 @@ const ACTION_CTA: Record<string, string> = {
   'OOH resolved': 'Close',
   'OOH unresolved': 'Review',
   'OOH in progress': 'View',
+  // Rent CTAs
+  'Rent overdue': 'Chase',
+  'Partial payment': 'Follow up',
+  // Tenancy CTAs
+  'Tenancy ending': 'Review',
+  'Tenancy expired': 'Update',
+  // Handoff CTAs
+  'Handoff conversation': 'Create ticket',
+}
+
+// CTA fallback for compliance items (action_label is dynamic, e.g. "Gas Safety (CP12) expired")
+function getCtaText(item: TodoItem): string {
+  const fromMap = ACTION_CTA[item.action_label]
+  if (fromMap) return fromMap
+  // Compliance items have dynamic labels — match by reason key
+  if (item.next_action_reason === 'compliance_expired') return 'Renew'
+  if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
+  if (item.next_action_reason === 'compliance_missing') return 'Add'
+  return 'View'
 }
 
 // Dot + text badges per next_action_reason
@@ -88,6 +114,18 @@ export const REASON_BADGE: Record<string, { label: string; dot: string; text: st
   awaiting_booking:     { label: 'Awaiting booking',     dot: 'bg-warning',          text: 'text-warning' },
   scheduled:            { label: 'Scheduled',             dot: 'bg-success',          text: 'text-success' },
   awaiting_landlord:    { label: 'Awaiting landlord',    dot: 'bg-warning',          text: 'text-warning' },
+  // Compliance
+  compliance_expired:   { label: 'Expired',              dot: 'bg-danger',           text: 'text-danger' },
+  compliance_expiring:  { label: 'Expiring',             dot: 'bg-warning',          text: 'text-warning' },
+  compliance_missing:   { label: 'Missing',              dot: 'bg-danger',           text: 'text-danger' },
+  // Rent
+  rent_overdue:         { label: 'Overdue',              dot: 'bg-danger',           text: 'text-danger' },
+  rent_partial:         { label: 'Partial payment',      dot: 'bg-warning',          text: 'text-warning' },
+  // Tenancy
+  tenancy_ending:       { label: 'Ending soon',          dot: 'bg-warning',          text: 'text-warning' },
+  tenancy_expired:      { label: 'Tenancy ended',        dot: 'bg-danger',           text: 'text-danger' },
+  // Handoff
+  handoff_conversation: { label: 'Needs ticket',         dot: 'bg-primary',          text: 'text-primary' },
 }
 
 // Recommended next-step descriptions per state
@@ -116,6 +154,9 @@ export const IN_PROGRESS_REASONS = new Set([
 
 export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
+    // Non-ticket items are always actionable
+    if (i.source_type && i.source_type !== 'ticket') return true
+    // Ticket-specific filtering
     if (i.action_type === 'FOLLOW_UP') return false
     if (i.next_action_reason === 'awaiting_landlord') {
       const hrs = (Date.now() - new Date(i.waiting_since).getTime()) / 3_600_000
@@ -201,7 +242,7 @@ export function TodoPanel({ actionable, inProgressTickets }: TodoPanelProps) {
       ) : (
         <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {actionable.map(item => {
-            const ctaText = ACTION_CTA[item.action_label] || 'View'
+            const ctaText = getCtaText(item)
             const isHandoff = item.next_action_reason === 'handoff_review'
             const isPendingReview = item.next_action_reason === 'pending_review'
             const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'

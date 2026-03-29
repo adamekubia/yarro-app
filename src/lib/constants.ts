@@ -103,16 +103,3 @@ export const CERT_TYPE_CONTRACTOR_CATEGORIES: Record<CertificateType, string[] |
 
 // Days before expiry to flag as "expiring"
 export const COMPLIANCE_EXPIRING_DAYS = 30
-
-// Compute certificate status from expiry date (avoids stale DB values)
-export function computeCertificateStatus(
-  expiryDate: string | null
-): 'valid' | 'expiring' | 'expired' | 'missing' {
-  if (!expiryDate) return 'missing'
-  const now = new Date()
-  const expiry = new Date(expiryDate)
-  if (expiry < now) return 'expired'
-  const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  if (daysUntilExpiry <= COMPLIANCE_EXPIRING_DAYS) return 'expiring'
-  return 'valid'
-}
