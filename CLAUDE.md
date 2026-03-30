@@ -16,58 +16,59 @@ You are helping **Adam**, the sole developer on the Yarro PM dashboard. Adam own
 
 ---
 
-## Daily Workflow
+## Session Discipline
 
-### Every Morning (before any code)
-1. Read SESSION_LOG.md — check "Next Session Pickup" for pending work
-2. Check git state: `git status` and `git branch`
-3. If work is pending from last session, mention it: "Last time we were working on X. Want to continue?"
-4. Ask Adam: "What is the one thing we are building today?"
-5. Read CLAUDE.md + SESSION_LOG.md + BACKLOG.md + relevant files
-6. Generate task file at `.claude/tasks/YYYY-MM-DD-taskname.md`
-7. State technical plan — Adam approves before any code is written
-8. Create task branch off `feat/hmo-compliance`
-9. Build starts only after Adam confirms
+Five rules that keep builds focused and shippable. These are non-negotiable.
 
-### During Every Session
-- One task only — nothing else
-- New ideas → .claude/tasks/BACKLOG.md → back to task
-- Run /context if session feels long
-- /clear between unrelated tasks (keeps CLAUDE.md, wipes conversation)
+### Rule 1: One feature, one merge
+Every build session produces one merge to main. At session start, check `.claude/tasks/` for incomplete PRDs (`Status: In Progress`). If one exists: "There's an unfinished task: **[name]**. Ship it (`/ship`) or abandon it before starting something new." Never start a new branch while a PRD is in progress without resolving it first.
 
-### Every Session End
-- Run the done checklist (see "Before Claiming Done" below)
-- `/clear` if switching tasks
-
-### Branch Structure
+### Rule 2: Branch from main
+Every feature branch starts from `main`. No integration branches. No `feat/hmo-compliance`. No `style/demo-polish`. Each feature is atomic.
 ```
 main (live, always working)
-└── feat/hmo-compliance (full HMO pivot)
-    ├── feat/[name]      — new UI or functionality
-    ├── refactor/[name]  — code cleanup, type fixes, no user-visible change
-    └── fix/[name]       — bug fixes
+├── feat/[name]      — new feature
+├── refactor/[name]  — cleanup
+└── fix/[name]       — bug fix
 ```
+Start: `git checkout main && git pull origin main && git checkout -b feat/[name]`
+Finish: run `/ship`
 
-Group related changes on one branch when they share the same type and area.
-Don't mix refactors with features on the same branch.
+### Rule 3: Guard the scope
+Before implementing any change, check: is this in the active PRD? If the work isn't in the PRD's Technical Plan or Acceptance Criteria, say: "This isn't in today's scope. Add to backlog?" Only proceed if Adam explicitly expands the PRD — and update the PRD to reflect the change.
+
+### Rule 4: Commit often
+After modifying 3+ files without a commit, suggest: "We've changed N files — commit progress?" This is a nudge, not a blocker.
+
+### Rule 5: Don't build during testing
+When running a test plan and a test fails because a feature is missing, log the issue. Do NOT start building the missing feature. Say: "Test X failed because Y. Backlog it or is this a blocker for this PRD?" This prevents test sessions from becoming build sessions.
+
+### Session Start
+1. Read SESSION_LOG.md — check "Next Session Pickup"
+2. Check git state: `git status` and `git branch`
+3. Check `.claude/tasks/` for incomplete PRDs — enforce Rule 1
+4. If pending work exists, mention it
+5. Run `/scope` to create a PRD for today's build (or `/scope` lightweight for quick fixes)
+6. Build starts only after Adam confirms the PRD
+
+### Session End
+Run `/ship` — this handles test plan, build, commit, merge, push, and session log.
 
 ### Branch Commands
 ```bash
-# Start a new task
-git checkout feat/hmo-compliance
-git pull
-git checkout -b feat/[name]  # or refactor/[name] or fix/[name]
+# Start (always from main)
+git checkout main && git pull origin main
+git checkout -b feat/[name]
 
-# Finish a task — merge back to hmo-compliance
-git checkout feat/hmo-compliance
-git merge feat/[name]
-git push
+# Finish (run /ship, or manually)
+git checkout main
+git merge --no-ff feat/[name]
+git push origin main
 ```
 
 ### Rule
-Never commit directly to main.
-Never commit directly to feat/hmo-compliance during active development.
-Always work on a task branch.
+Always branch from main. Always merge back to main.
+No integration branches. One feature branch, one merge, ship it.
 
 ---
 
