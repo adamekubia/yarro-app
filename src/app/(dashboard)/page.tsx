@@ -162,6 +162,7 @@ export default function DashboardPage() {
     if (!propertyManager) return
     setLoading(true)
 
+    try {
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
     const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes, onboardingRes] = await Promise.all([
       supabase
@@ -372,6 +373,11 @@ export default function DashboardPage() {
     }
 
     setLoading(false)
+    } catch (err) {
+      console.error('Dashboard fetch failed:', err)
+      toast.error('Could not load dashboard. Please refresh.')
+      setLoading(false)
+    }
   }, [propertyManager, dateRange, supabase])
 
   useEffect(() => {

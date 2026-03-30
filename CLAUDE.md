@@ -266,4 +266,5 @@ One paragraph of what happened.
 | `.claude/skills/morning-prd/SKILL.md` | Morning PRD skill definition |
 | `supabase/core-rpcs/README.md` | Before writing ANY new migration |
 | `.claude/docs/protected-rpcs.md` | Before planning changes to SQL functions |
+| `docs/stability/` | Before modifying edge functions, migrations, or error handling |
 
