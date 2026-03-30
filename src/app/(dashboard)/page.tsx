@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Zap,
   Banknote,
-  CalendarDays,
+  Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -38,11 +38,13 @@ import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { formatDistanceToNow, format } from 'date-fns'
 import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { filterActionable, filterInProgress, REASON_BADGE } from '@/components/dashboard/todo-panel'
 import { StatCard } from '@/components/dashboard/stat-card'
+import { TodoCategoryCard } from '@/components/dashboard/todo-category-card'
+import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
+import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
 
 interface DashboardStats {
@@ -123,7 +125,7 @@ const EVENT_DOT_COLOR: Record<string, string> = {
 
 
 export default function DashboardPage() {
-  const { propertyManager } = usePM()
+  const { propertyManager, refreshPM } = usePM()
   const { dateRange } = useDateRange()
   const openTicket = useOpenTicket()
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -152,14 +154,18 @@ export default function DashboardPage() {
     total_rooms: number; occupied: number; vacant: number; ending_soon: number
   }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
   const [aiActionsCount, setAiActionsCount] = useState(0)
+  const [onboardingChecklist, setOnboardingChecklist] = useState<OnboardingChecklistItem[]>([])
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [spotlightVisible, setSpotlightVisible] = useState(false)
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
     setLoading(true)
 
+    try {
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes, onboardingRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -219,6 +225,10 @@ export default function DashboardPage() {
       supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
       // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
       supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
+      // Onboarding checklist — skip if already completed (DB field)
+      propertyManager.onboarding_completed_at
+        ? Promise.resolve({ data: null })
+        : supabase.rpc('c1_get_onboarding_checklist', { p_pm_id: propertyManager.id }),
     ])
 
     // Process compliance summary — RPC returns action-based counts
@@ -356,8 +366,34 @@ export default function DashboardPage() {
     const eventsPayload = (eventsRes.data as unknown as { events: RecentEvent[] } | null)
     setRecentEvents(eventsPayload?.events ?? [])
 
+    // Onboarding checklist
+    const checklistData = (onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []
+    setOnboardingChecklist(checklistData)
+
+    // If checklist just completed, refresh PM to pick up the new onboarding_completed_at
+    if (checklistData.length > 0 && checklistData.every(i => i.complete) && !propertyManager.onboarding_completed_at) {
+      refreshPM()
+    }
+
+    // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
+    if (
+      checklistData.length > 0 &&
+      !checklistData.every(i => i.complete) &&
+      !localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)
+    ) {
+      setSpotlightVisible(true)
+      setExpandedCategory('onboarding')
+      localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
+      setTimeout(() => setSpotlightVisible(false), 1500)
+    }
+
     setLoading(false)
-  }, [propertyManager, dateRange, supabase])
+    } catch (err) {
+      console.error('Dashboard fetch failed:', err)
+      toast.error('Could not load dashboard. Please refresh.')
+      setLoading(false)
+    }
+  }, [propertyManager, dateRange, supabase, refreshPM])
 
   useEffect(() => {
     fetchData()
@@ -416,9 +452,15 @@ export default function DashboardPage() {
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const firstName = propertyManager?.name?.split(' ')[0] || ''
-  const taskCount = actionable.length
-  const greetingLabel = taskCount > 0
-    ? `Hi, ${firstName}. You've got ${taskCount} task${taskCount !== 1 ? 's' : ''} today.`
+  const onboardingDone = !!propertyManager?.onboarding_completed_at
+  // During onboarding, only count maintenance items (compliance/finance are hidden)
+  const visibleTaskCount = onboardingDone
+    ? actionable.length
+    : actionable.filter(i => { const s = i.source_type || 'ticket'; return s === 'ticket' || s === 'handoff' }).length
+  const onboardingRemaining = onboardingChecklist.filter(i => !i.complete).length
+  const totalTasks = visibleTaskCount + (onboardingDone ? 0 : onboardingRemaining)
+  const greetingLabel = totalTasks > 0
+    ? `Hi, ${firstName}. You've got ${totalTasks} task${totalTasks !== 1 ? 's' : ''} today.`
     : `Hi, ${firstName}. You're all clear.`
 
   // Autocomplete results for global search in top bar
@@ -457,7 +499,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative">
+      {/* Onboarding spotlight overlay — dims everything except the Getting Started card */}
+      {spotlightVisible && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-700 pointer-events-none"
+          style={{ animation: 'spotlight-fade 1.5s ease-in-out forwards' }}
+        />
+      )}
+      <style>{`
+        @keyframes spotlight-fade {
+          0% { opacity: 0; }
+          15% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
       {/* Header — greeting */}
       <div className="px-6 py-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>
@@ -496,120 +553,75 @@ export default function DashboardPage() {
         {/* Main Content — two-column layout: Needs Action + In Progress */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 lg:items-stretch">
 
-          {/* Left column — Needs Action (unified: tickets + compliance + rent + tenancy + handoff) */}
+          {/* Left column — Needs Action (categorised) */}
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
               <span className="text-base font-semibold text-foreground">Needs action</span>
-              {actionable.length > 0 && (
+              {totalTasks > 0 && (
                 <span className="text-xs font-bold text-danger bg-danger/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                  {actionable.length}
+                  {totalTasks}
                 </span>
               )}
             </div>
             <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto">
-              {actionable.length === 0 ? (
+              {actionable.length === 0 && onboardingChecklist.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center p-6">
                   <p className="text-sm text-success font-medium">All clear — nothing needs your attention</p>
                 </div>
               ) : (
-                actionable.map(item => {
-                  const borderAccent = (item.sla_breached || item.priority_bucket === 'URGENT')
-                    ? 'border-l-[3px] border-l-danger'
-                    : item.priority_bucket === 'HIGH'
-                    ? 'border-l-[3px] border-l-warning'
-                    : ''
-                  const src = item.source_type || 'ticket'
-
-                  // Source icon for non-ticket items
-                  const SourceIcon = src === 'compliance' ? ShieldCheck
-                    : src === 'rent' ? Banknote
-                    : src === 'tenancy' ? CalendarDays
-                    : src === 'handoff' ? MessageSquare
-                    : null
-
-                  // CTA text
-                  const ctaText = (() => {
-                    if (src === 'compliance') {
-                      if (item.next_action_reason === 'compliance_expired') return 'Renew'
-                      if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
-                      if (item.next_action_reason === 'compliance_missing') return 'Add'
-                      return 'View'
-                    }
-                    if (src === 'rent') return item.next_action_reason === 'rent_partial' ? 'Follow up' : 'Chase'
-                    if (src === 'tenancy') return item.next_action_reason === 'tenancy_expired' ? 'Update' : 'Review'
-                    if (src === 'handoff') return 'Create ticket'
-                    // Ticket CTAs
-                    return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
-                  })()
-
-                  // Navigation per source
-                  const getHref = (): string | null => {
-                    if (src === 'compliance') {
-                      return item.next_action_reason === 'compliance_missing'
-                        ? `/properties/${item.property_id}`
-                        : `/compliance/${item.entity_id}`
-                    }
-                    if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
-                    // Ticket navigation
-                    if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
-                    if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
-                    return null
-                  }
-                  const href = getHref()
-
-                  // Handoff source items open the handoff dialog instead of navigating
-                  const handleHandoffClick = () => {
-                    if (src === 'handoff') {
+                <>
+                  {onboardingChecklist.length > 0 && !onboardingChecklist.every(i => i.complete) && (
+                    <OnboardingCategoryCard
+                      items={onboardingChecklist}
+                      expanded={expandedCategory === 'onboarding'}
+                      onToggle={() => setExpandedCategory(expandedCategory === 'onboarding' ? null : 'onboarding')}
+                    />
+                  )}
+                  <TodoCategoryCard
+                    icon={Wrench}
+                    title="Maintenance"
+                    accentColor="bg-primary"
+                    items={actionable.filter(i => {
+                      const src = i.source_type || 'ticket'
+                      return src === 'ticket' || src === 'handoff'
+                    })}
+                    expanded={expandedCategory === 'maintenance'}
+                    onToggle={() => setExpandedCategory(expandedCategory === 'maintenance' ? null : 'maintenance')}
+                    onHandoffClick={(item) => {
                       const convo = handoffConversations.find(c => c.id === item.entity_id)
-                      if (convo) {
-                        setSelectedHandoff(convo)
-                        setCreateTicketOpen(true)
-                      }
-                      return
-                    }
-                    // Ticket fallback — open ticket detail
-                    const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-                    openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
-                  }
-
-                  const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-                  const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                  const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger' : waitHrs > 24 ? 'text-xs font-medium text-warning' : 'text-[11px] text-muted-foreground/60'
-
-                  const rowContent = (
+                      if (convo) { setSelectedHandoff(convo); setCreateTicketOpen(true) }
+                    }}
+                    onTicketClick={(item) => {
+                      const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                      openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
+                    }}
+                  />
+                  {/* Only show Compliance + Finance after onboarding is complete */}
+                  {onboardingDone && (
                     <>
-                      {SourceIcon && (
-                        <SourceIcon className="h-4 w-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                          {item.priority && <StatusBadge status={item.priority} size="sm" className="border-border/50 text-muted-foreground/70" />}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                          </span>
-                          <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                        </div>
-                      </div>
-                      <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">{ctaText}</span>
+                      <TodoCategoryCard
+                        icon={ShieldCheck}
+                        title="Compliance"
+                        accentColor="bg-warning"
+                        items={actionable.filter(i => i.source_type === 'compliance')}
+                        expanded={expandedCategory === 'compliance'}
+                        onToggle={() => setExpandedCategory(expandedCategory === 'compliance' ? null : 'compliance')}
+                        onHandoffClick={() => {}}
+                        onTicketClick={() => {}}
+                      />
+                      <TodoCategoryCard
+                        icon={Banknote}
+                        title="Finance"
+                        accentColor="bg-danger"
+                        items={actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy')}
+                        expanded={expandedCategory === 'finance'}
+                        onToggle={() => setExpandedCategory(expandedCategory === 'finance' ? null : 'finance')}
+                        onHandoffClick={() => {}}
+                        onTicketClick={() => {}}
+                      />
                     </>
-                  )
-
-                  const rowClass = cn("flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer", borderAccent)
-
-                  if (href) {
-                    return <Link key={item.id} href={href} className={rowClass}>{rowContent}</Link>
-                  }
-                  return (
-                    <button key={item.id} onClick={handleHandoffClick} className={cn(rowClass, 'w-full text-left')}>
-                      {rowContent}
-                    </button>
-                  )
-                })
+                  )}
+                </>
               )}
             </div>
           </div>

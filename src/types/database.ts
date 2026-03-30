@@ -990,9 +990,12 @@ export type Database = {
           landlord_timeout_hours: number | null
           min_booking_lead_hours: number
           name: string
+          onboarding_completed_at: string | null
           ooh_enabled: boolean
           ooh_routine_action: string
           phone: string | null
+          preferred_contact_method: string | null
+          role: string | null
           stripe_customer_id: string | null
           subscription_status: string | null
           ticket_mode: string
@@ -1018,9 +1021,12 @@ export type Database = {
           landlord_timeout_hours?: number | null
           min_booking_lead_hours?: number
           name: string
+          onboarding_completed_at?: string | null
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null
+          preferred_contact_method?: string | null
+          role?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string | null
           ticket_mode?: string
@@ -1046,9 +1052,12 @@ export type Database = {
           landlord_timeout_hours?: number | null
           min_booking_lead_hours?: number
           name?: string
+          onboarding_completed_at?: string | null
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null
+          preferred_contact_method?: string | null
+          role?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string | null
           ticket_mode?: string
@@ -1680,6 +1689,14 @@ export type Database = {
       }
     }
     Functions: {
+      bulk_import_properties: {
+        Args: { p_data: Json; p_pm_id: string }
+        Returns: Json
+      }
+      bulk_import_tenants: {
+        Args: { p_data: Json; p_pm_id: string }
+        Returns: Json
+      }
       c1_allocate_to_landlord: { Args: { p_ticket_id: string }; Returns: Json }
       c1_check_same_day_reminder: {
         Args: { p_ticket_id: string }
@@ -2337,6 +2354,33 @@ export type Database = {
         Returns: undefined
       }
       norm_uk_postcode: { Args: { p_in: string }; Returns: string }
+      onboarding_create_account: {
+        Args: {
+          p_business_name?: string
+          p_email: string
+          p_name: string
+          p_phone: string
+          p_preferred_contact?: string
+          p_role?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      c1_get_onboarding_checklist: {
+        Args: { p_pm_id: string }
+        Returns: Json
+      }
+      onboarding_create_property: {
+        Args: {
+          p_address: string
+          p_city: string
+          p_pm_id: string
+          p_postcode: string
+          p_property_type?: string
+          p_room_count?: number
+        }
+        Returns: Json
+      }
       room_assign_tenant: {
         Args: {
           p_pm_id: string
