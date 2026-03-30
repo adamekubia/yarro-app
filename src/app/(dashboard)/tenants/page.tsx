@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download } from 'lucide-react'
+import { exportToCSV, TENANT_EXPORT_COLUMNS } from '@/lib/export'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -509,12 +510,23 @@ export default function TenantsPage() {
       title="Tenants"
       count={filteredTenants.length}
       actions={
-        <CommandSearchInput
-          placeholder="Search tenants..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
-        />
+        <div className="flex items-center gap-2">
+          <CommandSearchInput
+            placeholder="Search tenants..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportToCSV(filteredTenants, TENANT_EXPORT_COLUMNS, 'yarro-tenants')}
+            className="gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </Button>
+        </div>
       }
     >
 

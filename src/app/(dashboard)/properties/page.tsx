@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck } from 'lucide-react'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck, Download } from 'lucide-react'
+import { exportToCSV, PROPERTY_EXPORT_COLUMNS } from '@/lib/export'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
@@ -638,12 +639,23 @@ export default function PropertiesPage() {
       title="Properties"
       count={filteredProperties.length}
       actions={
-        <CommandSearchInput
-          placeholder="Search properties..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
-        />
+        <div className="flex items-center gap-2">
+          <CommandSearchInput
+            placeholder="Search properties..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportToCSV(filteredProperties, PROPERTY_EXPORT_COLUMNS, 'yarro-properties')}
+            className="gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </Button>
+        </div>
       }
     >
 

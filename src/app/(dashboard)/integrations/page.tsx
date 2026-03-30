@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Building2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, FileSpreadsheet } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
@@ -21,6 +22,7 @@ interface Integration {
 }
 
 export default function IntegrationsPage() {
+  const router = useRouter()
   const { propertyManager } = usePM()
   const supabase = createClient()
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -94,6 +96,16 @@ export default function IntegrationsPage() {
       <div className="max-w-2xl">
 
       <div className="space-y-4">
+        {/* Spreadsheet Import */}
+        <ProviderCard
+          name="Spreadsheet Import"
+          description="Import properties and tenants from a CSV spreadsheet"
+          icon={<FileSpreadsheet className="h-6 w-6 text-muted-foreground" />}
+          status="connected"
+          onConnect={() => router.push('/integrations/import')}
+          onImport={() => router.push('/integrations/import')}
+        />
+
         <ProviderCard
           name="Alto"
           description="Import properties, tenants, landlords and contractors from Alto CRM"
