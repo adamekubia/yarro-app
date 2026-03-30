@@ -156,14 +156,18 @@
   background: #94A3B8;
 }
 
-/* Print styles — hide app chrome, show only content */
+/* Print styles — hide app chrome, allow content to flow across pages */
 @media print {
   nav, aside, header,
   [data-sidebar], [data-slot="sidebar"] {
     display: none !important;
   }
 
-  main, [role="main"] {
+  html, body, main, [role="main"],
+  main > *, main > * > * {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;

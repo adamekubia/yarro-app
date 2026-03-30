@@ -69,6 +69,22 @@ export default function DashboardLayout({
     checkProperties()
   }, [propertyManager, pathname, router, supabase])
 
+  // Trial expiry check — redirect to /billing if trial has ended
+  useEffect(() => {
+    if (!propertyManager) return
+    const { subscription_status, trial_ends_at } = propertyManager
+    if (subscription_status === 'active') return // paid user, no gate
+    if (subscription_status === 'trialing' && trial_ends_at) {
+      const expired = new Date(trial_ends_at).getTime() < Date.now()
+      if (expired) {
+        router.push('/billing')
+      }
+    }
+    if (subscription_status === 'expired') {
+      router.push('/billing')
+    }
+  }, [propertyManager, router])
+
   // Loading state - simple, no timeouts needed now that root cause is fixed
   if (loading || checkingOnboarding) {
     return (

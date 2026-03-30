@@ -114,7 +114,7 @@ export function DataTable<T>({
       >
         <Table>
           {showHeader && (
-            <TableHeader className="[&_tr]:border-b [&_tr]:border-border/60 sticky top-0 z-10 bg-muted/60">
+            <TableHeader className="[&_tr]:border-b [&_tr]:border-border/60 sticky top-0 z-10 bg-card">
               <TableRow className="hover:bg-transparent">
                 {columns.map((col) => (
                   <TableHead

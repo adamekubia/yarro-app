@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -57,11 +57,12 @@ const entityConfig = {
 } as const
 
 const createOptions = [
-  { label: 'New Ticket',     icon: Ticket,    href: '/tickets?create=true' },
-  { label: 'New Property',   icon: Building2, href: '/properties?create=true' },
-  { label: 'New Tenant',     icon: Users,     href: '/tenants?create=true' },
-  { label: 'New Contractor', icon: Wrench,    href: '/contractors?create=true' },
-  { label: 'New Landlord',   icon: Contact,   href: '/landlords?create=true' },
+  { label: 'New Ticket',      icon: Ticket,      href: '/tickets?create=true' },
+  { label: 'New Property',    icon: Building2,   href: '/properties?create=true' },
+  { label: 'New Tenant',      icon: Users,       href: '/tenants?create=true' },
+  { label: 'New Contractor',  icon: Wrench,      href: '/contractors?create=true' },
+  { label: 'New Landlord',    icon: Contact,     href: '/landlords?create=true' },
+  { label: 'New Certificate', icon: ShieldCheck, href: '/compliance?create=true' },
 ]
 
 // ─────────────────────────────────────────────────────────
@@ -77,6 +78,13 @@ export function DashboardHeader() {
   const router = useRouter()
   const supabase = createClient()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Trial banner
+  const trialDaysLeft = useMemo(() => {
+    if (!propertyManager?.trial_ends_at || propertyManager.subscription_status !== 'trialing') return null
+    const diff = new Date(propertyManager.trial_ends_at).getTime() - Date.now()
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+  }, [propertyManager?.trial_ends_at, propertyManager?.subscription_status])
 
   // Cmd+K shortcut
   useEffect(() => {
@@ -221,8 +229,16 @@ export function DashboardHeader() {
   return (
     <div className="flex-shrink-0 border-b border-border/60 bg-secondary">
       <div className="flex items-center gap-3 px-4 lg:px-6 h-14">
-        {/* Spacer pushes actions right */}
-        <div className="flex-1" />
+        {/* Trial banner / spacer */}
+        <div className="flex-1">
+          {trialDaysLeft !== null && (
+            <span className="text-xs text-muted-foreground">
+              {trialDaysLeft === 0
+                ? 'Trial expires today'
+                : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your free trial`}
+            </span>
+          )}
+        </div>
 
         {/* Right-aligned actions — labeled icons + create */}
         <div className="flex items-center gap-1 flex-shrink-0">
