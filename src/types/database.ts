@@ -2363,6 +2363,10 @@ export type Database = {
         }
         Returns: Json
       }
+      c1_get_onboarding_checklist: {
+        Args: { p_pm_id: string }
+        Returns: Json
+      }
       onboarding_create_property: {
         Args: {
           p_address: string

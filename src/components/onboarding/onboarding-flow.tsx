@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 import { usePM } from '@/contexts/pm-context'
 import { AccountCard } from './account-card'
 import { PropertyCard } from './property-card'
-import { CheckCircle } from 'lucide-react'
-import { typography } from '@/lib/typography'
-import { Button } from '@/components/ui/button'
+import { SuccessCard } from './success-card'
 
 type OnboardingStep = 'account' | 'property' | 'complete'
 
@@ -24,13 +22,8 @@ export function OnboardingFlow() {
     }
   }, [propertyManager, step])
 
-  const handleComplete = () => {
-    setStep('complete')
-  }
-
   const handleDismiss = () => {
     setDismissing(true)
-    // Let the fade animation play, then navigate
     setTimeout(() => {
       router.push('/')
     }, 600)
@@ -61,26 +54,14 @@ export function OnboardingFlow() {
         {step === 'property' && propertyManager && (
           <PropertyCard
             pmId={propertyManager.id}
-            onComplete={handleComplete}
+            onComplete={() => setStep('complete')}
           />
         )}
 
         {step === 'complete' && (
-          <div className="bg-card rounded-2xl border border-border p-8 text-center shadow-2xl">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-              <CheckCircle className="w-7 h-7 text-primary" />
-            </div>
-            <h2 className={typography.pageTitle}>Property set up</h2>
-            <p className={`${typography.bodyText} mt-2 mb-6`}>
-              Next up: adding your tenants and linking them to rooms. This step is coming soon.
-            </p>
-            <Button onClick={handleDismiss} size="lg" className="w-full">
-              Go to dashboard
-            </Button>
-          </div>
+          <SuccessCard onDismiss={handleDismiss} />
         )}
       </div>
     </div>
   )
 }
-
