@@ -70,6 +70,9 @@ export const CERTIFICATE_TYPES = [
   'legionella',
   'smoke_alarms',
   'co_alarms',
+  'building_insurance',
+  'landlord_insurance',
+  'rent_guarantee_insurance',
 ] as const
 
 export type CertificateType = (typeof CERTIFICATE_TYPES)[number]
@@ -84,6 +87,9 @@ export const CERTIFICATE_LABELS: Record<CertificateType, string> = {
   legionella: 'Legionella Risk Assessment',
   smoke_alarms: 'Smoke Alarms',
   co_alarms: 'CO Alarms',
+  building_insurance: 'Building Insurance',
+  landlord_insurance: 'Landlord Insurance',
+  rent_guarantee_insurance: 'Rent Guarantee Insurance',
 }
 
 // Maps certificate types to relevant contractor categories for the automation dropdown.
@@ -99,6 +105,9 @@ export const CERT_TYPE_CONTRACTOR_CATEGORIES: Record<CertificateType, string[] |
   hmo_license: null,            // Admin task — no contractor
   smoke_alarms: null,           // Operator handles
   co_alarms: null,              // Operator handles
+  building_insurance: null,     // Insurance — no contractor
+  landlord_insurance: null,     // Insurance — no contractor
+  rent_guarantee_insurance: null, // Insurance — no contractor
 }
 
 // Days before expiry to flag as "expiring"

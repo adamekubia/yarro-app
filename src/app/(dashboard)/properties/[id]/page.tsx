@@ -302,7 +302,7 @@ function PropertyDetailInner() {
             <TabsTrigger
               key={value}
               value={value}
-              className="gap-1.5 px-3.5 py-2.5 rounded-none border-b-2 border-transparent shadow-none data-[state=active]:border-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent text-[13px] text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium shrink-0 -mb-[0.5px]"
+              className="gap-1.5 px-3.5 py-2.5 rounded-none border-b-2 border-transparent shadow-none data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-[13px] text-muted-foreground data-[state=active]:text-primary data-[state=active]:font-medium shrink-0 -mb-[0.5px] focus-visible:ring-0 focus-visible:outline-none"
             >
               <Icon className="h-[13px] w-[13px]" />
               {label}
@@ -314,7 +314,7 @@ function PropertyDetailInner() {
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
           {/* Overview Tab */}
           <TabsContent value="overview" className="mt-0">
-            <div className="max-w-3xl space-y-6">
+            <div className="space-y-6">
               {/* Stat strip */}
               {(() => {
                 const totalRooms = rooms.length
@@ -325,26 +325,26 @@ function PropertyDetailInner() {
                 const openTickets = tickets.filter((t) => t.status !== 'closed' && !t.archived)
                 const urgentTickets = openTickets.filter((t) => t.priority === 'urgent')
                 return (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="bg-muted/50 rounded-xl p-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-card rounded-2xl border border-border p-5 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Rooms</p>
-                      <p className="text-[22px] font-medium">{totalRooms}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{occupiedRooms} occupied</p>
+                      <p className="text-2xl font-semibold">{totalRooms}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{occupiedRooms} occupied</p>
                     </div>
-                    <div className="bg-muted/50 rounded-xl p-4">
+                    <div className="bg-card rounded-2xl border border-border p-5 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Occupancy</p>
-                      <p className="text-[22px] font-medium">{occupancyPct}%</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{vacantRooms} vacant</p>
+                      <p className="text-2xl font-semibold">{occupancyPct}%</p>
+                      <p className="text-xs text-muted-foreground mt-1">{vacantRooms} vacant</p>
                     </div>
-                    <div className="bg-muted/50 rounded-xl p-4">
+                    <div className="bg-card rounded-2xl border border-border p-5 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Monthly rent</p>
-                      <p className="text-[22px] font-medium">{monthlyRent > 0 ? `\u00a3${monthlyRent.toLocaleString()}` : '\u2014'}</p>
-                      {monthlyRent > 0 && <p className="text-[11px] text-muted-foreground mt-0.5">expected</p>}
+                      <p className="text-2xl font-semibold">{monthlyRent > 0 ? `\u00a3${monthlyRent.toLocaleString()}` : '\u2014'}</p>
+                      {monthlyRent > 0 && <p className="text-xs text-muted-foreground mt-1">expected</p>}
                     </div>
-                    <div className="bg-muted/50 rounded-xl p-4">
+                    <div className="bg-card rounded-2xl border border-border p-5 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Open tickets</p>
-                      <p className="text-[22px] font-medium">{openTickets.length}</p>
-                      {urgentTickets.length > 0 && <p className="text-[11px] text-destructive mt-0.5">{urgentTickets.length} urgent</p>}
+                      <p className="text-2xl font-semibold">{openTickets.length}</p>
+                      {urgentTickets.length > 0 ? <p className="text-xs text-destructive mt-1">{urgentTickets.length} urgent</p> : <p className="text-xs text-muted-foreground mt-1">&nbsp;</p>}
                     </div>
                   </div>
                 )
@@ -431,7 +431,7 @@ function PropertyDetailInner() {
 
           {/* People Tab */}
           <TabsContent value="people" className="mt-0">
-            <div className="max-w-3xl space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Tenants */}
               <ProfileCard
                 title="Tenants"
@@ -478,7 +478,7 @@ function PropertyDetailInner() {
                           </button>
                         </div>
                       ) : (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5">
+                        <Link key={t.id} href={`/tenants/${t.id}`} className="flex items-center gap-3 py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
                           <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
                             <Users className="h-3.5 w-3.5 text-primary" />
                           </div>
@@ -488,8 +488,7 @@ function PropertyDetailInner() {
                               {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                             </p>
                           </div>
-                          <Link href={`/tenants/${t.id}`} className="text-xs text-primary hover:underline shrink-0">View</Link>
-                        </div>
+                        </Link>
                       )
                     ))}
                   </div>
@@ -539,11 +538,10 @@ function PropertyDetailInner() {
                           </button>
                         </div>
                       ) : (
-                        <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-3 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors gap-4">
-                          <span className="text-sm font-medium truncate">{c.contractor_name}</span>
+                        <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors gap-4">
+                          <span className="text-[13px] font-medium truncate">{c.contractor_name}</span>
                           <span className="text-xs text-muted-foreground shrink-0">
                             {(c.categories || (c.category ? [c.category] : [])).join(', ')}
-                            {c.contractor_phone && ` \u00b7 ${formatPhoneDisplay(c.contractor_phone)}`}
                           </span>
                         </Link>
                       )
@@ -580,27 +578,33 @@ function PropertyDetailInner() {
           {/* Compliance Tab */}
           <TabsContent value="compliance" className="mt-0">
             {propertyManager && (
-              <PropertyComplianceSection propertyId={propertyId} pmId={propertyManager.id} />
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <PropertyComplianceSection propertyId={propertyId} pmId={propertyManager.id} />
+              </div>
             )}
           </TabsContent>
 
           {/* Rooms Tab */}
           <TabsContent value="rooms" className="mt-0">
             {propertyManager && (
-              <PropertyRoomsSection propertyId={propertyId} pmId={propertyManager.id} />
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <PropertyRoomsSection propertyId={propertyId} pmId={propertyManager.id} />
+              </div>
             )}
           </TabsContent>
 
           {/* Rent Tab */}
           <TabsContent value="rent" className="mt-0">
             {propertyManager && (
-              <PropertyRentSection propertyId={propertyId} pmId={propertyManager.id} />
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <PropertyRentSection propertyId={propertyId} pmId={propertyManager.id} />
+              </div>
             )}
           </TabsContent>
 
           {/* Tickets Tab */}
           <TabsContent value="tickets" className="mt-0">
-            <div className="max-w-3xl">
+            <div>
               <TicketCard tickets={tickets} onTicketUpdated={() => fetchRelated()} />
             </div>
           </TabsContent>

@@ -6,7 +6,7 @@ export default function LandlordDetailLoading() {
         <div className="h-7 w-48 bg-muted rounded" />
       </div>
       <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="max-w-3xl space-y-6">
+        <div className="w-full space-y-6">
           <div className="rounded-2xl border p-6 space-y-4">
             <div className="h-5 w-20 bg-muted rounded" />
             <div className="space-y-3">
