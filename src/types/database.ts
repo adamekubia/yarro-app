@@ -2392,16 +2392,6 @@ export type Database = {
         }
         Returns: Json
       }
-      onboarding_seed_demo: {
-        Args: {
-          p_pm_id: string
-          p_issue_title?: string
-          p_issue_description?: string
-          p_category?: string
-          p_priority?: string
-        }
-        Returns: Json
-      }
       onboarding_create_tenants: {
         Args: {
           p_pm_id: string

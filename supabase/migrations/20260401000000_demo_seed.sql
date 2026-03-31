@@ -132,7 +132,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.onboarding_seed_demo TO authenticated;
 
--- 3. Update onboarding_create_property to clean up demo data
+-- 3. Simple onboarding_create_property (no demo cleanup needed)
 CREATE OR REPLACE FUNCTION public.onboarding_create_property(
   p_pm_id uuid,
   p_address text,
@@ -155,21 +155,6 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'PM not found';
   END IF;
-
-  -- Clean up demo data when adding first real property
-  DELETE FROM c1_ledger WHERE ticket_id IN (
-    SELECT id FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true
-  );
-  DELETE FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true;
-  DELETE FROM c1_conversations WHERE property_manager_id = p_pm_id AND property_id IN (
-    SELECT id FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true
-  );
-  DELETE FROM c1_rooms WHERE property_manager_id = p_pm_id AND property_id IN (
-    SELECT id FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true
-  );
-  DELETE FROM c1_tenants WHERE property_manager_id = p_pm_id AND is_demo = true;
-  DELETE FROM c1_contractors WHERE property_manager_id = p_pm_id AND is_demo = true;
-  DELETE FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true;
 
   -- Insert property
   INSERT INTO c1_properties (
@@ -217,22 +202,22 @@ BEGIN
     RAISE EXCEPTION 'PM not found';
   END IF;
 
-  -- First non-demo property for linking
+  -- First property for linking
   SELECT id INTO v_first_property_id
   FROM c1_properties
-  WHERE property_manager_id = p_pm_id AND is_demo = false
+  WHERE property_manager_id = p_pm_id
   ORDER BY created_at ASC
   LIMIT 1;
 
-  -- Counts excluding demo data
+  -- Counts
   SELECT count(*) INTO v_real_property_count
-  FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = false;
+  FROM c1_properties WHERE property_manager_id = p_pm_id;
 
   SELECT count(*) INTO v_tenant_count
-  FROM c1_tenants WHERE property_manager_id = p_pm_id AND is_demo = false;
+  FROM c1_tenants WHERE property_manager_id = p_pm_id;
 
   SELECT count(*) INTO v_contractor_count
-  FROM c1_contractors WHERE property_manager_id = p_pm_id AND is_demo = false;
+  FROM c1_contractors WHERE property_manager_id = p_pm_id;
 
   SELECT count(*) INTO v_cert_count
   FROM c1_compliance_certificates WHERE property_manager_id = p_pm_id;

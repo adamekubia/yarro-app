@@ -457,7 +457,13 @@ export default function DashboardPage() {
   const visibleTaskCount = onboardingDone
     ? actionable.length
     : actionable.filter(i => { const s = i.source_type || 'ticket'; return s === 'ticket' || s === 'handoff' }).length
-  const onboardingRemaining = onboardingChecklist.filter(i => !i.complete).length
+  const propertyAdded = onboardingChecklist.find(i => i.key === 'add_property')?.complete
+  const visibleChecklist = onboardingDone
+    ? onboardingChecklist
+    : propertyAdded
+      ? onboardingChecklist
+      : onboardingChecklist.filter(i => i.key === 'add_property')
+  const onboardingRemaining = visibleChecklist.filter(i => !i.complete).length
   const totalTasks = visibleTaskCount + (onboardingDone ? 0 : onboardingRemaining)
   const greetingLabel = totalTasks > 0
     ? `Hi, ${firstName}. You've got ${totalTasks} task${totalTasks !== 1 ? 's' : ''} today.`
