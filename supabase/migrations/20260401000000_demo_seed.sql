@@ -9,7 +9,13 @@ ALTER TABLE c1_contractors ADD COLUMN IF NOT EXISTS is_demo boolean DEFAULT fals
 ALTER TABLE c1_tickets ADD COLUMN IF NOT EXISTS is_demo boolean DEFAULT false;
 
 -- 2. Seed demo data RPC
-CREATE OR REPLACE FUNCTION public.onboarding_seed_demo(p_pm_id uuid)
+CREATE OR REPLACE FUNCTION public.onboarding_seed_demo(
+  p_pm_id uuid,
+  p_issue_title text DEFAULT 'Boiler not heating',
+  p_issue_description text DEFAULT 'No hot water since this morning. Tenant reports no heating either.',
+  p_category text DEFAULT 'Plumbing',
+  p_priority text DEFAULT 'Urgent'
+)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -84,12 +90,12 @@ BEGIN
     '447700200001', 'closed', p_pm_id, v_property.id, v_tenant1.id, 'final_summary', false,
     'Sarah Mitchell', 'tenant', true,
     jsonb_build_array(
-      jsonb_build_object('direction', 'inbound', 'message', 'Hi, the boiler in my flat isn''t working', 'timestamp', (now() - interval '2 hours')::text),
-      jsonb_build_object('direction', 'outbound', 'message', 'Sorry to hear that, Sarah. When did this start?', 'timestamp', (now() - interval '1 hour 58 minutes')::text),
-      jsonb_build_object('direction', 'inbound', 'message', 'This morning, no hot water at all', 'timestamp', (now() - interval '1 hour 55 minutes')::text),
-      jsonb_build_object('direction', 'outbound', 'message', 'Can you send a photo of the boiler?', 'timestamp', (now() - interval '1 hour 53 minutes')::text),
+      jsonb_build_object('direction', 'inbound', 'message', 'Hi, I need to report an issue — ' || p_issue_description, 'timestamp', (now() - interval '2 hours')::text),
+      jsonb_build_object('direction', 'outbound', 'message', 'Sorry to hear that, Sarah. Can you tell me more about the problem?', 'timestamp', (now() - interval '1 hour 58 minutes')::text),
+      jsonb_build_object('direction', 'inbound', 'message', p_issue_description, 'timestamp', (now() - interval '1 hour 55 minutes')::text),
+      jsonb_build_object('direction', 'outbound', 'message', 'Can you send a photo?', 'timestamp', (now() - interval '1 hour 53 minutes')::text),
       jsonb_build_object('direction', 'inbound', 'message', '[Photo attached]', 'timestamp', (now() - interval '1 hour 50 minutes')::text),
-      jsonb_build_object('direction', 'outbound', 'message', 'Thanks — I''ve created a maintenance ticket and I''m finding a plumber for you now.', 'timestamp', (now() - interval '1 hour 48 minutes')::text)
+      jsonb_build_object('direction', 'outbound', 'message', 'Thanks — I''ve created a ' || p_category || ' ticket and I''m finding a contractor for you now.', 'timestamp', (now() - interval '1 hour 48 minutes')::text)
     )
   ) RETURNING * INTO v_convo;
 
@@ -101,17 +107,17 @@ BEGIN
     images
   ) VALUES (
     v_convo.id, v_property.id, p_pm_id, v_tenant1.id, v_room1.id,
-    'Boiler is not producing hot water since this morning. Tenant reports no heating either. Photo of boiler attached.',
-    'Boiler not heating — Room 1',
-    'Plumbing', 'Urgent', 'closed', 'completed',
+    p_issue_description,
+    p_issue_title || ' — Room 1',
+    p_category, p_priority, 'closed', 'completed',
     now() - interval '2 hours', 'IMMEDIATE', 'tenant', false, true,
     '[]'::jsonb
   ) RETURNING * INTO v_ticket;
 
   -- Add audit trail entries (the trigger creates the first one, we add the rest)
   INSERT INTO c1_ledger (ticket_id, event_type, actor_role, data, created_at) VALUES
-    (v_ticket.id, 'CONTRACTOR_ASSIGNED', 'system', jsonb_build_object('contractor', 'Mike''s Plumbing', 'category', 'Plumbing'), now() - interval '1 hour 45 minutes'),
-    (v_ticket.id, 'QUOTE_RECEIVED', 'contractor', jsonb_build_object('amount', 85, 'notes', 'Standard boiler repair'), now() - interval '1 hour 30 minutes'),
+    (v_ticket.id, 'CONTRACTOR_ASSIGNED', 'system', jsonb_build_object('contractor', 'Mike''s Plumbing', 'category', p_category), now() - interval '1 hour 45 minutes'),
+    (v_ticket.id, 'QUOTE_RECEIVED', 'contractor', jsonb_build_object('amount', 85, 'notes', 'Standard repair job'), now() - interval '1 hour 30 minutes'),
     (v_ticket.id, 'QUOTE_APPROVED', 'system', jsonb_build_object('approved_by', 'auto', 'amount', 85), now() - interval '1 hour 28 minutes'),
     (v_ticket.id, 'JOB_SCHEDULED', 'contractor', jsonb_build_object('date', (CURRENT_DATE + 1)::text, 'time', '14:00'), now() - interval '1 hour'),
     (v_ticket.id, 'JOB_COMPLETED', 'contractor', jsonb_build_object('notes', 'Replaced faulty thermostat. Boiler heating normally now.'), now() - interval '30 minutes');

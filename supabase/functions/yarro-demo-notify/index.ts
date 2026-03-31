@@ -114,12 +114,12 @@ Deno.serve(async (req) => {
     const phone = pm.phone.startsWith("44") ? pm.phone : `44${pm.phone}`;
     let result;
 
-    // Hardcode clean descriptions — DB values have newlines that Twilio rejects
-    const cleanDesc = "Boiler is not producing hot water since this morning. No heating either.";
+    // Read description from DB — seed RPC now stores clean strings
+    const desc = (ticket.issue_description || "Maintenance issue reported").replace(/[\r\n\t]+/g, " ").trim();
 
     if (step === 1) {
       const vars = {
-        "1": cleanDesc,
+        "1": desc,
         "2": "14 Brixton Hill, London SW2 1QA",
         "3": "Sarah Mitchell (Room 1)",
         "4": "Today",
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       const vars = {
         "1": "Mike's Plumbing",
         "2": "14 Brixton Hill, London SW2 1QA",
-        "3": cleanDesc,
+        "3": desc,
         "4": "-",
         "5": "85",
         "6": "85",

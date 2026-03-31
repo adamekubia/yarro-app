@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { typography } from '@/lib/typography'
+import type { DemoIssue } from './demo-issues'
 import {
   MessageSquare,
   Bell,
@@ -26,78 +26,79 @@ interface DemoPage {
   whatsAppStep?: number
 }
 
-const DEMO_PAGES: DemoPage[] = [
-  {
-    icon: MessageSquare,
-    title: 'A tenant reports an issue',
-    bullets: [
-      'Your tenant reports an issue via WhatsApp',
-      'Yarro AI diagnoses the problem automatically',
-      'Photos are collected and attached to the ticket',
-      'A maintenance ticket is created — no input from you',
-    ],
-  },
-  {
-    icon: Bell,
-    title: 'You get notified instantly',
-    bullets: [
-      'You just received this on your phone',
-      'Every new ticket is sent to you in real-time',
-      'Priority, category, and tenant details included',
-      'You didn\'t have to ask — Yarro told you',
-    ],
-    sendsWhatsApp: true,
-    whatsAppStep: 1,
-  },
-  {
-    icon: Wrench,
-    title: 'The right contractor is dispatched',
-    bullets: [
-      'Yarro finds the right contractor from your list',
-      'They receive the job details via WhatsApp',
-      'A secure portal link lets them quote or book',
-      'No phone calls, no back-and-forth',
-    ],
-  },
-  {
-    icon: CalendarCheck,
-    title: 'Job scheduled, everyone notified',
-    bullets: [
-      'Once the contractor confirms, everyone is notified',
-      'Tenant knows when to expect the visit',
-      'You get confirmation without chasing anyone',
-      'Check your phone — you just received this',
-    ],
-    sendsWhatsApp: true,
-    whatsAppStep: 2,
-  },
-  {
-    icon: ClipboardCheck,
-    title: 'Job complete with full audit trail',
-    bullets: [
-      'The contractor closes the job with photo proof',
-      'Full audit trail logged automatically',
-      'Compliance-ready documentation for every job',
-      'From report to resolution — zero manual work',
-    ],
-  },
-]
+function buildPages(issue: DemoIssue): DemoPage[] {
+  return [
+    {
+      icon: MessageSquare,
+      title: `Tenant reports: "${issue.title}"`,
+      bullets: [
+        'Your tenant reports an issue via WhatsApp',
+        'Yarro AI diagnoses the problem automatically',
+        'Photos are collected and attached to the ticket',
+        `Ticket created: ${issue.category} · ${issue.priority}`,
+      ],
+    },
+    {
+      icon: Bell,
+      title: 'You get notified instantly',
+      bullets: [
+        'You just received this on your phone',
+        `"${issue.description}"`,
+        'Priority, category, and tenant details included',
+        'You didn\'t have to ask — Yarro told you',
+      ],
+      sendsWhatsApp: true,
+      whatsAppStep: 1,
+    },
+    {
+      icon: Wrench,
+      title: 'The right contractor is dispatched',
+      bullets: [
+        `Yarro matches this to a ${issue.category} contractor`,
+        'They receive the job details via WhatsApp',
+        'A secure portal link lets them quote or book',
+        'No phone calls, no back-and-forth',
+      ],
+    },
+    {
+      icon: CalendarCheck,
+      title: 'Job scheduled, everyone notified',
+      bullets: [
+        'Once the contractor confirms, everyone is notified',
+        'Tenant knows when to expect the visit',
+        'You get confirmation without chasing anyone',
+        'Check your phone — you just received this',
+      ],
+      sendsWhatsApp: true,
+      whatsAppStep: 2,
+    },
+    {
+      icon: ClipboardCheck,
+      title: `"${issue.title}" — resolved`,
+      bullets: [
+        'The contractor closes the job with photo proof',
+        'Full audit trail logged automatically',
+        'Compliance-ready documentation for every job',
+        'From report to resolution — zero manual work',
+      ],
+    },
+  ]
+}
 
-export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
+export function DemoWalkthrough({ onComplete, issue }: { onComplete: () => void; issue: DemoIssue }) {
   const { propertyManager } = usePM()
-  const router = useRouter()
   const supabase = createClient()
   const [currentPage, setCurrentPage] = useState(0)
   const [sending, setSending] = useState(false)
   const [dismissing, setDismissing] = useState(false)
 
-  const page = DEMO_PAGES[currentPage]
-  const isLast = currentPage === DEMO_PAGES.length - 1
+  const pages = buildPages(issue)
+  const page = pages[currentPage]
+  const isLast = currentPage === pages.length - 1
   const isFirst = currentPage === 0
 
   const handleContinue = async () => {
-    // If the NEXT page sends WhatsApp, trigger it now
-    const nextPage = DEMO_PAGES[currentPage + 1]
+    const nextPage = pages[currentPage + 1]
     if (nextPage?.sendsWhatsApp && propertyManager) {
       setSending(true)
       try {
@@ -108,7 +109,6 @@ export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
           toast.info('Demo message preview — WhatsApp send will be available soon')
         }
       } catch {
-        // Fallback: demo continues regardless
         toast.info('Demo message preview — WhatsApp send will be available soon')
       }
       setSending(false)
@@ -152,7 +152,7 @@ export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
               <div className="w-8" />
             )}
             <div className="flex-1 flex items-center justify-center gap-1.5">
-              {DEMO_PAGES.map((_, i) => (
+              {pages.map((_, i) => (
                 <div
                   key={i}
                   className={`h-1 rounded-full transition-all ${
