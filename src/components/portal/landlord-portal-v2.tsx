@@ -72,14 +72,16 @@ export function LandlordPortalV2({ data, onSubmit }: LandlordPortalV2Props) {
 function OverviewCard({ data }: { data: LandlordPortalData }) {
   return (
     <div className="bg-card rounded-2xl border border-border p-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2 mb-4">
         <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
           T-{data.ticket_ref}
         </span>
-        <span className="text-xs font-medium text-blue-600">Allocated to you</span>
+        <span className="inline-block rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-700">
+          Allocated to you
+        </span>
       </div>
 
-      <h1 className="mt-3 text-xl font-semibold text-foreground leading-snug">
+      <h1 className="text-xl font-semibold text-foreground leading-snug">
         {data.property_address}
       </h1>
       <p className="mt-1.5 text-base font-medium text-muted-foreground">
