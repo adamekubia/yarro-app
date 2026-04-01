@@ -10,6 +10,7 @@ interface SuccessCardProps {
   heading?: string
   subtext?: string
   buttonLabel?: string
+  showConfetti?: boolean
 }
 
 export function SuccessCard({
@@ -17,8 +18,10 @@ export function SuccessCard({
   heading = 'Your property is live!',
   subtext = 'Next up: add your tenants, contractors, and compliance documents from your dashboard.',
   buttonLabel = 'Go to dashboard',
+  showConfetti = true,
 }: SuccessCardProps) {
   useEffect(() => {
+    if (!showConfetti) return
     async function fireConfetti() {
       const confetti = (await import('canvas-confetti')).default
 
@@ -48,7 +51,7 @@ export function SuccessCard({
     }
 
     fireConfetti()
-  }, [])
+  }, [showConfetti])
 
   return (
     <div className="bg-card rounded-2xl border border-border p-10 text-center shadow-2xl">
