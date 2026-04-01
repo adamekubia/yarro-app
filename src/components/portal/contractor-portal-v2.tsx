@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Check, Circle, Wrench, Search, CalendarCheck, CheckCircle2, Loader2, Phone, CalendarClock, AlertTriangle, Upload, X } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { MiniCalendar } from './mini-calendar'
-import type { ContractorPortalData } from '@/lib/portal-types'
+import { MediaGrid } from './media-grid'
+import type { ContractorPortalData, ContractorQuoteData } from '@/lib/portal-types'
 
 // ─── Formatting ─────────────────────────────────────────────────────────
 
@@ -418,6 +419,187 @@ function InfoRow({ label, value, last }: { label: string; value: React.ReactNode
     <div className={`flex justify-between items-start gap-4 py-2.5 ${last ? '' : 'border-b border-border/40'}`}>
       <span className="text-[13px] text-muted-foreground shrink-0">{label}</span>
       <span className="text-[13px] font-medium text-foreground text-right">{value}</span>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Contractor Quote Flow (separate entry point — dispatch → quote)
+// ═══════════════════════════════════════════════════════════════════════
+
+export type ContractorQuoteV2Props = {
+  data: ContractorQuoteData
+  onQuoteSubmit: (amount: number, notes: string | null) => Promise<void>
+}
+
+export function ContractorQuoteV2({ data, onQuoteSubmit }: ContractorQuoteV2Props) {
+  return (
+    <div className="min-h-screen bg-background" style={{ colorScheme: 'light' }}>
+      <div className="mx-auto max-w-[640px] px-5 py-8 flex flex-col gap-5">
+        <QuoteOverviewCard data={data} />
+        <QuoteContentCard data={data} onQuoteSubmit={onQuoteSubmit} />
+        <p className="text-center text-xs text-muted-foreground/40">Powered by Yarro</p>
+      </div>
+    </div>
+  )
+}
+
+function QuoteOverviewCard({ data }: { data: ContractorQuoteData }) {
+  return (
+    <div className="bg-card rounded-2xl border border-border p-6">
+      <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground mb-4">
+        T-{data.ticket_ref}
+      </span>
+
+      <h1 className="text-xl font-semibold text-foreground leading-snug">{data.property_address}</h1>
+      <p className="mt-1.5 text-base font-medium text-muted-foreground">{data.issue_title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">From {data.agency_name} &middot; {fmtDatetime(data.date_logged)}</p>
+
+      {data.quote_status === 'approved' && (
+        <div className="mt-3 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+          Your quote of &pound;{data.quote_amount} has been approved.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function QuoteContentCard({ data, onQuoteSubmit }: { data: ContractorQuoteData; onQuoteSubmit: (amount: number, notes: string | null) => Promise<void> }) {
+  return (
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <Tabs defaultValue="details" className="gap-0">
+        <TabsList className="bg-transparent rounded-none border-b border-border p-0 h-auto w-full">
+          <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+          <TabsTrigger value="quote" className={tabTriggerClass}>Quote</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="p-5">
+          <QuoteDetailsTab data={data} />
+        </TabsContent>
+        <TabsContent value="quote" className="p-5">
+          <QuoteFormTab data={data} onQuoteSubmit={onQuoteSubmit} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function QuoteDetailsTab({ data }: { data: ContractorQuoteData }) {
+  return (
+    <>
+      <SectionLabel>Issue</SectionLabel>
+      <p className="text-sm text-foreground leading-relaxed mt-2">{data.issue_description}</p>
+
+      <MediaGrid images={data.images} />
+
+      <div className="border-t border-border my-4" />
+
+      <SectionLabel>Job info</SectionLabel>
+      <div className="mt-2">
+        {data.category && <InfoRow label="Category" value={data.category} />}
+        <InfoRow
+          label="Priority"
+          value={<span className={data.priority === 'urgent' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>}
+        />
+        {data.tenant_name && (
+          <InfoRow
+            label="Tenant"
+            value={
+              <span>
+                {data.tenant_name}
+                {data.tenant_phone && (
+                  <a href={`tel:${data.tenant_phone}`} className="ml-2 text-primary hover:underline inline-flex items-center gap-1">
+                    <Phone className="size-3" />
+                    {formatPhone(data.tenant_phone)}
+                  </a>
+                )}
+              </span>
+            }
+          />
+        )}
+        {data.availability && <InfoRow label="Tenant availability" value={data.availability} />}
+        <InfoRow label="Reported" value={fmtDate(data.date_logged)} last />
+      </div>
+    </>
+  )
+}
+
+function QuoteFormTab({ data, onQuoteSubmit }: { data: ContractorQuoteData; onQuoteSubmit: (amount: number, notes: string | null) => Promise<void> }) {
+  const [amount, setAmount] = useState('')
+  const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+
+  if (data.quote_status === 'submitted' || data.quote_status === 'approved') {
+    return (
+      <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
+        <p className="text-sm font-medium text-green-700">Quote of &pound;{data.quote_amount} submitted</p>
+        {data.quote_notes && <p className="text-xs text-green-600 mt-1">{data.quote_notes}</p>}
+        <p className="text-xs text-green-600 mt-2">
+          {data.quote_status === 'approved'
+            ? 'Your quote has been approved. You\u2019ll be asked to schedule the job.'
+            : 'The property manager will review and get back to you.'}
+        </p>
+      </div>
+    )
+  }
+
+  async function handleSubmit() {
+    const parsed = parseFloat(amount)
+    if (!parsed || parsed <= 0) return
+    setSubmitting(true)
+    await onQuoteSubmit(parsed, notes || null)
+    setSubmitting(false)
+    setShowConfirmation(true)
+    setTimeout(() => setShowConfirmation(false), 3000)
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionLabel>Your quote</SectionLabel>
+
+      {showConfirmation && (
+        <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+          Quote submitted — the property manager has been notified.
+        </div>
+      )}
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Quote amount</label>
+        <div className="mt-1.5 relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">&pound;</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">
+          Notes <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <textarea
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          rows={3}
+          placeholder="Any details about the quote, materials needed, timeline..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || !amount || parseFloat(amount) <= 0}
+        className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Quote'}
+      </button>
     </div>
   )
 }

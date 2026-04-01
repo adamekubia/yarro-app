@@ -1,7 +1,7 @@
 // Mock data for portal preview route.
 // Each portal type has multiple state variants to test different UI states.
 
-import type { TenantTicket, LandlordTicket, OOHTicket, ContractorTicket, TenantPortalData, LandlordPortalData, OOHPortalData, ContractorPortalData } from './portal-types'
+import type { TenantTicket, LandlordTicket, OOHTicket, ContractorTicket, TenantPortalData, LandlordPortalData, OOHPortalData, ContractorPortalData, ContractorQuoteData } from './portal-types'
 
 // ─── Tenant Portal v2 Mock Data ─────────────────────────────────────────
 
@@ -88,6 +88,7 @@ const landlordPortalBase: LandlordPortalData = {
   issue_description: 'Tenant reports a growing damp patch near the window. Approximately 30cm across. No visible leak from above.',
   category: 'Damp / mould',
   priority: 'medium',
+  images: ['https://placehold.co/400x300/e2e8f0/64748b?text=Damp+patch', 'https://placehold.co/400x300/e2e8f0/64748b?text=Close+up'],
   date_logged: '2026-03-27T16:40:00Z',
   job_stage: 'sent',
   tenant_name: 'Sarah Chen',
@@ -151,6 +152,7 @@ const oohPortalBase: OOHPortalData = {
   issue_description: 'Water dripping from bathroom ceiling light fitting. Tenant in flat above not answering door. Getting worse.',
   category: 'Plumbing / leak',
   priority: 'emergency',
+  images: [],
   date_logged: '2026-03-31T21:45:00Z',
   job_stage: 'sent',
   tenant_name: 'James Okafor',
@@ -252,6 +254,46 @@ export const contractorPortalMocks = {
     ],
   },
 } as const satisfies Record<string, ContractorPortalData>
+
+// ─── Contractor Quote Portal v2 Mock Data ───────────────────────────────
+
+const contractorQuoteBase: ContractorQuoteData = {
+  ticket_id: 'mock-quote-001',
+  ticket_ref: '1042',
+  property_address: '14 Cranbrook Road, Flat 3, London E17 5QJ',
+  issue_title: 'Boiler not heating water',
+  issue_description: 'The boiler turns on but only produces cold water. The pressure gauge shows 0.5 bar. Started yesterday morning. Tenant has tried represurising but it drops back within an hour.',
+  category: 'Plumbing / heating',
+  priority: 'urgent',
+  images: ['https://placehold.co/400x300/e2e8f0/64748b?text=Boiler+front', 'https://placehold.co/400x300/e2e8f0/64748b?text=Pressure+gauge'],
+  date_logged: '2026-03-28T09:14:00Z',
+  tenant_name: 'Alex Morgan',
+  tenant_phone: '+447700112233',
+  availability: 'Available mornings before 11am, or any time on Fridays.',
+  agency_name: 'Northgate Property Management',
+  contractor_name: 'Dave Wilson',
+  quote_amount: null,
+  quote_notes: null,
+  quote_status: 'pending',
+}
+
+export const contractorQuoteMocks = {
+  fresh: { ...contractorQuoteBase },
+
+  submitted: {
+    ...contractorQuoteBase,
+    quote_amount: '245.00',
+    quote_notes: 'Likely needs a new pressure relief valve and expansion vessel service. Parts included.',
+    quote_status: 'submitted',
+  },
+
+  approved: {
+    ...contractorQuoteBase,
+    quote_amount: '245.00',
+    quote_notes: 'Likely needs a new pressure relief valve and expansion vessel service. Parts included.',
+    quote_status: 'approved',
+  },
+} as const satisfies Record<string, ContractorQuoteData>
 
 // ─── Tenant Mock Data (legacy) ──────────────────────────────────────────
 

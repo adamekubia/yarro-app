@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CheckCircle2, HelpCircle, Clock, Loader2, Phone } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { MediaGrid } from './media-grid'
 import type { LandlordPortalData } from '@/lib/portal-types'
 
 // ─── Formatting ─────────────────────────────────────────────────────────
@@ -115,18 +116,18 @@ const tabTriggerClass = 'flex-1 rounded-none h-auto text-[13px] py-3 border-b-2 
 function ContentCard({ data, onSubmit }: { data: LandlordPortalData; onSubmit: (outcome: string, notes: string | null, cost: number | null) => Promise<void> }) {
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
-      <Tabs defaultValue="response" className="gap-0">
+      <Tabs defaultValue="details" className="gap-0">
         <TabsList className="bg-transparent rounded-none border-b border-border p-0 h-auto w-full">
+          <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
           <TabsTrigger value="response" className={tabTriggerClass}>Response</TabsTrigger>
-          <TabsTrigger value="updates" className={tabTriggerClass}>Updates</TabsTrigger>
           <TabsTrigger value="contact" className={tabTriggerClass}>Contact</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="details" className="p-5">
+          <DetailsTab data={data} />
+        </TabsContent>
         <TabsContent value="response" className="p-5">
           <ResponseTab data={data} onSubmit={onSubmit} />
-        </TabsContent>
-        <TabsContent value="updates" className="p-5">
-          <UpdatesTab data={data} />
         </TabsContent>
         <TabsContent value="contact" className="p-5">
           <ContactTab data={data} />
@@ -239,25 +240,59 @@ function ResponseTab({ data, onSubmit }: { data: LandlordPortalData; onSubmit: (
 
 // ─── Updates Tab ────────────────────────────────────────────────────────
 
-function UpdatesTab({ data }: { data: LandlordPortalData }) {
-  const sorted = [...data.activity].reverse()
+function DetailsTab({ data }: { data: LandlordPortalData }) {
   return (
     <>
-      <SectionLabel>Activity</SectionLabel>
-      {sorted.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">No updates yet.</p>
-      ) : (
-        <div className="mt-3">
-          {sorted.map((entry, i) => (
-            <div key={i} className={`flex gap-2.5 py-2.5 ${i < sorted.length - 1 ? 'border-b border-border/40' : ''}`}>
-              <div className={`size-2 rounded-full shrink-0 mt-[7px] ${i === 0 ? 'bg-primary' : 'bg-border'}`} />
-              <div className="min-w-0">
-                <p className="text-[13px] text-foreground leading-relaxed">{entry.message}</p>
-                <p className="text-xs text-muted-foreground/70 mt-0.5">{fmtShortDatetime(entry.timestamp)}</p>
+      <SectionLabel>Issue</SectionLabel>
+      <p className="text-sm text-foreground leading-relaxed mt-2">{data.issue_description}</p>
+
+      <MediaGrid images={data.images} />
+
+      <div className="border-t border-border my-4" />
+
+      <SectionLabel>Ticket info</SectionLabel>
+      <div className="mt-2">
+        {data.category && <InfoRow label="Category" value={data.category} />}
+        <InfoRow
+          label="Priority"
+          value={<span className={data.priority === 'urgent' || data.priority === 'emergency' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>}
+        />
+        {data.tenant_name && (
+          <InfoRow
+            label="Tenant"
+            value={
+              <span>
+                {data.tenant_name}
+                {data.tenant_phone && (
+                  <a href={`tel:${data.tenant_phone}`} className="ml-2 text-primary hover:underline inline-flex items-center gap-1">
+                    <Phone className="size-3" />
+                    {formatPhone(data.tenant_phone)}
+                  </a>
+                )}
+              </span>
+            }
+          />
+        )}
+        <InfoRow label="Reported" value={fmtDatetime(data.date_logged)} last />
+      </div>
+
+      {/* Activity */}
+      {data.activity.length > 0 && (
+        <>
+          <div className="border-t border-border my-4" />
+          <SectionLabel>Activity</SectionLabel>
+          <div className="mt-2">
+            {[...data.activity].reverse().map((entry, i) => (
+              <div key={i} className={`flex gap-2.5 py-2.5 ${i < data.activity.length - 1 ? 'border-b border-border/40' : ''}`}>
+                <div className={`size-2 rounded-full shrink-0 mt-[7px] ${i === 0 ? 'bg-primary' : 'bg-border'}`} />
+                <div className="min-w-0">
+                  <p className="text-[13px] text-foreground leading-relaxed">{entry.message}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">{fmtShortDatetime(entry.timestamp)}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </>
   )

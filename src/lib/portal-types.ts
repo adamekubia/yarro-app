@@ -53,6 +53,7 @@ export type LandlordPortalData = {
   issue_description: string
   category: string | null
   priority: string
+  images: string[]
   date_logged: string
   job_stage: string
 
@@ -94,6 +95,7 @@ export type OOHPortalData = {
   issue_description: string
   category: string | null
   priority: string
+  images: string[]
   date_logged: string
   job_stage: string
 
@@ -118,6 +120,28 @@ export type OOHPortalData = {
   activity: PortalActivityEntry[]
 
   resolved_at: string | null
+}
+
+// ─── Contractor Quote Portal v2 ─────────────────────────────────────────
+
+export type ContractorQuoteData = {
+  ticket_id: string
+  ticket_ref: string
+  property_address: string
+  issue_title: string
+  issue_description: string
+  category: string | null
+  priority: string
+  images: string[]
+  date_logged: string
+  tenant_name: string | null
+  tenant_phone: string | null
+  availability: string | null
+  agency_name: string
+  contractor_name: string
+  quote_amount: string | null
+  quote_notes: string | null
+  quote_status: string
 }
 
 // ─── Contractor Portal v2 ───────────────────────────────────────────────

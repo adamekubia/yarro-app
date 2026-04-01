@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useParams, notFound } from 'next/navigation'
-import { tenantPortalMocks, landlordPortalMocks, oohPortalMocks, contractorPortalMocks } from '@/lib/portal-mock-data'
+import { tenantPortalMocks, landlordPortalMocks, oohPortalMocks, contractorPortalMocks, contractorQuoteMocks } from '@/lib/portal-mock-data'
 import { TenantPortalV2 } from '@/components/portal/tenant-portal-v2'
 import { LandlordPortalV2 } from '@/components/portal/landlord-portal-v2'
 import { OOHPortalV2 } from '@/components/portal/ooh-portal-v2'
-import { ContractorPortalV2 } from '@/components/portal/contractor-portal-v2'
+import { ContractorPortalV2, ContractorQuoteV2 } from '@/components/portal/contractor-portal-v2'
 
-const PORTAL_TYPES = ['tenant', 'landlord', 'ooh', 'contractor'] as const
+const PORTAL_TYPES = ['tenant', 'landlord', 'ooh', 'contractor', 'contractor-quote'] as const
 type PortalType = typeof PORTAL_TYPES[number]
 
 const VARIANT_LABELS: Record<PortalType, Record<string, string>> = {
@@ -32,6 +32,11 @@ const VARIANT_LABELS: Record<PortalType, Record<string, string>> = {
     needsScheduling: 'Needs Scheduling',
     booked: 'Booked',
     completed: 'Completed',
+  },
+  'contractor-quote': {
+    fresh: 'Fresh (no quote)',
+    submitted: 'Quote Submitted',
+    approved: 'Quote Approved',
   },
 }
 
@@ -59,6 +64,12 @@ function ContractorPreview({ variant }: { variant: string }) {
   const mock = contractorPortalMocks[variant as keyof typeof contractorPortalMocks]
   if (!mock) return null
   return <ContractorPortalV2 data={{ ...mock }} onSchedule={noop} onCompletion={noop} />
+}
+
+function ContractorQuotePreview({ variant }: { variant: string }) {
+  const mock = contractorQuoteMocks[variant as keyof typeof contractorQuoteMocks]
+  if (!mock) return null
+  return <ContractorQuoteV2 data={{ ...mock }} onQuoteSubmit={noop} />
 }
 
 export default function PortalPreviewPage() {
@@ -91,7 +102,7 @@ export default function PortalPreviewPage() {
                         : 'text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    {pt.charAt(0).toUpperCase() + pt.slice(1)}
+                    {{ tenant: 'Tenant', landlord: 'Landlord', ooh: 'OOH', contractor: 'Contractor', 'contractor-quote': 'Quote' }[pt]}
                   </a>
                 ))}
               </div>
@@ -115,6 +126,7 @@ export default function PortalPreviewPage() {
         {portalType === 'landlord' && <LandlordPreview variant={selectedVariant} />}
         {portalType === 'ooh' && <OOHPreview variant={selectedVariant} />}
         {portalType === 'contractor' && <ContractorPreview variant={selectedVariant} />}
+        {portalType === 'contractor-quote' && <ContractorQuotePreview variant={selectedVariant} />}
       </div>
     </div>
   )
