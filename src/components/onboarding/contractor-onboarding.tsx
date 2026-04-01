@@ -76,7 +76,10 @@ export function ContractorOnboarding() {
         .select('id, address')
         .eq('property_manager_id', propertyManager!.id)
         .order('address')
-      if (data) setAllProperties(data)
+      if (data) {
+        setAllProperties(data)
+        setSelectedPropertyIds(data.map(p => p.id))
+      }
       setLoadingProperties(false)
     }
     fetchProperties()
@@ -406,10 +409,7 @@ export function ContractorOnboarding() {
                     size="lg"
                   >
                     {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    {allProperties.length > 0 && selectedPropertyIds.length === 0
-                      ? 'Skip & finish'
-                      : 'Add contractor'
-                    }
+                    Add contractor
                   </Button>
                 </>
               )}
