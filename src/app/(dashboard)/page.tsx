@@ -375,16 +375,16 @@ export default function DashboardPage() {
       refreshPM()
     }
 
-    // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
-    if (
-      checklistData.length > 0 &&
-      !checklistData.every(i => i.complete) &&
-      !localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)
-    ) {
-      setSpotlightVisible(true)
+    // Always expand Getting Started while items remain incomplete
+    if (checklistData.length > 0 && !checklistData.every(i => i.complete)) {
       setExpandedCategory('onboarding')
-      localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
-      setTimeout(() => setSpotlightVisible(false), 1500)
+
+      // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
+      if (!localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)) {
+        setSpotlightVisible(true)
+        localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
+        setTimeout(() => setSpotlightVisible(false), 1500)
+      }
     }
 
     setLoading(false)

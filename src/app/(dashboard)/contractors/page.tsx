@@ -37,6 +37,7 @@ import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
+import { ContractorOnboarding } from '@/components/onboarding/contractor-onboarding'
 
 interface Contractor {
   id: string
@@ -93,6 +94,7 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [showContractorOnboarding, setShowContractorOnboarding] = useState(false)
   const [search, setSearch] = useState('')
   const filteredContractors = useMemo(() => {
     if (!search) return contractors
@@ -289,6 +291,11 @@ export default function ContractorsPage() {
 
     if (data) {
       setContractors(data)
+      if (data.length === 0 && !propertyManager?.onboarding_completed_at) {
+        setShowContractorOnboarding(true)
+      }
+    } else if (!propertyManager?.onboarding_completed_at) {
+      setShowContractorOnboarding(true)
     }
     setLoading(false)
   }
@@ -843,6 +850,9 @@ export default function ContractorsPage() {
           </div>
         </DetailDrawer>
       )}
+
+      {/* Contractor Onboarding Flow */}
+      {showContractorOnboarding && <ContractorOnboarding />}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDeleteDialog
