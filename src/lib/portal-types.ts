@@ -43,6 +43,122 @@ export type TenantPortalData = {
   resolved_at: string | null
 }
 
+// ─── Landlord Portal v2 ─────────────────────────────────────────────────
+
+export type LandlordPortalData = {
+  ticket_id: string
+  ticket_ref: string
+  property_address: string
+  issue_title: string
+  issue_description: string
+  category: string | null
+  priority: string
+  date_logged: string
+  job_stage: string
+
+  // Tenant
+  tenant_name: string | null
+  tenant_phone: string | null
+
+  // Agency
+  agency_name: string
+  agency_phone: string | null
+  agency_email: string | null
+
+  // Contractor (null until assigned)
+  contractor_name: string | null
+  contractor_phone: string | null
+  contractor_trade: string | null
+
+  // Submissions
+  submissions: Array<{
+    outcome: string
+    notes: string | null
+    cost: number | null
+    submitted_at: string
+  }>
+
+  // Activity feed
+  activity: PortalActivityEntry[]
+
+  resolved_at: string | null
+}
+
+// ─── OOH Portal v2 ─────────────────────────────────────────────────────
+
+export type OOHPortalData = {
+  ticket_id: string
+  ticket_ref: string
+  property_address: string
+  issue_title: string
+  issue_description: string
+  category: string | null
+  priority: string
+  date_logged: string
+  job_stage: string
+
+  // Tenant
+  tenant_name: string | null
+  tenant_phone: string | null
+
+  // Agency
+  agency_name: string
+  agency_phone: string | null
+  agency_email: string | null
+
+  // Submissions
+  submissions: Array<{
+    outcome: string
+    notes: string | null
+    cost: number | null
+    submitted_at: string
+  }>
+
+  // Activity feed
+  activity: PortalActivityEntry[]
+
+  resolved_at: string | null
+}
+
+// ─── Contractor Portal v2 ───────────────────────────────────────────────
+
+export type ContractorPortalData = {
+  ticket_id: string
+  ticket_ref: string
+  property_address: string
+  issue_title: string
+  issue_description: string
+  category: string | null
+  priority: string
+  images: string[]
+  date_logged: string
+  job_stage: string
+
+  // Scheduling
+  scheduled_date: string | null
+  scheduled_window: string | null
+  min_booking_lead_hours: number
+
+  // Tenant
+  tenant_name: string | null
+  tenant_phone: string | null
+  availability: string | null
+
+  // Agency
+  agency_name: string
+  agency_phone: string | null
+  agency_email: string | null
+
+  // Contractor
+  contractor_name: string | null
+  contractor_quote: number | null
+
+  // Activity feed
+  activity: PortalActivityEntry[]
+
+  resolved_at: string | null
+}
+
 // ─── Legacy portal types (existing RPC shapes) ─────────────────────────
 
 export type TenantTicket = {
