@@ -101,11 +101,11 @@ export function ContractorOnboarding() {
     switch (step) {
       case 'name': setStep('intro'); break
       case 'trades': setStep('name'); break
-      case 'phone': setStep('trades'); break
-      case 'contact-method': setStep('phone'); break
+      case 'contact-method': setStep('trades'); break
+      case 'phone': setStep('contact-method'); break
       case 'contact-detail': setStep('contact-method'); break
       case 'properties':
-        setStep(contactMethod === 'email' ? 'contact-detail' : 'contact-method')
+        setStep(contactMethod === 'email' ? 'contact-detail' : 'phone')
         break
     }
   }
@@ -125,7 +125,12 @@ export function ContractorOnboarding() {
       return
     }
     setError(null)
-    setStep('phone')
+    setStep('contact-method')
+  }
+
+  const handleContactMethodSelect = (method: 'whatsapp' | 'email') => {
+    setContactMethod(method)
+    setStep(method === 'whatsapp' ? 'phone' : 'contact-detail')
   }
 
   const handlePhoneNext = () => {
@@ -138,16 +143,7 @@ export function ContractorOnboarding() {
       return
     }
     setError(null)
-    setStep('contact-method')
-  }
-
-  const handleContactMethodSelect = (method: 'whatsapp' | 'email') => {
-    setContactMethod(method)
-    if (method === 'email') {
-      setStep('contact-detail')
-    } else {
-      setStep('properties')
-    }
+    setStep('properties')
   }
 
   const handleEmailNext = () => {
