@@ -69,7 +69,7 @@ function ContractorPreview({ variant }: { variant: string }) {
 function ContractorQuotePreview({ variant }: { variant: string }) {
   const mock = contractorQuoteMocks[variant as keyof typeof contractorQuoteMocks]
   if (!mock) return null
-  return <ContractorQuoteV2 data={{ ...mock }} onQuoteSubmit={noop} />
+  return <ContractorQuoteV2 data={{ ...mock }} onQuoteSubmit={noop} onSchedule={noop} />
 }
 
 export default function PortalPreviewPage() {

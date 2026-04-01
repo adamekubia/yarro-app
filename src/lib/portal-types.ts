@@ -138,10 +138,13 @@ export type ContractorQuoteData = {
   tenant_phone: string | null
   availability: string | null
   agency_name: string
+  agency_phone: string | null
+  agency_email: string | null
   contractor_name: string
   quote_amount: string | null
   quote_notes: string | null
   quote_status: string
+  min_booking_lead_hours: number
 }
 
 // ─── Contractor Portal v2 ───────────────────────────────────────────────

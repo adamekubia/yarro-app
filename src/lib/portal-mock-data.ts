@@ -271,10 +271,13 @@ const contractorQuoteBase: ContractorQuoteData = {
   tenant_phone: '+447700112233',
   availability: 'Available mornings before 11am, or any time on Fridays.',
   agency_name: 'Northgate Property Management',
+  agency_phone: '020 7946 0958',
+  agency_email: 'maintenance@northgateproperty.co.uk',
   contractor_name: 'Dave Wilson',
   quote_amount: null,
   quote_notes: null,
   quote_status: 'pending',
+  min_booking_lead_hours: 24,
 }
 
 export const contractorQuoteMocks = {
