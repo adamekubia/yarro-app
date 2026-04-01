@@ -36,7 +36,6 @@ const VARIANT_LABELS: Record<PortalType, Record<string, string>> = {
   'contractor-quote': {
     fresh: 'Fresh (no quote)',
     submitted: 'Quote Submitted',
-    approved: 'Quote Approved',
   },
 }
 
@@ -69,7 +68,7 @@ function ContractorPreview({ variant }: { variant: string }) {
 function ContractorQuotePreview({ variant }: { variant: string }) {
   const mock = contractorQuoteMocks[variant as keyof typeof contractorQuoteMocks]
   if (!mock) return null
-  return <ContractorQuoteV2 data={{ ...mock }} onQuoteSubmit={noop} onSchedule={noop} />
+  return <ContractorQuoteV2 data={{ ...mock }} onQuoteSubmit={noop} />
 }
 
 export default function PortalPreviewPage() {

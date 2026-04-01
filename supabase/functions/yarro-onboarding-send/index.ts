@@ -53,6 +53,10 @@ function isPlaceholder(sid: string): boolean {
   return sid.startsWith("PLACEHOLDER_");
 }
 
+function firstName(name: string): string {
+  return name.split(" ")[0] || name;
+}
+
 function buildVariables(
   entityType: EntityType,
   name: string,
@@ -62,7 +66,7 @@ function buildVariables(
   if (entityType === "tenant") {
     // Template: Hi {{1}}, Adam from Yarro here. {{2}} has added you as a tenant at {{3}}. ...message {{4}}...
     return {
-      "1": name,
+      "1": firstName(name),
       "2": businessName,
       "3": propertyAddress || "your property",
       "4": TENANT_INTAKE_NUMBER,
@@ -72,7 +76,7 @@ function buildVariables(
   if (entityType === "contractor") {
     // Template: Hi {{1}}, Adam from Yarro here. You've been added as a contractor by {{2}}...
     return {
-      "1": name,
+      "1": firstName(name),
       "2": businessName,
     };
   }
@@ -80,7 +84,7 @@ function buildVariables(
   // landlord
   // Template: Hi {{1}}, Adam from Yarro here. {{2}} has added you as a landlord...
   return {
-    "1": name,
+    "1": firstName(name),
     "2": businessName,
   };
 }
@@ -228,7 +232,7 @@ Deno.serve(async (req: Request) => {
     // Verify PM exists and get business name
     const { data: pm, error: pmError } = await supabase
       .from("c1_property_managers")
-      .select("id, business_name")
+      .select("id, business_name, name")
       .eq("id", body.pm_id)
       .maybeSingle();
 
@@ -238,6 +242,8 @@ Deno.serve(async (req: Request) => {
         { status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
       );
     }
+
+    const displayName = pm.business_name || pm.name || "Your property manager";
 
     // Check template SID
     const templateKey = TEMPLATE_MAP[body.entity_type];
@@ -288,7 +294,7 @@ Deno.serve(async (req: Request) => {
     const results: SendResult[] = [];
     for (const entry of entries) {
       try {
-        const result = await processEntity(supabase, body.entity_type, entry, pm.business_name, templateSid);
+        const result = await processEntity(supabase, body.entity_type, entry, displayName, templateSid);
         results.push(result);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -319,7 +325,7 @@ Deno.serve(async (req: Request) => {
       await alertInfo(
         FN,
         `Onboarding blast (${body.entity_type}): ${sent} sent, ${skipped} skipped, ${failed} failed`,
-        { PM: pm.business_name, "PM ID": body.pm_id },
+        { PM: displayName, "PM ID": body.pm_id },
       );
     }
 

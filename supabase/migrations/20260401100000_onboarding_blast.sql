@@ -159,7 +159,7 @@ CREATE OR REPLACE FUNCTION public.generate_verification_tokens_batch(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path TO 'public', 'extensions'
 AS $$
 DECLARE
   v_id uuid;

@@ -4,7 +4,11 @@ function isVideoUrl(url: string): boolean {
 }
 
 export function MediaGrid({ images }: { images: string[] }) {
-  if (!images || images.length === 0) return null
+  if (!images || images.length === 0) return (
+    <div className="mt-3 rounded-lg border border-dashed border-border bg-muted/50 px-4 py-6 text-center">
+      <p className="text-xs text-muted-foreground">No images provided</p>
+    </div>
+  )
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
       {images.map((url, i) =>

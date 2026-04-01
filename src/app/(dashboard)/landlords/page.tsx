@@ -15,7 +15,7 @@ import {
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import Link from 'next/link'
-import { Building2, Contact, MoreHorizontal, Send } from 'lucide-react'
+import { Building2, Contact, MoreHorizontal, Send, Loader2 } from 'lucide-react'
 import { EditableField } from '@/components/editable-field'
 import {
   DropdownMenu,
@@ -68,6 +68,7 @@ export default function LandlordsPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [blastDialogOpen, setBlastDialogOpen] = useState(false)
+  const [blastSending, setBlastSending] = useState(false)
   const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredLandlords = useMemo(() => {
@@ -439,15 +440,25 @@ export default function LandlordsPage() {
             onChange={setSearch}
             className="w-64"
           />
-          {blastTargets.length > 0 && (
+          {(blastTargets.length > 0 || blastSending) && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setBlastDialogOpen(true)}
+              disabled={blastSending}
               className="gap-1.5"
             >
-              <Send className="h-3.5 w-3.5" />
-              Send Onboarding ({blastTargets.length})
+              {blastSending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  Send Onboarding Message ({blastTargets.length})
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -593,6 +604,7 @@ export default function LandlordsPage() {
         onOpenChange={setBlastDialogOpen}
         entityType="landlord"
         targets={blastTargets}
+        onSending={setBlastSending}
         onComplete={() => { fetchLandlords(); fetchBlastTargets() }}
       />
     </PageShell>

@@ -95,65 +95,67 @@ export type ContractorPortalV2Props = {
 
 export function ContractorPortalV2({ data, onSchedule, onCompletion }: ContractorPortalV2Props) {
   const activeIdx = getActiveStageIdx(data)
+  const needsScheduling = activeIdx === 0
 
   return (
     <div className="min-h-screen bg-background" style={{ colorScheme: 'light' }}>
       <div className="mx-auto max-w-[640px] px-5 py-8 flex flex-col gap-5">
-        <OverviewCard data={data} activeIdx={activeIdx} />
-        <ContentCard data={data} onSchedule={onSchedule} onCompletion={onCompletion} />
-        <p className="text-center text-xs text-muted-foreground/40">Powered by Yarro</p>
-      </div>
-    </div>
-  )
-}
-
-// ─── Overview Card ──────────────────────────────────────────────────────
-
-function OverviewCard({ data, activeIdx }: { data: ContractorPortalData; activeIdx: number }) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-6">
-      <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground mb-4">
-        T-{data.ticket_ref}
-      </span>
-
-      <h1 className="text-xl font-semibold text-foreground leading-snug">{data.property_address}</h1>
-      <p className="mt-1.5 text-base font-medium text-muted-foreground">{data.issue_title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">From {data.agency_name} &middot; {fmtDatetime(data.date_logged)}</p>
-
-      {data.contractor_quote && (
-        <div className="mt-3 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
-          Your quote of &pound;{Number(data.contractor_quote).toFixed(2)} has been approved.
+        {/* Overview card */}
+        <div className="bg-card rounded-2xl border border-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              T-{data.ticket_ref}
+            </span>
+            {needsScheduling && data.contractor_quote && (
+              <span className="inline-block rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-[11px] font-medium text-green-700">
+                Quote approved &middot; &pound;{Number(data.contractor_quote).toFixed(2)}
+              </span>
+            )}
+          </div>
+          <h1 className="text-xl font-semibold text-foreground leading-snug">{data.property_address}</h1>
+          <p className="mt-1.5 text-base font-medium text-muted-foreground">{data.issue_title}</p>
+          <p className="mt-1 text-xs text-muted-foreground">From {data.agency_name} &middot; {fmtDatetime(data.date_logged)}</p>
         </div>
-      )}
 
-      <div className="border-t border-border my-5" />
+        {/* Content card */}
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <Tabs defaultValue={needsScheduling ? 'schedule' : 'action'} className="gap-0">
+            <TabsList className="bg-transparent rounded-none border-b border-border p-0 h-auto w-full">
+              {needsScheduling ? (
+                <>
+                  <TabsTrigger value="schedule" className={tabTriggerClass}>Schedule</TabsTrigger>
+                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
+                </>
+              ) : (
+                <>
+                  <TabsTrigger value="action" className={tabTriggerClass}>{activeIdx === 1 ? 'Complete' : 'Status'}</TabsTrigger>
+                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
+                </>
+              )}
+            </TabsList>
 
-      {/* Horizontal tracker */}
-      <div className="flex items-start">
-        {STAGES.map((stageKey, i) => {
-          const config = STAGE_CONFIG[stageKey]
-          const isDone = i < activeIdx
-          const isActive = i === activeIdx
-          const isLast = i === STAGES.length - 1
+            {needsScheduling && (
+              <TabsContent value="schedule" className="p-5">
+                <ScheduleForm data={data} onSchedule={onSchedule} />
+              </TabsContent>
+            )}
+            {!needsScheduling && (
+              <TabsContent value="action" className="p-5">
+                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} />
+              </TabsContent>
+            )}
+            <TabsContent value="details" className="p-5">
+              <DetailsTab data={data} />
+            </TabsContent>
+            <TabsContent value="info" className="p-5">
+              <ContactTab data={data} />
+            </TabsContent>
+          </Tabs>
+        </div>
 
-          return (
-            <div key={stageKey} className="contents">
-              <div className="flex flex-col items-center shrink-0" style={{ width: 72 }}>
-                <div className={`flex items-center justify-center size-7 rounded-full transition-colors ${
-                  isActive ? 'bg-primary text-white ring-4 ring-primary/20' :
-                  isDone ? 'bg-green-500 text-white' :
-                  'bg-muted text-muted-foreground'
-                }`}>
-                  {isDone ? <Check className="size-3.5" strokeWidth={3} /> : isActive ? <Circle className="size-2 fill-white text-white" /> : config.icon}
-                </div>
-                <span className={`mt-2 text-[10px] font-medium text-center leading-tight ${
-                  isActive ? 'text-primary' : isDone ? 'text-green-600' : 'text-muted-foreground'
-                }`}>{config.label}</span>
-              </div>
-              {!isLast && <div className={`h-0.5 flex-1 mt-3.5 ${i < activeIdx ? 'bg-green-400' : 'bg-border'}`} />}
-            </div>
-          )
-        })}
+        <p className="text-center text-xs text-muted-foreground/40">Powered by Yarro</p>
       </div>
     </div>
   )
@@ -162,33 +164,6 @@ function OverviewCard({ data, activeIdx }: { data: ContractorPortalData; activeI
 // ─── Content Card ───────────────────────────────────────────────────────
 
 const tabTriggerClass = 'flex-1 rounded-none h-auto text-[13px] py-3 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-medium data-[state=active]:shadow-none text-muted-foreground hover:text-foreground'
-
-function ContentCard({ data, onSchedule, onCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void> }) {
-  const stage = getActiveStageIdx(data)
-  const defaultTab = stage === 0 ? 'action' : 'details'
-
-  return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden">
-      <Tabs defaultValue={defaultTab} className="gap-0">
-        <TabsList className="bg-transparent rounded-none border-b border-border p-0 h-auto w-full">
-          <TabsTrigger value="action" className={tabTriggerClass}>{stage === 0 ? 'Schedule' : stage === 1 ? 'Complete' : 'Status'}</TabsTrigger>
-          <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
-          <TabsTrigger value="contact" className={tabTriggerClass}>Contact</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="action" className="p-5">
-          <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} />
-        </TabsContent>
-        <TabsContent value="details" className="p-5">
-          <DetailsTab data={data} />
-        </TabsContent>
-        <TabsContent value="contact" className="p-5">
-          <ContactTab data={data} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
 
 // ─── Action Tab ─────────────────────────────────────────────────────────
 
@@ -226,7 +201,14 @@ function ScheduleForm({ data, onSchedule }: { data: ContractorPortalData; onSche
 
   return (
     <div className="space-y-4">
-      <SectionLabel>Book a slot</SectionLabel>
+      {/* Availability hint — prominent so the contractor knows when to book */}
+      {data.availability && (
+        <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wider text-primary/70 mb-1">Availability</p>
+          <p className="text-sm font-medium text-primary">{data.availability}</p>
+        </div>
+      )}
+
       <div>
         <label className="text-sm font-medium text-foreground">Select a date</label>
         <MiniCalendar
@@ -348,48 +330,34 @@ function CompletionForm({ data, onCompletion }: { data: ContractorPortalData; on
   )
 }
 
-// ─── Details Tab ────────────────────────────────────────────────────────
+// ─── Details Tab (issue + photos) ───────────────────────────────────────
 
 function DetailsTab({ data }: { data: ContractorPortalData }) {
   return (
     <>
       <SectionLabel>Issue</SectionLabel>
       <p className="text-sm text-foreground leading-relaxed mt-2">{data.issue_description}</p>
+      <MediaGrid images={data.images} />
+    </>
+  )
+}
 
-      <div className="border-t border-border my-4" />
+// ─── Info Tab (job info + agency + tenant contact) ──────────────────────
 
+function ContactTab({ data }: { data: ContractorPortalData }) {
+  return (
+    <>
       <SectionLabel>Job info</SectionLabel>
       <div className="mt-2">
         {data.category && <InfoRow label="Category" value={data.category} />}
         <InfoRow label="Priority" value={<span className={data.priority === 'urgent' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>} />
         <InfoRow label="Reported" value={fmtDate(data.date_logged)} />
         {data.scheduled_date && <InfoRow label="Booked" value={fmtDatetime(data.scheduled_date)} />}
-        {data.availability && <InfoRow label="Tenant availability" value={data.availability} last />}
+        {data.availability && <InfoRow label="Availability" value={data.availability} last />}
       </div>
 
-      {/* Activity */}
       <div className="border-t border-border my-4" />
-      <SectionLabel>Activity</SectionLabel>
-      <div className="mt-2">
-        {[...data.activity].reverse().map((entry, i) => (
-          <div key={i} className={`flex gap-2.5 py-2.5 ${i < data.activity.length - 1 ? 'border-b border-border/40' : ''}`}>
-            <div className={`size-2 rounded-full shrink-0 mt-[7px] ${i === 0 ? 'bg-primary' : 'bg-border'}`} />
-            <div className="min-w-0">
-              <p className="text-[13px] text-foreground leading-relaxed">{entry.message}</p>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">{fmtShortDatetime(entry.timestamp)}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-}
 
-// ─── Contact Tab ────────────────────────────────────────────────────────
-
-function ContactTab({ data }: { data: ContractorPortalData }) {
-  return (
-    <>
       <SectionLabel>Agency</SectionLabel>
       <div className="mt-2">
         <InfoRow label="Agency" value={data.agency_name} />
@@ -430,12 +398,9 @@ function InfoRow({ label, value, last }: { label: string; value: React.ReactNode
 export type ContractorQuoteV2Props = {
   data: ContractorQuoteData
   onQuoteSubmit: (amount: number, notes: string | null) => Promise<void>
-  onSchedule?: (date: string, slot: string, notes: string | null) => Promise<void>
 }
 
-export function ContractorQuoteV2({ data, onQuoteSubmit, onSchedule }: ContractorQuoteV2Props) {
-  const isApproved = data.quote_status === 'approved'
-
+export function ContractorQuoteV2({ data, onQuoteSubmit }: ContractorQuoteV2Props) {
   return (
     <div className="min-h-screen bg-background" style={{ colorScheme: 'light' }}>
       <div className="mx-auto max-w-[640px] px-5 py-8 flex flex-col gap-5">
@@ -449,29 +414,19 @@ export function ContractorQuoteV2({ data, onQuoteSubmit, onSchedule }: Contracto
           <p className="mt-1 text-xs text-muted-foreground">From {data.agency_name} &middot; {fmtDatetime(data.date_logged)}</p>
         </div>
 
-        {/* Content card */}
+        {/* Content card — 2 tabs: Details | Info */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <Tabs defaultValue="main" className="gap-0">
+          <Tabs defaultValue="details" className="gap-0">
             <TabsList className="bg-transparent rounded-none border-b border-border p-0 h-auto w-full">
-              <TabsTrigger value="main" className={tabTriggerClass}>
-                {isApproved ? 'Schedule' : 'Quote'}
-              </TabsTrigger>
               <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
-              <TabsTrigger value="contact" className={tabTriggerClass}>Contact</TabsTrigger>
+              <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="main" className="p-5">
-              {isApproved && onSchedule ? (
-                <QuoteApprovedTab data={data} onSchedule={onSchedule} />
-              ) : (
-                <QuoteMainTab data={data} onQuoteSubmit={onQuoteSubmit} />
-              )}
-            </TabsContent>
             <TabsContent value="details" className="p-5">
-              <QuoteDetailsTab data={data} />
+              <QuoteDetailsTab data={data} onQuoteSubmit={onQuoteSubmit} />
             </TabsContent>
-            <TabsContent value="contact" className="p-5">
-              <QuoteContactTab data={data} />
+            <TabsContent value="info" className="p-5">
+              <QuoteInfoTab data={data} />
             </TabsContent>
           </Tabs>
         </div>
@@ -482,30 +437,15 @@ export function ContractorQuoteV2({ data, onQuoteSubmit, onSchedule }: Contracto
   )
 }
 
-// ─── Quote Main Tab (photos + quote form or submitted state) ────────────
+// ─── Quote Details Tab (issue + photos + quote form or schedule) ────────
 
-function QuoteMainTab({ data, onQuoteSubmit }: { data: ContractorQuoteData; onQuoteSubmit: (amount: number, notes: string | null) => Promise<void> }) {
+function QuoteDetailsTab({ data, onQuoteSubmit }: { data: ContractorQuoteData; onQuoteSubmit: (amount: number, notes: string | null) => Promise<void> }) {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
 
-  // Already submitted — show confirmation
-  if (data.quote_status === 'submitted') {
-    return (
-      <>
-        <MediaGrid images={data.images} />
-        {data.images.length > 0 && <div className="border-t border-border my-4" />}
-        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
-          <p className="text-sm font-medium text-green-700">Quote of &pound;{data.quote_amount} submitted</p>
-          {data.quote_notes && <p className="text-xs text-green-600 mt-1">{data.quote_notes}</p>}
-          <p className="text-xs text-green-600 mt-2">The property manager will review and get back to you.</p>
-        </div>
-      </>
-    )
-  }
-
-  async function handleSubmit() {
+  async function handleQuoteSubmit() {
     const parsed = parseFloat(amount)
     if (!parsed || parsed <= 0) return
     setSubmitting(true)
@@ -517,129 +457,7 @@ function QuoteMainTab({ data, onQuoteSubmit }: { data: ContractorQuoteData; onQu
 
   return (
     <>
-      <MediaGrid images={data.images} />
-      {data.images.length > 0 && <div className="border-t border-border my-4" />}
-
-      <div className="space-y-4">
-        <SectionLabel>Provide a quote</SectionLabel>
-
-        {showConfirmation && (
-          <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
-            Quote submitted — the property manager has been notified.
-          </div>
-        )}
-
-        <div>
-          <label className="text-sm font-medium text-foreground">Quote amount</label>
-          <div className="mt-1.5 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">&pound;</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-foreground">
-            Notes <span className="font-normal text-muted-foreground">(optional)</span>
-          </label>
-          <textarea
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-            rows={3}
-            placeholder="Any details about the quote, materials needed, timeline..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || !amount || parseFloat(amount) <= 0}
-          className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Quote'}
-        </button>
-      </div>
-    </>
-  )
-}
-
-// ─── Quote Approved Tab (approval banner + schedule form) ───────────────
-
-function QuoteApprovedTab({ data, onSchedule }: { data: ContractorQuoteData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void> }) {
-  const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleSlot, setScheduleSlot] = useState('')
-  const [notes, setNotes] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const leadHours = data.min_booking_lead_hours ?? 24
-  const availableSlots = scheduleDate ? getAvailableSlots(scheduleDate, leadHours) : null
-
-  async function handleSubmit() {
-    if (!scheduleDate || !scheduleSlot) return
-    setSubmitting(true)
-    await onSchedule(scheduleDate, scheduleSlot, notes || null)
-    setSubmitting(false)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
-        <p className="text-sm font-semibold text-green-700">Your quote of &pound;{data.quote_amount} has been approved</p>
-        <p className="text-xs text-green-600 mt-0.5">Please book a slot below to schedule the job.</p>
-      </div>
-
-      <SectionLabel>Book a slot</SectionLabel>
-      <div>
-        <label className="text-sm font-medium text-foreground">Select a date</label>
-        <MiniCalendar
-          selected={scheduleDate}
-          onSelect={(d) => { setScheduleDate(d); setScheduleSlot('') }}
-          minDate={getMinBookableDate(leadHours)}
-          isDateDisabled={(dateStr) => getAvailableSlots(dateStr, leadHours).size === 0}
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium text-foreground">Time slot</label>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {TIME_SLOTS.map((slot) => {
-            const disabled = availableSlots != null && !availableSlots.has(slot.hour)
-            return (
-              <button key={slot.value} type="button" disabled={disabled} onClick={() => setScheduleSlot(slot.value)}
-                className={`rounded-lg border-2 px-3 py-2.5 text-center transition-colors ${
-                  scheduleSlot === slot.value ? 'border-primary bg-primary/5 text-primary' :
-                  disabled ? 'border-border/50 bg-muted text-muted-foreground/50 cursor-not-allowed' :
-                  'border-border bg-card text-muted-foreground hover:border-foreground/30'
-                }`}>
-                <span className="block text-sm font-medium">{slot.label}</span>
-                <span className="block text-[10px] text-muted-foreground mt-0.5">{slot.range}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      <div>
-        <label className="text-sm font-medium text-foreground">Notes <span className="font-normal text-muted-foreground">(optional)</span></label>
-        <textarea className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none" rows={2} placeholder="e.g. Will need access to loft..." value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
-      <button onClick={handleSubmit} disabled={submitting || !scheduleDate || !scheduleSlot} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Confirm Booking'}
-      </button>
-    </div>
-  )
-}
-
-// ─── Quote Details Tab (issue + job info) ───────────────────────────────
-
-function QuoteDetailsTab({ data }: { data: ContractorQuoteData }) {
-  return (
-    <>
+      {/* Issue */}
       <SectionLabel>Issue</SectionLabel>
       <p className="text-sm text-foreground leading-relaxed mt-2">{data.issue_description}</p>
 
@@ -647,6 +465,69 @@ function QuoteDetailsTab({ data }: { data: ContractorQuoteData }) {
 
       <div className="border-t border-border my-4" />
 
+      {data.quote_status === 'submitted' ? (
+        /* Submitted → confirmation banner */
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
+          <p className="text-sm font-medium text-green-700">Quote of &pound;{data.quote_amount} submitted</p>
+          {data.quote_notes && <p className="text-xs text-green-600 mt-1">{data.quote_notes}</p>}
+          <p className="text-xs text-green-600 mt-2">The property manager will review and get back to you.</p>
+        </div>
+      ) : (
+        /* Fresh → quote form (no section title) */
+        <div className="space-y-4">
+          {showConfirmation && (
+            <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+              Quote submitted — the property manager has been notified.
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm font-medium text-foreground">Quote amount</label>
+            <div className="mt-1.5 relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">&pound;</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">
+              Notes <span className="font-normal text-muted-foreground">(optional)</span>
+            </label>
+            <textarea
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              rows={3}
+              placeholder="Any details about the quote, materials needed, timeline..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={handleQuoteSubmit}
+            disabled={submitting || !amount || parseFloat(amount) <= 0}
+            className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Quote'}
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── Quote Info Tab (job info + agency contact, no tenant) ──────────────
+
+function QuoteInfoTab({ data }: { data: ContractorQuoteData }) {
+  return (
+    <>
       <SectionLabel>Job info</SectionLabel>
       <div className="mt-2">
         {data.category && <InfoRow label="Category" value={data.category} />}
@@ -654,31 +535,17 @@ function QuoteDetailsTab({ data }: { data: ContractorQuoteData }) {
           label="Priority"
           value={<span className={data.priority === 'urgent' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>}
         />
-        {data.availability && <InfoRow label="Tenant availability" value={data.availability} />}
+        {data.availability && <InfoRow label="Availability" value={data.availability} />}
         <InfoRow label="Reported" value={fmtDate(data.date_logged)} last />
       </div>
-    </>
-  )
-}
 
-// ─── Quote Contact Tab ──────────────────────────────────────────────────
+      <div className="border-t border-border my-4" />
 
-function QuoteContactTab({ data }: { data: ContractorQuoteData }) {
-  return (
-    <>
       <SectionLabel>Agency</SectionLabel>
       <div className="mt-2">
         <InfoRow label="Agency" value={data.agency_name} />
         {data.agency_phone && <InfoRow label="Phone" value={<a href={`tel:${data.agency_phone}`} className="text-primary hover:underline">{data.agency_phone}</a>} />}
         {data.agency_email && <InfoRow label="Email" value={<a href={`mailto:${data.agency_email}`} className="text-primary hover:underline text-xs">{data.agency_email}</a>} last />}
-      </div>
-
-      <div className="border-t border-border my-4" />
-
-      <SectionLabel>Tenant</SectionLabel>
-      <div className="mt-2">
-        <InfoRow label="Name" value={data.tenant_name || <span className="text-muted-foreground font-normal">Not provided</span>} />
-        <InfoRow label="Contact" value={data.tenant_phone ? <a href={`tel:${data.tenant_phone}`} className="text-primary hover:underline inline-flex items-center gap-1"><Phone className="size-3" />{formatPhone(data.tenant_phone)}</a> : <span className="text-muted-foreground font-normal">Not provided</span>} last />
       </div>
     </>
   )

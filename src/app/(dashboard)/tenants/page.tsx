@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download, Send } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download, Send, Loader2 } from 'lucide-react'
 import { exportToCSV, TENANT_EXPORT_COLUMNS } from '@/lib/export'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
@@ -88,6 +88,7 @@ export default function TenantsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [showTenantOnboarding, setShowTenantOnboarding] = useState(false)
   const [blastDialogOpen, setBlastDialogOpen] = useState(false)
+  const [blastSending, setBlastSending] = useState(false)
   const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredTenants = useMemo(() => {
@@ -539,15 +540,25 @@ export default function TenantsPage() {
             onChange={setSearch}
             className="w-64"
           />
-          {blastTargets.length > 0 && (
+          {(blastTargets.length > 0 || blastSending) && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setBlastDialogOpen(true)}
+              disabled={blastSending}
               className="gap-1.5"
             >
-              <Send className="h-3.5 w-3.5" />
-              Send Onboarding ({blastTargets.length})
+              {blastSending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  Send Onboarding Message ({blastTargets.length})
+                </>
+              )}
             </Button>
           )}
           <Button
@@ -721,6 +732,7 @@ export default function TenantsPage() {
         onOpenChange={setBlastDialogOpen}
         entityType="tenant"
         targets={blastTargets}
+        onSending={setBlastSending}
         onComplete={() => { fetchTenants(); fetchBlastTargets() }}
       />
     </PageShell>

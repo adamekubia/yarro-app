@@ -207,7 +207,7 @@ const contractorPortalBase: ContractorPortalData = {
   issue_description: 'The boiler turns on but only produces cold water. The pressure gauge shows 0.5 bar. Started yesterday morning.',
   category: 'Plumbing / heating',
   priority: 'urgent',
-  images: [],
+  images: ['https://placehold.co/400x300/e2e8f0/64748b?text=Boiler+front', 'https://placehold.co/400x300/e2e8f0/64748b?text=Pressure+gauge'],
   date_logged: '2026-03-28T09:14:00Z',
   job_stage: 'sent',
   scheduled_date: null,
@@ -228,7 +228,7 @@ const contractorPortalBase: ContractorPortalData = {
 }
 
 export const contractorPortalMocks = {
-  needsScheduling: { ...contractorPortalBase },
+  needsScheduling: { ...contractorPortalBase, contractor_quote: 245 },
 
   booked: {
     ...contractorPortalBase,
@@ -288,13 +288,6 @@ export const contractorQuoteMocks = {
     quote_amount: '245.00',
     quote_notes: 'Likely needs a new pressure relief valve and expansion vessel service. Parts included.',
     quote_status: 'submitted',
-  },
-
-  approved: {
-    ...contractorQuoteBase,
-    quote_amount: '245.00',
-    quote_notes: 'Likely needs a new pressure relief valve and expansion vessel service. Parts included.',
-    quote_status: 'approved',
   },
 } as const satisfies Record<string, ContractorQuoteData>
 

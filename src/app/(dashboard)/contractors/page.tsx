@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal, Send } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal, Send, Loader2 } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -95,6 +95,7 @@ export default function ContractorsPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [blastDialogOpen, setBlastDialogOpen] = useState(false)
+  const [blastSending, setBlastSending] = useState(false)
   const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredContractors = useMemo(() => {
@@ -692,15 +693,25 @@ export default function ContractorsPage() {
             onChange={setSearch}
             className="w-64"
           />
-          {blastTargets.length > 0 && (
+          {(blastTargets.length > 0 || blastSending) && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setBlastDialogOpen(true)}
+              disabled={blastSending}
               className="gap-1.5"
             >
-              <Send className="h-3.5 w-3.5" />
-              Send Onboarding ({blastTargets.length})
+              {blastSending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  Send Onboarding Message ({blastTargets.length})
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -885,6 +896,7 @@ export default function ContractorsPage() {
         onOpenChange={setBlastDialogOpen}
         entityType="contractor"
         targets={blastTargets}
+        onSending={setBlastSending}
         onComplete={() => { fetchContractors(); fetchBlastTargets() }}
       />
     </PageShell>
