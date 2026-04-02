@@ -53,15 +53,18 @@ interface SidebarCounts {
   landlords: number
   tenants: number
   contractors: number
-  activeTickets: number
-  expiringCerts: number
+}
+
+interface BadgeCounts {
+  actionableTickets: number
+  complianceIssues: number
 }
 
 interface NavChild {
   href: string
   label: string
   countKey?: keyof SidebarCounts
-  badgeKey?: keyof SidebarCounts
+  badgeKey?: keyof BadgeCounts
   comingSoon?: boolean
 }
 
@@ -92,7 +95,7 @@ const navGroups: NavGroup[] = [
     icon: Wrench,
     defaultOpen: false,
     children: [
-      { href: '/tickets', label: 'Jobs', badgeKey: 'activeTickets' },
+      { href: '/tickets', label: 'Jobs', badgeKey: 'actionableTickets' },
       { href: '/contractors', label: 'Contractors', countKey: 'contractors' },
     ],
   },
@@ -111,7 +114,7 @@ const navGroups: NavGroup[] = [
     icon: ShieldCheck,
     defaultOpen: false,
     children: [
-      { href: '/compliance', label: 'Certificates', badgeKey: 'expiringCerts' },
+      { href: '/compliance', label: 'Certificates', badgeKey: 'complianceIssues' },
       { href: '/audit-trail', label: 'Audit Trail' },
       { href: '/tenancies', label: 'Tenancies', comingSoon: true },
     ],
@@ -169,7 +172,8 @@ export function Sidebar() {
     })
     return initial
   })
-  const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, landlords: 0, tenants: 0, contractors: 0, activeTickets: 0, expiringCerts: 0 })
+  const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, landlords: 0, tenants: 0, contractors: 0 })
+  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({ actionableTickets: 0, complianceIssues: 0 })
   const supabase = createClient()
 
   const toggleCollapsed = () => {
@@ -194,15 +198,24 @@ export function Sidebar() {
   }
 
   const fetchCounts = useCallback(async () => {
-    if (!propertyManager) return
+    if (!propertyManager) {
+      setBadgeCounts({ actionableTickets: 0, complianceIssues: 0 })
+      return
+    }
 
-    const [propsRes, landlordsRes, tenantsRes, contractorsRes, ticketsRes, certsRes] = await Promise.all([
+    const [propsRes, landlordsRes, tenantsRes, contractorsRes, ticketsRes, complianceRes] = await Promise.all([
       supabase.from('c1_properties').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_landlords').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_tenants').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_contractors').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).eq('active', true),
-      supabase.from('c1_tickets').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).neq('status', 'closed'),
-      supabase.from('c1_compliance_certificates').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).in('status', ['expired', 'expiring', 'missing']),
+      // Actionable tickets: open + needs PM attention
+      supabase.from('c1_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_manager_id', propertyManager.id)
+        .eq('status', 'open')
+        .or('handoff.eq.true,pending_review.eq.true'),
+      // Compliance: use RPC for accurate computed statuses (handles "missing" certs + date-based expiry)
+      supabase.rpc('compliance_get_all_statuses', { p_pm_id: propertyManager.id }),
     ])
 
     setCounts({
@@ -210,8 +223,16 @@ export function Sidebar() {
       landlords: landlordsRes.count || 0,
       tenants: tenantsRes.count || 0,
       contractors: contractorsRes.count || 0,
-      activeTickets: ticketsRes.count || 0,
-      expiringCerts: certsRes.count || 0,
+    })
+
+    const complianceIssues = (complianceRes.data ?? []).filter(
+      (c: { display_status: string }) =>
+        c.display_status === 'expired' || c.display_status === 'expiring_soon' || c.display_status === 'missing'
+    ).length
+
+    setBadgeCounts({
+      actionableTickets: ticketsRes.count || 0,
+      complianceIssues,
     })
   }, [propertyManager, supabase])
 
@@ -224,6 +245,10 @@ export function Sidebar() {
     const basePath = href.split('?')[0]
     return pathname === basePath || (basePath !== '/' && pathname.startsWith(basePath + '/'))
   }
+
+  // Check if any child in a group has an active badge
+  const groupHasBadge = (group: NavGroup) =>
+    group.children.some(c => c.badgeKey && badgeCounts[c.badgeKey] > 0)
 
   // Check if any child in a group is active
   const isGroupActive = (group: NavGroup) => group.children.some(c => isActive(c.href))
@@ -285,13 +310,16 @@ export function Sidebar() {
                     <Link
                       href={group.children[0]?.href || '/'}
                       className={cn(
-                        'flex items-center justify-center p-2.5 rounded-lg transition-all mt-1',
+                        'flex items-center justify-center p-2.5 rounded-lg transition-all mt-1 relative',
                         isGroupActive(group)
                           ? 'text-white'
                           : 'text-sidebar-foreground hover:text-white hover:bg-sidebar-accent'
                       )}
                     >
                       <GroupIcon className="h-5 w-5" />
+                      {groupHasBadge(group) && (
+                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+                      )}
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right"><p>{group.label}</p></TooltipContent>
@@ -401,7 +429,12 @@ export function Sidebar() {
                       : 'text-sidebar-foreground hover:text-[#B8D4E8]'
                   )}
                 >
-                  <GroupIcon className="h-5 w-5 flex-shrink-0" />
+                  <span className="relative flex-shrink-0">
+                    <GroupIcon className="h-5 w-5" />
+                    {!open && groupHasBadge(group) && (
+                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                    )}
+                  </span>
                   <span className="flex-1">{group.label}</span>
                   <ChevronRight className={cn(
                     'h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200',
@@ -436,9 +469,9 @@ export function Sidebar() {
                               {count}
                             </span>
                           )}
-                          {child.badgeKey && counts[child.badgeKey] > 0 && (
+                          {child.badgeKey && badgeCounts[child.badgeKey] > 0 && (
                             <span className="text-[10px] font-bold bg-[rgba(220,38,38,0.22)] text-[#FCA5A5] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 mr-2">
-                              {counts[child.badgeKey]}
+                              {badgeCounts[child.badgeKey]}
                             </span>
                           )}
                           {child.comingSoon && (

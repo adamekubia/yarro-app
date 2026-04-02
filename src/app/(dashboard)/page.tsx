@@ -367,7 +367,13 @@ export default function DashboardPage() {
     setRecentEvents(eventsPayload?.events ?? [])
 
     // Onboarding checklist
-    const checklistData = (onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []
+    const checklistData = ((onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []).map(item => {
+      // Compliance onboarding now lives on /compliance page
+      if (item.key === 'setup_compliance') {
+        return { ...item, link_href: '/compliance' }
+      }
+      return item
+    })
     setOnboardingChecklist(checklistData)
 
     // If checklist just completed, refresh PM to pick up the new onboarding_completed_at
@@ -375,16 +381,16 @@ export default function DashboardPage() {
       refreshPM()
     }
 
-    // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
-    if (
-      checklistData.length > 0 &&
-      !checklistData.every(i => i.complete) &&
-      !localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)
-    ) {
-      setSpotlightVisible(true)
+    // Always expand Getting Started while items remain incomplete
+    if (checklistData.length > 0 && !checklistData.every(i => i.complete)) {
       setExpandedCategory('onboarding')
-      localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
-      setTimeout(() => setSpotlightVisible(false), 1500)
+
+      // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
+      if (!localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)) {
+        setSpotlightVisible(true)
+        localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
+        setTimeout(() => setSpotlightVisible(false), 1500)
+      }
     }
 
     setLoading(false)

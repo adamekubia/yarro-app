@@ -51,6 +51,7 @@ export default function ImportPage() {
             onDismiss={handleDismiss}
             heading="Property added!"
             subtext="Head to your dashboard to add tenants and contractors."
+            showConfetti={false}
           />
         )}
       </div>

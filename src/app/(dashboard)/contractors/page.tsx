@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal, Send, Loader2 } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -37,7 +37,7 @@ import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
-import { SendBlastDialog } from '@/components/onboarding/send-blast-dialog'
+import { ContractorOnboarding } from '@/components/onboarding/contractor-onboarding'
 
 interface Contractor {
   id: string
@@ -94,9 +94,7 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [blastDialogOpen, setBlastDialogOpen] = useState(false)
-  const [blastSending, setBlastSending] = useState(false)
-  const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
+  const [showContractorOnboarding, setShowContractorOnboarding] = useState(false)
   const [search, setSearch] = useState('')
   const filteredContractors = useMemo(() => {
     if (!search) return contractors
@@ -233,7 +231,6 @@ export default function ContractorsPage() {
     fetchContractors()
     if (propertyManager) {
       fetchAllProperties()
-      fetchBlastTargets()
     }
   }, [propertyManager])
 
@@ -252,14 +249,6 @@ export default function ContractorsPage() {
   useEffect(() => {
     resetData(toEditable(selectedContractor))
   }, [selectedContractor, resetData])
-
-  const fetchBlastTargets = async () => {
-    const { data } = await supabase.rpc('get_onboarding_send_targets', {
-      p_pm_id: propertyManager!.id,
-      p_entity_type: 'contractor',
-    })
-    if (data) setBlastTargets(data as typeof blastTargets)
-  }
 
   const fetchAllProperties = async () => {
     const { data } = await supabase
@@ -302,6 +291,11 @@ export default function ContractorsPage() {
 
     if (data) {
       setContractors(data)
+      if (data.length === 0 && !propertyManager?.onboarding_completed_at) {
+        setShowContractorOnboarding(true)
+      }
+    } else if (!propertyManager?.onboarding_completed_at) {
+      setShowContractorOnboarding(true)
     }
     setLoading(false)
   }
@@ -686,35 +680,12 @@ export default function ContractorsPage() {
       title="Contractors"
       count={filteredContractors.length}
       actions={
-        <div className="flex items-center gap-2">
-          <CommandSearchInput
-            placeholder="Search contractors..."
-            value={search}
-            onChange={setSearch}
-            className="w-64"
-          />
-          {(blastTargets.length > 0 || blastSending) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setBlastDialogOpen(true)}
-              disabled={blastSending}
-              className="gap-1.5"
-            >
-              {blastSending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" />
-                  Send Onboarding Message ({blastTargets.length})
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        <CommandSearchInput
+          placeholder="Search contractors..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
       }
     >
 
@@ -880,6 +851,9 @@ export default function ContractorsPage() {
         </DetailDrawer>
       )}
 
+      {/* Contractor Onboarding Flow */}
+      {showContractorOnboarding && <ContractorOnboarding />}
+
       {/* Delete Confirmation Dialog */}
       <ConfirmDeleteDialog
         open={deleteDialogOpen}
@@ -888,16 +862,6 @@ export default function ContractorsPage() {
         description="Are you sure you want to deactivate this contractor? They will no longer appear in selection lists but historical data will be preserved."
         itemName={selectedContractor?.contractor_name || undefined}
         onConfirm={handleDelete}
-      />
-
-      {/* Send Onboarding Blast Dialog */}
-      <SendBlastDialog
-        open={blastDialogOpen}
-        onOpenChange={setBlastDialogOpen}
-        entityType="contractor"
-        targets={blastTargets}
-        onSending={setBlastSending}
-        onComplete={() => { fetchContractors(); fetchBlastTargets() }}
       />
     </PageShell>
   )

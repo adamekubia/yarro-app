@@ -42,7 +42,7 @@ import { ShieldCheck, Printer, Settings2, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { ComplianceSetupWizard } from '@/components/compliance-setup/setup-wizard'
+import { ComplianceOnboarding } from '@/components/onboarding/compliance-onboarding'
 
 interface ComplianceRow {
   cert_id: string | null
@@ -255,7 +255,7 @@ export default function CompliancePage() {
   const hasAnyCerts = !loading && certificates.some(c => c.cert_id !== null)
   if (!loading && !hasAnyCerts && certificates.length > 0) {
     return (
-      <ComplianceSetupWizard
+      <ComplianceOnboarding
         certificates={certificates}
         pmId={propertyManager?.id || ''}
         onComplete={fetchData}
