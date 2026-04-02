@@ -1180,6 +1180,7 @@ export type Database = {
           room_number: string
           tenancy_end_date: string | null
           tenancy_start_date: string | null
+          tenancy_status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1197,6 +1198,7 @@ export type Database = {
           room_number: string
           tenancy_end_date?: string | null
           tenancy_start_date?: string | null
+          tenancy_status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1214,6 +1216,7 @@ export type Database = {
           room_number?: string
           tenancy_end_date?: string | null
           tenancy_start_date?: string | null
+          tenancy_status?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2438,6 +2441,10 @@ export type Database = {
       room_delete: {
         Args: { p_pm_id: string; p_room_id: string }
         Returns: boolean
+      }
+      room_end_tenancy: {
+        Args: { p_pm_id: string; p_room_id: string }
+        Returns: undefined
       }
       room_remove_tenant: {
         Args: { p_pm_id: string; p_room_id: string }

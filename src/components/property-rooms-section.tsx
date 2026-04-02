@@ -7,6 +7,7 @@ import { Plus, BedDouble, MoreHorizontal, Pencil, Trash2, UserMinus, UserPlus } 
 import { RoomFormDialog, type RoomFormData } from '@/components/room-form-dialog'
 import { TenantAssignDialog } from '@/components/tenant-assign-dialog'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { EndTenancyDialog } from '@/components/end-tenancy-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,18 +101,9 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
     await fetchRooms()
   }
 
-  const handleRemoveTenant = async () => {
-    if (!removeTarget) return
-    const { error } = await supabase.rpc('room_remove_tenant', {
-      p_room_id: removeTarget.id,
-      p_pm_id: pmId,
-    })
-
-    if (error) throw new Error(error.message)
-
-    toast.success('Tenant removed from room')
+  const handleRemoveTenantComplete = () => {
     setRemoveTarget(null)
-    await fetchRooms()
+    fetchRooms()
   }
 
   const openEdit = (room: Room) => {
@@ -289,14 +281,12 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
         onConfirm={handleDelete}
       />
 
-      <ConfirmDeleteDialog
+      <EndTenancyDialog
         open={!!removeTarget}
         onOpenChange={(open) => { if (!open) setRemoveTarget(null) }}
-        title="Remove Tenant"
-        description={`Remove ${removeTarget?.tenant_name || 'tenant'} from ${removeTarget?.room_number || 'this room'}? The tenant will remain on the property but will no longer be assigned to this room.`}
-        onConfirm={handleRemoveTenant}
-        confirmLabel="Remove"
-        confirmingLabel="Removing..."
+        room={removeTarget}
+        pmId={pmId}
+        onComplete={handleRemoveTenantComplete}
       />
 
       {assignTarget && (

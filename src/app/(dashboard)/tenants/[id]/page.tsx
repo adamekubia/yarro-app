@@ -76,7 +76,7 @@ export default function TenantDetailPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [blastDialogOpen, setBlastDialogOpen] = useState(false)
-  const [room, setRoom] = useState<{ id: string; room_number: string; room_name: string | null } | null>(null)
+  const [room, setRoom] = useState<{ id: string; room_number: string; room_name: string | null; monthly_rent: number | null; tenancy_start_date: string | null; tenancy_end_date: string | null; tenancy_status: string | null } | null>(null)
 
   const fetchTenant = useCallback(async () => {
     if (!tenantId) return
@@ -111,7 +111,7 @@ export default function TenantDetailPage() {
 
   useEffect(() => {
     if (!tenant?.room_id) { setRoom(null); return }
-    supabase.from('c1_rooms').select('id, room_number, room_name').eq('id', tenant.room_id).single()
+    supabase.from('c1_rooms').select('id, room_number, room_name, monthly_rent, tenancy_start_date, tenancy_end_date, tenancy_status').eq('id', tenant.room_id).single()
       .then(({ data }) => { if (data) setRoom(data); else setRoom(null) })
   }, [tenant?.room_id, supabase])
 
@@ -287,7 +287,7 @@ export default function TenantDetailPage() {
               {room ? (
                 <span>{room.room_number}{room.room_name ? ` \u2014 ${room.room_name}` : ''}</span>
               ) : (
-                <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+                <span className="text-muted-foreground/50 font-normal italic">Not assigned</span>
               )}
             </KeyValueRow>
             {isEditing && editedData && (
@@ -306,13 +306,25 @@ export default function TenantDetailPage() {
               </div>
             )}
             <KeyValueRow label="Start date">
-              <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              {room?.tenancy_start_date ? (
+                <span>{new Date(room.tenancy_start_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              ) : (
+                <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              )}
             </KeyValueRow>
             <KeyValueRow label="Rent">
-              <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              {room?.monthly_rent ? (
+                <span>&pound;{room.monthly_rent.toLocaleString('en-GB')}/mo</span>
+              ) : (
+                <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              )}
             </KeyValueRow>
             <KeyValueRow label="Lease end">
-              <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              {room?.tenancy_end_date ? (
+                <span>{new Date(room.tenancy_end_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              ) : (
+                <span className="text-muted-foreground/50 font-normal italic">Not set</span>
+              )}
             </KeyValueRow>
           </ProfileCard>
         </div>

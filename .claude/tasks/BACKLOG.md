@@ -12,6 +12,14 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-02] FEATURE: Tenancy history table (`c1_tenancies`) — immutable record per tenancy like tickets. Store property, room, tenant, start/end dates, status. End tenancy clears `room_id` AND `property_id` but history preserved. Tenant detail page gets "Tenancy History" button. Every move/end logged to audit trail. [priority: high]
+- [2026-04-02] UX: End tenancy dialog padding/layout polish [priority: low]
+- [2026-04-02] UX: Tenant-room assign dialog needs inline "Create tenant" button via global side drawer [priority: medium]
+- [2026-04-02] UX: Properties table not responsive, horizontal scroll broken on small screens [priority: medium]
+- [2026-04-02] UX: Sidebar white background doesn't collapse with sidebar toggle [priority: medium]
+- [2026-04-02] CLEANUP: Remove dark mode + blue mode tech debt (dead theme code) [priority: medium]
+- [2026-04-02] A11Y: DialogContent missing Description or aria-describedby [priority: low]
+- [2026-04-02] A11Y: Logo image in sidebar missing height auto on Next Image [priority: low]
 - [2026-04-02] CLEANUP: Delete duplicate files with ' 2' / ' 3' suffixes (macOS Finder copies) — ~20 files in portal/, onboarding/, lib/ [priority: medium]
 - [2026-04-01] UX: Add loading states/skeletons to all pages — dashboard is top priority, but every page that fetches data should show immediate loading signal (spinner, skeleton, etc.) [priority: high]
 - [2026-04-01] BUG: Compliance reminder and job reminder notifications persist across account deletion/switching — stale notification state not cleared on auth change [priority: high]
