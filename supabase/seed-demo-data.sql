@@ -2,7 +2,7 @@
 -- Yarro PM — Demo Seed Data
 -- Run this in the Supabase SQL Editor (one-shot, idempotent-ish)
 -- =============================================================
--- Creates: 1 property, 5 rooms, 4 tenants, compliance certs
+-- Creates: 1 property, 5 rooms, 4 tenants, compliance certs + requirements
 -- Assumes: You have at least one row in c1_property_managers
 -- =============================================================
 
@@ -21,12 +21,11 @@ DECLARE
   v_tenant4_id  uuid := gen_random_uuid();
 BEGIN
   -- -------------------------------------------------------
-  -- 1. Get your property manager ID
+  -- 1. Get your property manager ID (first PM found)
   -- -------------------------------------------------------
-  -- Adam's PM ID (auth UID = e279def0-3a4b-444b-987f-f7edd12b22ab)
   SELECT id INTO v_pm_id
   FROM public.c1_property_managers
-  WHERE id = 'e279def0-3a4b-444b-987f-f7edd12b22ab';
+  WHERE id = '2a4bf89e-e368-4af9-a5f0-86cf16c267c3';
 
   IF v_pm_id IS NULL THEN
     RAISE EXCEPTION 'No property manager found. Sign in to the dashboard first.';
@@ -39,7 +38,8 @@ BEGIN
   -- -------------------------------------------------------
   INSERT INTO public.c1_properties (
     id, address, city, landlord_name, landlord_email, landlord_phone,
-    property_manager_id, require_landlord_approval, auto_approve_limit
+    property_manager_id, require_landlord_approval, auto_approve_limit,
+    property_type
   ) VALUES (
     gen_random_uuid(),
     '14 Brixton Hill, London SW2 1QA',
@@ -49,7 +49,8 @@ BEGIN
     '+447700100001',
     v_pm_id,
     true,
-    150
+    150,
+    'hmo'
   )
   RETURNING id INTO v_property_id;
 
@@ -90,38 +91,61 @@ BEGIN
   RAISE NOTICE 'Created 5 rooms (4 occupied, 1 vacant) with dual-sync';
 
   -- -------------------------------------------------------
-  -- 5. Compliance certificates — mixed statuses
+  -- 5. Compliance requirements — explicitly set which certs
+  --    this HMO property needs (trigger removed, opt-in now)
+  -- -------------------------------------------------------
+  INSERT INTO public.c1_compliance_requirements (
+    property_id, property_manager_id, certificate_type, is_required
+  ) VALUES
+    (v_property_id, v_pm_id, 'hmo_license',   true),
+    (v_property_id, v_pm_id, 'gas_safety',    true),
+    (v_property_id, v_pm_id, 'eicr',          true),
+    (v_property_id, v_pm_id, 'epc',           true),
+    (v_property_id, v_pm_id, 'fire_risk',     true),
+    (v_property_id, v_pm_id, 'smoke_alarms',  true),
+    (v_property_id, v_pm_id, 'co_alarms',     true);
+
+  RAISE NOTICE 'Created 7 compliance requirements (HMO core — no PAT/legionella)';
+
+  -- -------------------------------------------------------
+  -- 6. Compliance certificates — mixed statuses for demo
+  --    Status uses 'verified' (not 'valid') to match RPC logic
   -- -------------------------------------------------------
   INSERT INTO public.c1_compliance_certificates (
     property_id, property_manager_id, certificate_type,
     issued_date, expiry_date, certificate_number, issued_by,
     status, reminder_days_before
   ) VALUES
-    -- Gas Safety: valid, expires Dec 2026
+    -- Gas Safety: VALID — verified, expires Dec 2026
     (v_property_id, v_pm_id, 'gas_safety',
      '2025-12-15', '2026-12-15', 'GS-2025-4821', 'British Gas',
-     'valid', 60),
+     'verified', 60),
 
-    -- EICR: valid, expires Oct 2026
+    -- EICR: VALID — verified, expires Oct 2026
     (v_property_id, v_pm_id, 'eicr',
      '2021-10-20', '2026-10-20', 'EICR-2021-7734', 'Spark Electrical Ltd',
-     'valid', 90),
+     'verified', 90),
 
-    -- HMO License: EXPIRING — expires in ~45 days (mid-May 2026)
+    -- HMO License: EXPIRING — verified, expires mid-May 2026 (~40 days)
     (v_property_id, v_pm_id, 'hmo_license',
      '2021-05-12', '2026-05-12', 'HMO/LB/2021/0394', 'Lambeth Council',
-     'valid', 60),
+     'verified', 60),
 
-    -- EPC: EXPIRED — expired last month
+    -- EPC: EXPIRED — verified, expired Feb 2026
     (v_property_id, v_pm_id, 'epc',
      '2016-02-28', '2026-02-28', 'EPC-8823-2244-0100', 'EPC Direct',
-     'expired', 60),
+     'verified', 60),
 
-    -- Fire Risk: missing / never uploaded
+    -- Fire Risk: REVIEW — uploaded but not yet verified
     (v_property_id, v_pm_id, 'fire_risk',
-     NULL, NULL, NULL, NULL,
-     'missing', 60);
+     '2025-06-01', '2026-06-01', 'FRA-2025-1100', 'SafeGuard Assessments',
+     'review', 60);
+
+  -- smoke_alarms and co_alarms have no cert → display as 'missing'
 
   RAISE NOTICE 'Created 5 compliance certificates';
+  RAISE NOTICE '  → gas_safety: valid, eicr: valid, hmo_license: expiring_soon';
+  RAISE NOTICE '  → epc: expired, fire_risk: review';
+  RAISE NOTICE '  → smoke_alarms: missing, co_alarms: missing';
   RAISE NOTICE '✓ Demo seed complete for property: 14 Brixton Hill';
 END $$;
