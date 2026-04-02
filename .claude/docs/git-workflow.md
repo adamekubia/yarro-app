@@ -81,11 +81,12 @@ git commit -m "feat: add priority filter to tickets page"
 ### Before Pushing
 
 ```bash
-# Make sure the build passes
+# Run tests first, then build
+npm test
 npm run build
 ```
 
-If the build fails, fix the errors before pushing. The pre-push hook will block you anyway.
+If tests or build fail, fix the errors before pushing. The pre-push hook will block the build anyway.
 
 ### Pushing
 
@@ -149,12 +150,13 @@ git stash pop
 
 ### "The pre-push hook blocked me"
 
-The build failed. Read the error output, fix the TypeScript errors, then try again:
+The build or tests failed. Read the error output, fix the issue, then try again:
 ```bash
-npm run build    # See the errors
+npm test         # Check for test failures
+npm run build    # Check for build errors
 # Fix them
 git add .
-git commit -m "fix: resolve build errors"
+git commit -m "fix: resolve build/test errors"
 git push origin adam/your-branch
 ```
 
@@ -171,5 +173,5 @@ git reset --soft HEAD~1
 
 1. **Never push to main** — always use `adam/` feature branches
 2. **Never merge your own PRs** — Faraaz reviews everything
-3. **Always run `npm run build` before pushing** — catch errors early
+3. **Always run `npm test && npm run build` before pushing** — catch errors early
 4. **One feature per branch** — keeps PRs small and reviewable

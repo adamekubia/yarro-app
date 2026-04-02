@@ -38,17 +38,20 @@ If there is no test plan in the PRD (shouldn't happen with /scope, but just in c
 - Run the acceptance criteria as the test plan instead
 - At minimum, verify each acceptance criterion passes
 
-### Step 3 — Build Check
+### Step 3 — Test & Build Check
 
 ```bash
+npm test
 npm run build
 ```
 
-**Must pass with zero errors.** If it fails:
+**Both must pass with zero errors/failures.** If either fails:
 - Show the error
 - Fix it
-- Re-run the build
-- Do NOT proceed until the build passes
+- Re-run the failing command
+- Do NOT proceed until both pass
+
+Tests live in `src/lib/__tests__/` and run via Vitest. If you added or changed any utility function in `src/lib/`, check whether existing tests need updating or new tests should be added.
 
 ### Step 4 — Commit
 
@@ -142,6 +145,7 @@ This undoes the merge without force-pushing. The feature branch still exists for
 ## Rules
 
 - Never skip the test plan — it exists for a reason
+- Never skip `npm test` — automated tests catch regressions the test plan won't
 - Never skip the build check
 - Always use `--no-ff` for the merge (single revert point)
 - Always update SESSION_LOG.md

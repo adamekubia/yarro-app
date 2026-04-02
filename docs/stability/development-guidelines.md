@@ -124,8 +124,9 @@ See [AD-1 and AD-2](architecture-decisions.md) for the reasoning. The rules:
 
 For additional detail, see the "Before Claiming Done" checklist in `CLAUDE.md`.
 
-1. `npm run build` — zero errors (pre-push hook enforces this)
-2. Feature works in browser
+1. `npm test` — zero failures (Vitest unit tests)
+2. `npm run build` — zero errors (pre-push hook enforces this)
+3. Feature works in browser
 3. Data persists on page refresh
 4. No console errors in DevTools
 5. Check at 375px mobile and 1440px desktop

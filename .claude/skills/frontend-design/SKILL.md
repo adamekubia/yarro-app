@@ -57,7 +57,7 @@ Use these. Don't reinvent them.
 Before creating any new component, check this table. If something similar exists, extend it — don't duplicate it.
 
 ---
-
+        12}
 ## Brand Palette
 
 | Token | Value | Use for |
@@ -137,4 +137,5 @@ Before finishing any UI work:
 - [ ] Empty states handled with friendly, specific copy
 - [ ] Interactive elements have hover/focus states
 - [ ] Layout feels light and breathable — not cramped or dense
+- [ ] `npm test` passes with zero failures
 - [ ] `npm run build` passes with zero errors

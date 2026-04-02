@@ -18,7 +18,9 @@ These files can be changed without risk of breaking core system flows.
 | `src/lib/export.ts` | CSV export logic | Pure utility functions |
 | `docs/`, `.claude/docs/` | Documentation | No code impact |
 | `public/` | Static assets | Images, icons, favicon |
-| `.github/workflows/ci.yml` | CI lint+build checks | Safe to modify — only runs on PRs |
+| `.github/workflows/ci.yml` | CI lint+test+build checks | Safe to modify — only runs on PRs |
+| `vitest.config.ts` | Vitest test config | Path alias config for `@/*` |
+| `src/lib/__tests__/` | Unit tests (Vitest) | Add tests here for any `src/lib/` utility |
 
 ## YELLOW — Proceed with Caution
 

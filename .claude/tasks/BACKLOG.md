@@ -12,6 +12,7 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-02] CLEANUP: Delete duplicate files with ' 2' / ' 3' suffixes (macOS Finder copies) — ~20 files in portal/, onboarding/, lib/ [priority: medium]
 - [2026-04-01] UX: Add loading states/skeletons to all pages — dashboard is top priority, but every page that fetches data should show immediate loading signal (spinner, skeleton, etc.) [priority: high]
 - [2026-04-01] BUG: Compliance reminder and job reminder notifications persist across account deletion/switching — stale notification state not cleared on auth change [priority: high]
 - [2026-04-01] BUG: Tenant onboarding button shows count off by +1 (e.g. 6-tenant HMO says "add 7 tenants", single let says "add 2 tenants"). The start button count is always N+1. Needs analysis [priority: high]
@@ -65,5 +66,5 @@ Review each morning when writing the day's PRD.
 - [2026-03-30] Zod input validation — replace minimal validate.ts with Zod schemas for forms that submit to Supabase. Prevents malformed data. [priority: medium]
 - [2026-03-30] Security headers — add CSP, X-Frame-Options, HSTS, X-Content-Type-Options to next.config.ts [priority: medium]
 - [2026-03-30] Dependabot — create `.github/dependabot.yml` for automated dependency update PRs [priority: low]
-- [2026-03-30] Vitest test framework — install Vitest, add npm test script, write tests for critical RPCs (onboarding, dashboard). Add test step to CI pipeline. [priority: high]
+- ~~[2026-03-30] Vitest test framework~~ **DONE 2026-04-02** — Vitest installed, `npm test` + `npm run test:watch` scripts, 52 tests for `normalize.ts`, CI pipeline updated. Next: expand coverage to other `src/lib/` utilities.
 - [2026-03-30] Source map upload to Sentry — set up SENTRY_AUTH_TOKEN, enable sourcemaps in next.config.ts for better stack traces [priority: low]

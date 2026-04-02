@@ -72,10 +72,11 @@ chmod +x .git/hooks/pre-push
 ## Stage 5: Verify Local Works
 
 ```bash
-npm run build
+npm test         # Run unit tests (should see 52 passing)
+npm run build    # Production build + TypeScript check
 ```
 
-If build passes, start the dev server:
+If both pass, start the dev server:
 ```bash
 npm run dev
 ```

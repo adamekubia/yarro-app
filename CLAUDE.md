@@ -148,7 +148,7 @@ across the entire system if modified incorrectly.
 
 **Rules:**
 1. Commit with clear prefixed messages: `feat:`, `fix:`, `style:`, `refactor:`
-2. **Before pushing, always run:** `npm run build` (pre-push hook enforces this)
+2. **Before pushing, always run:** `npm test && npm run build` (pre-push hook enforces build)
 3. Push to `origin` (your fork)
 
 ---
@@ -159,6 +159,8 @@ across the entire system if modified incorrectly.
 npm run dev          # Start dev server → http://localhost:3000
 npm run build        # Production build + TypeScript check
 npm run lint         # ESLint check
+npm test             # Run all unit tests once (Vitest)
+npm run test:watch   # Run tests in watch mode (re-runs on file save)
 ```
 
 ---
@@ -167,8 +169,9 @@ npm run lint         # ESLint check
 
 Run this before telling Adam a change is complete:
 
-1. `npm run build` passes with zero errors
-2. Feature works visually in browser
+1. `npm test` passes with zero failures
+2. `npm run build` passes with zero errors
+3. Feature works visually in browser
 3. Data persists on page refresh
 4. No errors in browser DevTools console
 5. Responsive: check at 375px mobile and 1440px desktop

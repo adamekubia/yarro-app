@@ -273,7 +273,7 @@ Debug logging that shouldn't be in production builds.
 | Issue | Where | Impact |
 |-------|-------|--------|
 | Handoff decision is prompt-controlled, not code-enforced | `yarro-tenant-intake/prompts.ts` | Prompt edit could bypass manual review |
-| No test suite | Entire codebase | Every change is a leap of faith |
+| ~~No test suite~~ **RESOLVED** — Vitest installed, 52 tests for `normalize.ts`, CI integrated | `src/lib/__tests__/` | Expand coverage to other `src/lib/` utilities next |
 | UK timezone hardcoded everywhere | Multiple Edge Functions | Breaks if expanding beyond UK |
 | Lead time uses browser's local timezone | Contractor portal | Wrong slots for non-UK contractors |
 | No realtime subscriptions | Frontend | PM must manually refresh |

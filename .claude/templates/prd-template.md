@@ -27,7 +27,8 @@ As a [PM/landlord/tenant], I want [action] so that [outcome].
 |---|------|-----------------|-------|
 | 1 | [specific action to take] | [what you should see] | |
 | 2 | [next action] | [expected result] | |
-| 3 | npm run build | Zero errors | |
+| 3 | npm test | Zero failures | |
+| 4 | npm run build | Zero errors | |
 
 ### Out of Scope
 - [Thing that came up but is NOT part of this build]
@@ -42,6 +43,7 @@ These items get added to BACKLOG.md if not already there.
 ### Done When
 - [ ] All acceptance criteria pass
 - [ ] Test plan passes
+- [ ] `npm test` passes
 - [ ] `npm run build` passes
 - [ ] Committed, merged to main, pushed
 - [ ] SESSION_LOG.md updated
