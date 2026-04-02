@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils'
 import { usePM } from '@/contexts/pm-context'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
   Command,
   CommandEmpty,
@@ -89,7 +90,7 @@ export function DashboardHeader() {
   // Cmd+K shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setOpen(true)
       }
@@ -216,7 +217,7 @@ export function DashboardHeader() {
 
   const handleSelect = (href: string) => {
     setOpen(false)
-    router.push(href)
+    requestAnimationFrame(() => router.push(href))
   }
 
   // Group results by type
@@ -298,7 +299,8 @@ export function DashboardHeader() {
 
       {/* Command palette dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
+        <DialogContent className="overflow-hidden p-0 sm:max-w-lg" hideCloseButton>
+          <VisuallyHidden><DialogTitle>Search</DialogTitle></VisuallyHidden>
           <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
             <CommandInput
               placeholder="Search properties, tenants, tickets..."
