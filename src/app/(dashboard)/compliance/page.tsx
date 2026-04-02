@@ -57,7 +57,7 @@ interface ComplianceRow {
   property_address: string
 }
 
-type StatusFilter = 'all' | 'expired' | 'expiring_soon' | 'missing' | 'valid' | 'review'
+type StatusFilter = 'all' | 'expired' | 'expiring_soon' | 'missing' | 'valid'
 
 interface RequirementRow {
   property_id: string
@@ -124,12 +124,11 @@ export default function CompliancePage() {
 
   // Counts derived from actual data (single source of truth)
   const counts = useMemo(() => {
-    const c = { expired: 0, expiring_soon: 0, missing: 0, review: 0, valid: 0 }
+    const c = { expired: 0, expiring_soon: 0, missing: 0, valid: 0 }
     for (const cert of certificates) {
       if (cert.display_status === 'expired') c.expired++
       else if (cert.display_status === 'expiring_soon') c.expiring_soon++
       else if (cert.display_status === 'missing') c.missing++
-      else if (cert.display_status === 'review') c.review++
       else if (cert.display_status === 'valid' || cert.display_status === 'renewal_scheduled') c.valid++
     }
     return c
@@ -230,7 +229,6 @@ export default function CompliancePage() {
     { key: 'expired', label: 'Expired', count: counts.expired, color: 'text-danger' },
     { key: 'expiring_soon', label: 'Expiring', count: counts.expiring_soon, color: 'text-warning' },
     { key: 'missing', label: 'Missing', count: counts.missing, color: 'text-muted-foreground' },
-    { key: 'review', label: 'Review', count: counts.review, color: 'text-primary' },
     { key: 'valid', label: 'Valid', count: counts.valid, color: 'text-success' },
   ]
 

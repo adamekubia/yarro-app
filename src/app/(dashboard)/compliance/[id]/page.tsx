@@ -19,7 +19,6 @@ import {
   Loader2,
   ShieldCheck,
   Pencil,
-  CheckCircle,
 } from 'lucide-react'
 import {
   CertificateFormDialog,
@@ -91,20 +90,16 @@ export default function CertificateDetailPage() {
       return
     }
 
-    // Compute display status
-    // Expired/expiring always override (urgent signals)
-    // Otherwise: verified → valid, has info → review, nothing → missing
+    // Compute display status — matches RPC CASE logic exactly
+    // Document + expiry = valid. No review/verify step.
     let status = 'missing'
-    if (data.expiry_date) {
+    if (data.document_url && data.expiry_date) {
       const expiry = new Date(data.expiry_date)
       const now = new Date()
       const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       if (expiry < now) status = 'expired'
-      else if (days <= 30) status = 'expiring'
-      else if (data.status === 'verified') status = 'valid'
-      else status = 'review'
-    } else if (data.document_url || data.issued_by || data.certificate_number) {
-      status = 'review'
+      else if (days <= 30) status = 'expiring_soon'
+      else status = 'valid'
     }
 
     setCertificate({ ...data, status } as CertificateDetail)
@@ -193,7 +188,7 @@ export default function CertificateDetailPage() {
 
     const { error } = await supabase
       .from('c1_compliance_certificates')
-      .update({ document_url: null, status: 'review' })
+      .update({ document_url: null })
       .eq('id', certificate.id)
       .eq('property_manager_id', certificate.property_manager_id)
 
@@ -203,24 +198,6 @@ export default function CertificateDetailPage() {
     }
 
     toast.success('Document removed')
-    await fetchCertificate()
-  }
-
-  const handleVerify = async () => {
-    if (!certificate) return
-
-    const { error } = await supabase
-      .from('c1_compliance_certificates')
-      .update({ status: 'verified' })
-      .eq('id', certificate.id)
-      .eq('property_manager_id', certificate.property_manager_id)
-
-    if (error) {
-      toast.error('Failed to verify certificate')
-      return
-    }
-
-    toast.success('Certificate verified')
     await fetchCertificate()
   }
 
@@ -273,23 +250,13 @@ export default function CertificateDetailPage() {
               <Pencil className="h-3.5 w-3.5" />
               Edit
             </Button>
-            {certificate.status === 'review' && certificate.expiry_date && certificate.document_url && (
-              <Button
-                size="sm"
-                onClick={handleVerify}
-                className="gap-1.5"
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
-                Verify
-              </Button>
-            )}
             <StatusBadge status={certificate.status} />
           </div>
         </div>
       </div>
 
       {/* Expiry warning */}
-      {(certificate.status === 'expired' || certificate.status === 'expiring') && (
+      {(certificate.status === 'expired' || certificate.status === 'expiring_soon') && (
         <div
           className={cn(
             'rounded-lg border px-4 py-3 mb-6 text-sm',
@@ -304,10 +271,10 @@ export default function CertificateDetailPage() {
         </div>
       )}
 
-      {/* Review hint — what's needed before verification */}
-      {certificate.status === 'review' && (!certificate.expiry_date || !certificate.document_url) && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 mb-6 text-sm text-primary">
-          To verify this certificate, add:
+      {/* Missing hint — what's needed to be compliant */}
+      {certificate.status === 'missing' && (certificate.document_url || certificate.expiry_date) && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 mb-6 text-sm text-warning">
+          To mark this certificate as compliant, add:
           {!certificate.expiry_date && !certificate.document_url
             ? ' an expiry date and upload the document.'
             : !certificate.expiry_date

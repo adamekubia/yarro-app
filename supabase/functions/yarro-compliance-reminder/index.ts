@@ -40,6 +40,7 @@ interface ExpiringCert {
   contractor_phone: string | null;
   contractor_email: string | null;
   contractor_contact_method: string | null;
+  reminder_count: number;
 }
 
 interface CertResult {
@@ -53,18 +54,27 @@ interface CertResult {
 
 // ─── Build notification variables for PM ────────────────────────────────
 
+function getUrgencyPrefix(cert: ExpiringCert): string {
+  if (cert.days_remaining > 0) return "";
+  if (cert.reminder_count === 0) return "";
+  if (cert.reminder_count === 1) return "EXPIRED — ";
+  if (cert.reminder_count === 2) return "URGENT — ";
+  return "CRITICAL — ";
+}
+
 function buildVariables(cert: ExpiringCert): Record<string, string> {
   const certLabel = CERT_LABELS[cert.certificate_type] || cert.certificate_type;
   const expiryFormatted = formatFriendlyDate(cert.expiry_date);
+  const urgency = getUrgencyPrefix(cert);
   const actionText = cert.contractor_id && cert.contractor_name
     ? `Your contractor ${cert.contractor_name} has been notified to arrange renewal.`
     : "No contractor assigned — log in to arrange renewal.";
 
   return {
-    "1": certLabel,
+    "1": `${urgency}${certLabel}`,
     "2": cert.property_address || "Unknown property",
     "3": expiryFormatted,
-    "4": String(cert.days_remaining),
+    "4": String(Math.abs(cert.days_remaining)),
     "5": actionText,
   };
 }
@@ -173,14 +183,18 @@ async function processCert(
     }
   }
 
-  // ─── Mark reminder as sent ───
+  // ─── Increment reminder count ───
   const { error: updateError } = await supabase
     .from("c1_compliance_certificates")
-    .update({ reminder_sent_at: new Date().toISOString() })
+    .update({
+      reminder_count: cert.reminder_count + 1,
+      last_reminder_at: new Date().toISOString(),
+      reminder_sent_at: new Date().toISOString(), // keep for backward compat
+    })
     .eq("id", cert.cert_id);
 
   if (updateError) {
-    console.error(`[${FN}] Failed to update reminder_sent_at for cert ${cert.cert_id}:`, updateError.message);
+    console.error(`[${FN}] Failed to update reminder for cert ${cert.cert_id}:`, updateError.message);
   }
 
   return {

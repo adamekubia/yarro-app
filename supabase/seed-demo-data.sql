@@ -109,43 +109,44 @@ BEGIN
 
   -- -------------------------------------------------------
   -- 6. Compliance certificates — mixed statuses for demo
-  --    Status uses 'verified' (not 'valid') to match RPC logic
+  --    New model: document_url + expiry_date = valid. No review step.
+  --    document_url uses placeholder paths (not real files).
   -- -------------------------------------------------------
   INSERT INTO public.c1_compliance_certificates (
     property_id, property_manager_id, certificate_type,
     issued_date, expiry_date, certificate_number, issued_by,
-    status, reminder_days_before
+    status, reminder_days_before, document_url
   ) VALUES
-    -- Gas Safety: VALID — verified, expires Dec 2026
+    -- Gas Safety: VALID — has doc + expiry > 30 days
     (v_property_id, v_pm_id, 'gas_safety',
      '2025-12-15', '2026-12-15', 'GS-2025-4821', 'British Gas',
-     'verified', 60),
+     'valid', 60, 'https://placeholder.example/gas-safety.pdf'),
 
-    -- EICR: VALID — verified, expires Oct 2026
+    -- EICR: VALID — has doc + expiry > 30 days
     (v_property_id, v_pm_id, 'eicr',
      '2021-10-20', '2026-10-20', 'EICR-2021-7734', 'Spark Electrical Ltd',
-     'verified', 90),
+     'valid', 90, 'https://placeholder.example/eicr.pdf'),
 
-    -- HMO License: EXPIRING — verified, expires mid-May 2026 (~40 days)
+    -- HMO License: EXPIRING — has doc + expiry < 30 days (~40 days, borderline)
     (v_property_id, v_pm_id, 'hmo_license',
      '2021-05-12', '2026-05-12', 'HMO/LB/2021/0394', 'Lambeth Council',
-     'verified', 60),
+     'valid', 60, 'https://placeholder.example/hmo-license.pdf'),
 
-    -- EPC: EXPIRED — verified, expired Feb 2026
+    -- EPC: EXPIRED — has doc + expiry in the past
     (v_property_id, v_pm_id, 'epc',
      '2016-02-28', '2026-02-28', 'EPC-8823-2244-0100', 'EPC Direct',
-     'verified', 60),
+     'valid', 60, 'https://placeholder.example/epc.pdf'),
 
-    -- Fire Risk: REVIEW — uploaded but not yet verified
+    -- Fire Risk: MISSING — has data but no document uploaded
     (v_property_id, v_pm_id, 'fire_risk',
      '2025-06-01', '2026-06-01', 'FRA-2025-1100', 'SafeGuard Assessments',
-     'review', 60);
+     'valid', 60, NULL);
 
-  -- smoke_alarms and co_alarms have no cert → display as 'missing'
+  -- smoke_alarms and co_alarms have no cert record → display as 'missing'
 
   RAISE NOTICE 'Created 5 compliance certificates';
-  RAISE NOTICE '  → gas_safety: valid, eicr: valid, hmo_license: expiring_soon';
-  RAISE NOTICE '  → epc: expired, fire_risk: review';
+  RAISE NOTICE '  → gas_safety: valid, eicr: valid, hmo_license: valid (40d)';
+  RAISE NOTICE '  → epc: expired, fire_risk: missing (no doc)';
   RAISE NOTICE '  → smoke_alarms: missing, co_alarms: missing';
   RAISE NOTICE '✓ Demo seed complete for property: 14 Brixton Hill';
 END $$;
