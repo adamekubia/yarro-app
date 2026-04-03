@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Circle, Wrench, Search, CalendarCheck, CheckCircle2, Loader2, Phone, CalendarClock, AlertTriangle, Upload, X } from 'lucide-react'
+import { Check, Circle, Wrench, Search, CalendarCheck, CheckCircle2, Loader2, Phone, CalendarClock, AlertTriangle, Upload, X, ShieldCheck, FileText } from 'lucide-react'
+import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { MiniCalendar } from './mini-calendar'
 import { MediaGrid } from './media-grid'
@@ -89,11 +90,12 @@ export type ContractorPortalV2Props = {
   data: ContractorPortalData
   onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>
   onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>
+  onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function ContractorPortalV2({ data, onSchedule, onCompletion }: ContractorPortalV2Props) {
+export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianceCompletion }: ContractorPortalV2Props) {
   const activeIdx = getActiveStageIdx(data)
   const needsScheduling = activeIdx === 0
 
@@ -143,7 +145,7 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion }: Contracto
             )}
             {!needsScheduling && (
               <TabsContent value="action" className="p-5">
-                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} />
+                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} onComplianceCompletion={onComplianceCompletion} />
               </TabsContent>
             )}
             <TabsContent value="details" className="p-5">
@@ -167,10 +169,24 @@ const tabTriggerClass = 'flex-1 rounded-none h-auto text-[13px] py-3 border-b-2 
 
 // ─── Action Tab ─────────────────────────────────────────────────────────
 
-function ActionTab({ data, onSchedule, onCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void> }) {
+function ActionTab({ data, onSchedule, onCompletion, onComplianceCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>; onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void> }) {
   const stageIdx = getActiveStageIdx(data)
+  const isCompliance = !!data.compliance_certificate_id
+  const certLabel = data.compliance_cert_type
+    ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
+    : 'Certificate'
 
   if (stageIdx === 2) {
+    if (isCompliance) {
+      return (
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-4 text-center">
+          <ShieldCheck className="size-8 text-green-600 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-green-700">Certificate renewed successfully</p>
+          <p className="text-xs text-green-600 mt-1">{certLabel} at {data.property_address}</p>
+          <p className="text-xs text-green-600/70 mt-2">The property manager has been notified.</p>
+        </div>
+      )
+    }
     return (
       <div className="rounded-md bg-green-50 border border-green-200 px-3 py-3 text-sm text-green-700 flex items-center gap-2">
         <CheckCircle2 className="size-4 shrink-0" />
@@ -179,7 +195,12 @@ function ActionTab({ data, onSchedule, onCompletion }: { data: ContractorPortalD
     )
   }
 
-  if (stageIdx === 1) return <CompletionForm data={data} onCompletion={onCompletion} />
+  if (stageIdx === 1) {
+    if (isCompliance && onComplianceCompletion) {
+      return <ComplianceCertForm data={data} certLabel={certLabel} onSubmit={onComplianceCompletion} />
+    }
+    return <CompletionForm data={data} onCompletion={onCompletion} />
+  }
   return <ScheduleForm data={data} onSchedule={onSchedule} />
 }
 
@@ -326,6 +347,126 @@ function CompletionForm({ data, onCompletion }: { data: ContractorPortalData; on
           {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : status === 'complete' ? 'Submit Completion' : 'Report Issue'}
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── Compliance Cert Form ──────────────────────────────────────────────
+
+function ComplianceCertForm({ data, certLabel, onSubmit }: {
+  data: ContractorPortalData
+  certLabel: string
+  onSubmit: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
+}) {
+  const [expiryDate, setExpiryDate] = useState('')
+  const [issuedBy, setIssuedBy] = useState('')
+  const [certNumber, setCertNumber] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit() {
+    if (!expiryDate || !file) return
+    setSubmitting(true)
+    await onSubmit({ expiryDate, issuedBy, certNumber, file, notes })
+    setSubmitting(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="size-5 text-primary" />
+        <SectionLabel>Upload renewed {certLabel}</SectionLabel>
+      </div>
+
+      {data.compliance_expiry_date && (
+        <div className="rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+          Current certificate expired {fmtDate(data.compliance_expiry_date)}
+        </div>
+      )}
+
+      <div>
+        <label className="text-sm font-medium text-foreground">New expiry date *</label>
+        <input
+          type="date"
+          value={expiryDate}
+          onChange={(e) => setExpiryDate(e.target.value)}
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Issued by</label>
+        <input
+          type="text"
+          value={issuedBy}
+          onChange={(e) => setIssuedBy(e.target.value)}
+          placeholder="e.g. British Gas, Lambeth Council"
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Certificate number</label>
+        <input
+          type="text"
+          value={certNumber}
+          onChange={(e) => setCertNumber(e.target.value)}
+          placeholder="Optional"
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Certificate document *</label>
+        {file ? (
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            className="mt-1.5 flex items-center gap-2 w-full px-3 py-2 border border-border rounded-md text-sm hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-4 text-primary shrink-0" />
+            <span className="truncate flex-1 text-left text-foreground text-[13px]">{file.name}</span>
+            <span className="text-xs text-muted-foreground shrink-0">Change</span>
+          </button>
+        ) : (
+          <label className="mt-1.5 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-border bg-muted hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer py-6">
+            <Upload className="size-6 text-muted-foreground mb-2" />
+            <span className="text-sm text-muted-foreground font-medium">Upload certificate</span>
+            <span className="text-xs text-muted-foreground/70 mt-1">PDF, JPG, PNG up to 10MB</span>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (!f) return
+                if (f.size > 10 * 1024 * 1024) return
+                setFile(f)
+              }}
+            />
+          </label>
+        )}
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Notes <span className="font-normal text-muted-foreground">(optional)</span></label>
+        <textarea
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          rows={2}
+          placeholder="Any notes about the renewal..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || !expiryDate || !file}
+        className="w-full rounded-md px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Certificate'}
+      </button>
     </div>
   )
 }

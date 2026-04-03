@@ -184,6 +184,11 @@ export type ContractorPortalData = {
   activity: PortalActivityEntry[]
 
   resolved_at: string | null
+
+  // Compliance fields (null for maintenance tickets)
+  compliance_certificate_id: string | null
+  compliance_cert_type: string | null
+  compliance_expiry_date: string | null
 }
 
 // ─── Legacy portal types (existing RPC shapes) ─────────────────────────

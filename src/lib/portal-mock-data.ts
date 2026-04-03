@@ -225,6 +225,9 @@ const contractorPortalBase: ContractorPortalData = {
     { message: 'You\u2019ve been assigned to this job. Please review the details and book a slot.', timestamp: '2026-03-29T11:20:00Z' },
   ],
   resolved_at: null,
+  compliance_certificate_id: null,
+  compliance_cert_type: null,
+  compliance_expiry_date: null,
 }
 
 export const contractorPortalMocks = {
