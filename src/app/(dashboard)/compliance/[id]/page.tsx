@@ -39,6 +39,8 @@ interface CertificateDetail {
   created_at: string
   updated_at: string | null
   status: string
+  contractor_id: string | null
+  reminder_days_before: number | null
 }
 
 function formatDate(dateStr: string | null): string {
@@ -320,8 +322,8 @@ export default function CertificateDetailPage() {
           certificate_number: certificate.certificate_number,
           issued_by: certificate.issued_by,
           notes: certificate.notes,
-          reminder_days_before: 60,
-          contractor_id: null,
+          reminder_days_before: certificate.reminder_days_before ?? 60,
+          contractor_id: certificate.contractor_id ?? null,
         }}
         onSubmit={async (formData) => {
           const { data: newId, error } = await supabase.rpc('compliance_upsert_certificate', {

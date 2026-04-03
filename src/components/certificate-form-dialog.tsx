@@ -16,6 +16,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -27,6 +28,7 @@ import {
   CERT_TYPE_CONTRACTOR_CATEGORIES,
   type CertificateType,
 } from '@/lib/constants'
+import { partitionContractors, contractorMatchesCertType } from '@/lib/contractor-utils'
 
 interface Contractor {
   id: string
@@ -88,9 +90,13 @@ export function CertificateFormDialog({
   const [reminderDays, setReminderDays] = useState('60')
   const [contractorId, setContractorId] = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
+  const [matchingContractors, setMatchingContractors] = useState<Contractor[]>([])
+  const [otherContractors, setOtherContractors] = useState<Contractor[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showReplace, setShowReplace] = useState(false)
+  const [showMismatchWarning, setShowMismatchWarning] = useState(false)
+  const [pendingContractorId, setPendingContractorId] = useState('')
 
   // Fetch properties when property picker is needed
   useEffect(() => {
@@ -107,10 +113,12 @@ export function CertificateFormDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, needsPropertyPicker, pmId])
 
-  // Fetch contractors when cert type changes (filtered by relevant categories)
+  // Fetch contractors when cert type changes
   useEffect(() => {
     if (!certificateType || !pmId) {
       setContractors([])
+      setMatchingContractors([])
+      setOtherContractors([])
       setContractorId('')
       return
     }
@@ -118,6 +126,8 @@ export function CertificateFormDialog({
     const relevantCategories = CERT_TYPE_CONTRACTOR_CATEGORIES[certificateType as CertificateType]
     if (!relevantCategories) {
       setContractors([])
+      setMatchingContractors([])
+      setOtherContractors([])
       setContractorId('')
       return
     }
@@ -132,19 +142,10 @@ export function CertificateFormDialog({
 
       if (!data) return
 
-      // Filter to contractors whose categories overlap with the relevant ones
-      const filtered = data.filter((c) => {
-        if (!c.categories || c.categories.length === 0) return false
-        return c.categories.some((cat: string) =>
-          relevantCategories!.some(
-            (rc) => rc.toLowerCase() === cat.toLowerCase()
-          )
-        )
-      })
-
-      // Show all contractors but put relevant ones first
-      const others = data.filter((c) => !filtered.includes(c))
-      setContractors([...filtered, ...others])
+      const [matching, other] = partitionContractors(data, certificateType as CertificateType)
+      setMatchingContractors(matching)
+      setOtherContractors(other)
+      setContractors([...matching, ...other])
     }
 
     fetchContractors()
@@ -179,6 +180,10 @@ export function CertificateFormDialog({
     setSelectedPropertyId('')
     setError(null)
     setShowReplace(false)
+    setShowMismatchWarning(false)
+    setPendingContractorId('')
+    setMatchingContractors([])
+    setOtherContractors([])
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -287,6 +292,8 @@ export function CertificateFormDialog({
                 setCertificateType(v as CertificateType)
                 setShowReplace(false)
                 setContractorId('')
+                setShowMismatchWarning(false)
+                setPendingContractorId('')
               }}
               disabled={isEditing}
             >
@@ -378,19 +385,92 @@ export function CertificateFormDialog({
                 <p className="text-sm text-muted-foreground mb-1.5">
                   Auto-dispatch contractor for renewal
                 </p>
-                <Select value={contractorId || 'none'} onValueChange={(v) => setContractorId(v === 'none' ? '' : v)}>
+                <Select
+                  value={contractorId || 'none'}
+                  onValueChange={(v) => {
+                    const selectedId = v === 'none' ? '' : v
+                    if (!selectedId) {
+                      setContractorId('')
+                      setShowMismatchWarning(false)
+                      setPendingContractorId('')
+                      return
+                    }
+                    const selected = contractors.find(c => c.id === selectedId)
+                    if (selected && !contractorMatchesCertType(selected, certificateType as CertificateType)) {
+                      setPendingContractorId(selectedId)
+                      setShowMismatchWarning(true)
+                    } else {
+                      setContractorId(selectedId)
+                      setShowMismatchWarning(false)
+                      setPendingContractorId('')
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="None (notify me only)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None (notify me only)</SelectItem>
-                    {contractors.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.contractor_name}
-                      </SelectItem>
+                    {matchingContractors.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.contractor_name}</SelectItem>
+                    ))}
+                    {matchingContractors.length > 0 && otherContractors.length > 0 && (
+                      <>
+                        <SelectSeparator />
+                        <p className="px-2 py-1 text-xs text-muted-foreground">Other contractors</p>
+                      </>
+                    )}
+                    {otherContractors.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.contractor_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                {showMismatchWarning && (
+                  <div className="mt-2 bg-warning/10 border border-warning/30 px-3 py-2 rounded-md">
+                    <p className="text-sm font-medium">Contractor may not be qualified</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This contractor doesn&apos;t have the right qualifications for {certificateType ? CERTIFICATE_LABELS[certificateType as CertificateType] : 'this certificate'}.
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setShowMismatchWarning(false); setPendingContractorId('') }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setContractorId(pendingContractorId)
+                          setShowMismatchWarning(false)
+                          setPendingContractorId('')
+                        }}
+                      >
+                        Continue anyway
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!showMismatchWarning && contractors.length > 0 && matchingContractors.length === 0 && (
+                  <p className="mt-1.5 text-xs text-warning">
+                    No contractors with matching qualifications.{' '}
+                    <a href="/contractors" className="underline font-medium hover:text-foreground transition-colors">
+                      Add a contractor
+                    </a>
+                  </p>
+                )}
+
+                {!showMismatchWarning && contractors.length === 0 && certificateType && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    No contractors added yet.{' '}
+                    <a href="/contractors" className="underline font-medium hover:text-foreground transition-colors">
+                      Add a contractor
+                    </a>
+                  </p>
+                )}
               </div>
             )}
           </div>
