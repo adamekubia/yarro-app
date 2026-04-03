@@ -108,6 +108,8 @@ These RPCs are newer and actively being developed:
 - Compliance: `compliance_get_certificates`, `compliance_upsert_certificate`, `compliance_delete_certificate`, `compliance_get_summary`, `compliance_get_all_statuses`, `compliance_get_property_status`, `compliance_get_todos`, `compliance_upsert_requirements`, `compliance_set_property_type`, `get_compliance_expiring`
   - **SSOT:** `compliance_get_all_statuses` is the sole owner of status CASE logic. `compliance_get_summary` aggregates from it (rewritten 2026-04-02). Do NOT add status logic elsewhere.
   - **Dropped:** `compliance_auto_populate_requirements` trigger + function (2026-04-02). Requirements are now opt-in. `compliance_set_property_type` (onboarding) still inserts defaults independently.
+  - **Contractor portal:** `compliance_submit_contractor_renewal` (new 2026-04-03). Contractor uploads renewed cert via portal token.
+  - **Protected RPC change:** `c1_get_contractor_ticket` extended (2026-04-03) with `compliance_certificate_id`, `compliance_cert_type`, `compliance_expiry_date` — safe addition, existing keys unchanged.
 - Rooms: `get_rooms_for_property`, `room_upsert`, `room_delete`, `room_assign_tenant`, `room_remove_tenant`
 - Rent: `create_rent_ledger_entries`, `get_rent_summary_for_property`, `mark_rent_paid`, `get_rent_dashboard_summary`, `get_rent_reminders_due`
 - Dashboard stats: `get_occupancy_summary`, `get_rent_income_summary`, `get_ai_actions_count`

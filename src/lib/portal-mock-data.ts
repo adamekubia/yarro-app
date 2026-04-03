@@ -487,6 +487,9 @@ const contractorBase: ContractorTicket = {
   resolved_at: null,
   tenant_updates: [],
   min_booking_lead_hours: 24,
+  compliance_certificate_id: null,
+  compliance_cert_type: null,
+  compliance_expiry_date: null,
 }
 
 export const contractorMocks = {

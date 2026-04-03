@@ -110,6 +110,35 @@ export default function ContractorPortalPage() {
     flash(resolved ? 'Job marked as complete — the property manager has been notified.' : 'Report submitted — the property manager has been notified.')
   }
 
+  async function handleComplianceCompletion(data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) {
+    let documentUrl: string | null = null
+    if (data.file) {
+      const ext = data.file.name.split('.').pop() || 'pdf'
+      const path = `portal/${token}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error: upErr } = await supabase.storage.from('compliance-documents').upload(path, data.file, { contentType: data.file.type })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('compliance-documents').getPublicUrl(path)
+        if (urlData?.publicUrl) documentUrl = urlData.publicUrl
+      }
+    }
+
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: {
+          source: 'portal-compliance-completion',
+          token,
+          document_url: documentUrl,
+          expiry_date: data.expiryDate,
+          issued_by: data.issuedBy || null,
+          certificate_number: data.certNumber || null,
+          notes: data.notes || null,
+        },
+      })
+    } catch { /* server action fires regardless */ }
+    await loadTicket()
+    flash('Certificate renewed — the property manager has been notified.')
+  }
+
   async function handleRescheduleDecision(approved: boolean) {
     try {
       await supabase.functions.invoke('yarro-scheduling', {
@@ -139,6 +168,7 @@ export default function ContractorPortalPage() {
       ticket={ticket!}
       onSchedule={handleSchedule}
       onCompletion={handleCompletion}
+      onComplianceCompletion={handleComplianceCompletion}
       onRescheduleDecision={handleRescheduleDecision}
       justSubmitted={justSubmitted}
       submitMessage={submitMessage}

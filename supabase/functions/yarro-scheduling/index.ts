@@ -924,6 +924,75 @@ async function handlePortalCompletion(
   );
 }
 
+// ─── Path D2: Compliance Renewal Completion (contractor uploads cert) ────
+async function handlePortalComplianceCompletion(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, document_url, expiry_date, issued_by, certificate_number, notes } = body;
+
+  if (!token || !document_url || !expiry_date) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing required fields (token, document_url, expiry_date)" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Submit renewal via RPC (atomic: updates cert + closes ticket)
+  const { data, error } = await supabase.rpc("compliance_submit_contractor_renewal", {
+    p_token: token,
+    p_document_url: document_url,
+    p_expiry_date: expiry_date,
+    p_issued_by: issued_by || null,
+    p_certificate_number: certificate_number || null,
+    p_notes: notes || null,
+  });
+
+  if (error || (!data?.success)) {
+    const errMsg = error?.message || data?.error || "Compliance renewal submission failed";
+    await alertTelegram(FN, "portal-compliance-completion → RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+
+  // Send PM notification (reuse pm_job_completed — ticket title has cert context)
+  const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+
+  if (ctx?.ok && ctx.manager?.phone) {
+    const addr = ctx.property?.address || "Address not available";
+    const issueTitle = ctx.ticket?.issue_title || "Compliance renewal";
+    const contrName = ctx.contractor?.contractor_name || "Contractor";
+    const contrPhone = ctx.contractor?.contractor_phone ? formatUkPhone(ctx.contractor.contractor_phone) : "";
+
+    await sendAndLog(supabase, FN, "portal-compliance-completion → pm_job_completed", {
+      ticketId,
+      recipientPhone: ctx.manager.phone,
+      recipientRole: "manager",
+      messageType: "pm_job_completed",
+      templateSid: TEMPLATES.pm_job_completed,
+      variables: {
+        "1": addr,
+        "2": issueTitle,
+        "3": `${contrName}${contrPhone ? ` ${contrPhone}` : ""}`,
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      path: "portal-compliance-completion",
+      ticket_id: ticketId,
+      cert_id: data.cert_id,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 // ─── Path E: Reschedule Request (tenant requests via portal) ─────────────
 async function handleRescheduleRequest(
   supabase: SupabaseClient,
@@ -1228,6 +1297,8 @@ Deno.serve(async (req: Request) => {
         return await handlePortalSchedule(supabase, body);
       case "portal-completion":
         return await handlePortalCompletion(supabase, body);
+      case "portal-compliance-completion":
+        return await handlePortalComplianceCompletion(supabase, body);
       case "portal-quote":
         return await handlePortalQuote(supabase, body);
       case "reschedule-request":
