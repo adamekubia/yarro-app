@@ -1,7 +1,7 @@
 ## PRD: Compliance Onboarding Polish
 **Date:** 2026-04-03
 **Branch:** feat/compliance-onboarding-polish
-**Status:** In Progress
+**Status:** Complete
 **Journey:** Compliance Lifecycle — Slice 2 of 3
 **Scope:** Add contractor + reminder config to compliance onboarding wizard. Nothing else.
 

@@ -49,7 +49,7 @@ A bad change here takes down WhatsApp intake, breaks tenant conversations, or co
 | **61 Protected RPCs** | Listed in `supabase/core-rpcs/README.md` | `CREATE OR REPLACE` silently overwrites. No undo. `get_pm_id` used by 33+ RLS policies. |
 | `supabase/migrations/20260327041845_remote_schema.sql` | Core schema (72 functions) | Original production definitions of all RPCs, triggers, RLS. |
 | `supabase/migrations/20260329000000_whatsapp_room_awareness.sql` | c1_context_logic + c1_create_ticket | Current production versions of the 2 most critical RPCs. |
-| `supabase/functions/yarro-tenant-intake/` | WhatsApp intake state machine | AI + Twilio + RPCs. Load-bearing phrases in `prompts.ts`. See AD-8. |
+| `supabase/functions/yarro-tenant-intake/` | WhatsApp intake state machine | AI + Twilio + RPCs. Load-bearing phrases in `prompts.ts` — backend parses exact emoji + phrases. See `.claude/docs/hmo-pivot-plan.md` Section 10 for the full list. See AD-8. |
 | `supabase/functions/yarro-ticket-notify/` | SMS notification dispatch | PM, tenant, landlord, contractor notifications |
 | `supabase/functions/yarro-dispatcher/` | Contractor dispatch | SMS sending + mark_sent tracking |
 | `supabase/functions/_shared/twilio.ts` | SMS send + retry logic | Used by all edge functions. See AD-6. |

@@ -33,7 +33,7 @@ Tenant messages WhatsApp
 | **Messaging** | Twilio (WhatsApp) | Tenant intake, notifications to all parties |
 | **Email** | Resend | Email notifications for email-preference contacts |
 | **AI** | OpenAI | Tenant conversation handling, issue extraction |
-| **Frontend** | Next.js 14 (App Router) | PM dashboard, contractor/tenant/landlord portals |
+| **Frontend** | Next.js 16 (App Router) | PM dashboard, contractor/tenant/landlord portals |
 | **Hosting** | Vercel | Frontend deployment |
 | **Automation** | n8n | Workflow orchestration (cron jobs, dispatch chains) |
 
@@ -134,3 +134,21 @@ src/
 - **Edge Functions handle all backend logic**: The frontend never writes to tickets directly — it calls Edge Functions which call RPCs
 - **sendAndLog**: Every outbound message (WhatsApp or email) goes through this shared helper for consistent logging and error handling
 - **PM settings**: All timing/dispatch/OOH rules are configurable per PM account in `c1_property_managers`
+
+---
+
+## RPC Development Workflow
+
+Every new feature that involves business logic starts here:
+
+1. Write the SQL function in a new migration file
+2. Test it in Supabase dashboard SQL editor first
+3. Deploy: `supabase db push`
+4. Regenerate types: `supabase gen types typescript --project-id qedsceehrrvohsjmbodc > src/types/database.ts`
+5. Build the UI to consume it
+
+**Rules:**
+- All business logic lives in RPCs, not the frontend
+- Never compute derived state (status, counts, summaries) in React
+- Direct `.from().select()` only for simple reads with no logic
+- Frontend is a display layer — it calls RPCs and renders results

@@ -6,7 +6,45 @@
 
 ---
 
-## Latest: 2026-04-01 — Sidebar Badge Bug Fix
+## Latest: 2026-04-03 — Compliance Lifecycle (All 3 Slices)
+
+### Summary
+Built the complete compliance lifecycle in one session — from SSOT RPC fix through contractor portal. Three slices shipped: (1) simplified status model removing review/verify, 4 statuses (valid/expiring_soon/expired/missing + renewal_scheduled overlay), multi-reminder escalation for expired certs; (2) onboarding polish with contractor dropdown, reminder config, qualification matching with mismatch warnings, missing cert page; (3) contractor compliance portal — cron links tickets to certs, portal switched to v2 design, cert renewal form replaces maintenance photo at completion step, clear success state.
+
+### Changes Made
+- `supabase/migrations/20260402100000_compliance_single_source_of_truth.sql` — SSOT RPC, drop auto-populate trigger
+- `supabase/migrations/20260403100000_compliance_simplified_status_model.sql` — 4-status model, multi-reminder columns, rewrite 5 RPCs
+- `supabase/migrations/20260403200000_contractor_compliance_portal.sql` — extend c1_get_contractor_ticket (PROTECTED), new compliance_submit_contractor_renewal RPC
+- `src/app/(dashboard)/compliance/page.tsx` — removed Review filter tab
+- `src/app/(dashboard)/compliance/[id]/page.tsx` — removed verify button, use RPC display_status, fixed contractor_id bug
+- `src/app/(dashboard)/compliance/new/page.tsx` — NEW missing cert profile page
+- `src/components/onboarding/compliance-onboarding.tsx` — contractor dropdown, reminder config, category-aware matching, no-contractor hint
+- `src/components/certificate-form-dialog.tsx` — mismatch warning, no-match hint, separator
+- `src/components/portal/contractor-portal-v2.tsx` — compliance cert form, success state, tab/info customization
+- `src/app/contractor/[token]/page.tsx` — switched to v2 portal, mapping functions, compliance handler
+- `src/lib/contractor-utils.ts` — NEW shared matching utilities
+- `src/lib/portal-types.ts` — compliance fields on ContractorPortalData + ContractorTicket
+- `supabase/functions/yarro-compliance-reminder/index.ts` — multi-reminder escalation, pass cert_id to tickets
+- `supabase/functions/yarro-scheduling/index.ts` — portal-compliance-completion handler
+- `supabase/seed-demo-data.sql` — updated for new status model
+- `supabase/core-rpcs/README.md` — documented all changes
+
+### Status
+- [x] Build passes
+- [x] Tests pass (52/52)
+- [x] Migrations deployed
+- [x] Committed and pushed to main
+- [ ] Edge functions need deploy (`supabase functions deploy yarro-scheduling yarro-compliance-reminder`)
+
+### Next Session Pickup
+1. **Deploy edge functions** — `yarro-scheduling` and `yarro-compliance-reminder` need `supabase functions deploy` for the compliance portal and multi-reminder to work live
+2. **Clean up test data** — test ticket with `contractor_token = 'test_compliance_portal_01'` in production DB
+3. **Demo blockers** — WhatsApp intake looping, loading states/skeletons, table scroll fix
+4. **Compliance deep dive** — test full loop end-to-end with real contractor dispatch
+
+---
+
+## 2026-04-01 — Sidebar Badge Bug Fix
 
 ### Summary
 Fixed backlog bug #1: sidebar notification badges (Jobs, Certificates) were hardcoded to always show `!` regardless of data. Made them data-driven — Jobs badge now shows count of open tickets needing PM attention (handoff or pending_review), Certificates badge shows count of expired/expiring/missing certs via the `compliance_get_all_statuses` RPC. Badges disappear when counts are zero and reset on account switch. Also added red notification dots on collapsed group headers so you can see alerts even when accordion sections are closed. Added `yarro_*` localStorage cleanup on sign out to prevent stale onboarding state leaking across accounts.
