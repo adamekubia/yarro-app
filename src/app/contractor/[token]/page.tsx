@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
-import type { ContractorTicket, QuoteContext } from '@/lib/portal-types'
+import type { ContractorTicket, QuoteContext, ContractorPortalData, ContractorQuoteData } from '@/lib/portal-types'
 import { PortalLoading, PortalError } from '@/components/portal/portal-shell'
-import { ContractorQuoteView, ContractorTicketView } from '@/components/portal/contractor-portal'
+import { ContractorPortalV2, ContractorQuoteV2 } from '@/components/portal/contractor-portal-v2'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +18,69 @@ const TIME_SLOTS = [
   { value: 'evening', hour: 18 },
 ] as const
 
+// ─── Data Mapping ─────────────────────────────────────────────────────
+
+function mapTicketToPortalData(ticket: ContractorTicket): ContractorPortalData {
+  return {
+    ticket_id: ticket.ticket_id,
+    ticket_ref: ticket.ticket_ref,
+    property_address: ticket.property_address,
+    issue_title: ticket.issue_title || '',
+    issue_description: ticket.issue_description,
+    category: ticket.category,
+    priority: ticket.priority,
+    images: ticket.images,
+    date_logged: ticket.date_logged,
+    job_stage: ticket.job_stage,
+    scheduled_date: ticket.scheduled_date,
+    scheduled_window: null,
+    min_booking_lead_hours: ticket.min_booking_lead_hours,
+    tenant_name: ticket.tenant_name,
+    tenant_phone: ticket.tenant_phone,
+    availability: ticket.availability,
+    agency_name: ticket.business_name,
+    agency_phone: null,
+    agency_email: null,
+    contractor_name: ticket.contractor_name,
+    contractor_quote: ticket.contractor_quote,
+    activity: (ticket.tenant_updates || []).map(u => ({
+      message: u.type.replace(/_/g, ' '),
+      timestamp: u.submitted_at,
+    })),
+    resolved_at: ticket.resolved_at,
+    compliance_certificate_id: ticket.compliance_certificate_id,
+    compliance_cert_type: ticket.compliance_cert_type,
+    compliance_expiry_date: ticket.compliance_expiry_date,
+  }
+}
+
+function mapQuoteToQuoteData(ctx: QuoteContext): ContractorQuoteData {
+  return {
+    ticket_id: ctx.ticket_id,
+    ticket_ref: ctx.ticket_ref,
+    property_address: ctx.property_address,
+    issue_title: ctx.issue_title || '',
+    issue_description: ctx.issue_description,
+    category: ctx.category,
+    priority: ctx.priority,
+    images: ctx.images,
+    date_logged: ctx.date_logged,
+    tenant_name: ctx.tenant_name,
+    tenant_phone: null,
+    availability: ctx.availability,
+    agency_name: ctx.business_name,
+    agency_phone: null,
+    agency_email: null,
+    contractor_name: ctx.contractor_name,
+    quote_amount: ctx.quote_amount,
+    quote_notes: ctx.quote_notes,
+    quote_status: ctx.contractor_status || 'pending',
+    min_booking_lead_hours: 3,
+  }
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────
+
 export default function ContractorPortalPage() {
   const { token } = useParams<{ token: string }>()
 
@@ -25,8 +88,6 @@ export default function ContractorPortalPage() {
   const [quoteCtx, setQuoteCtx] = useState<QuoteContext | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [justSubmitted, setJustSubmitted] = useState(false)
-  const [submitMessage, setSubmitMessage] = useState('')
 
   const loadTicket = useCallback(async () => {
     // Try scheduling/completion token first
@@ -59,12 +120,6 @@ export default function ContractorPortalPage() {
     loadTicket()
   }, [loadTicket])
 
-  function flash(message: string) {
-    setSubmitMessage(message)
-    setJustSubmitted(true)
-    setTimeout(() => setJustSubmitted(false), 5000)
-  }
-
   async function handleQuoteSubmit(amount: number, notes: string | null) {
     try {
       await supabase.functions.invoke('yarro-scheduling', {
@@ -72,7 +127,6 @@ export default function ContractorPortalPage() {
       })
     } catch { /* server action fires regardless */ }
     await loadTicket()
-    flash('Quote submitted — the property manager will review and get back to you.')
   }
 
   async function handleSchedule(date: string, slot: string, notes: string | null) {
@@ -84,7 +138,6 @@ export default function ContractorPortalPage() {
       })
     } catch { /* server action fires regardless */ }
     await loadTicket()
-    flash('Job booked — the tenant and property manager have been notified.')
   }
 
   async function handleCompletion(resolved: boolean, notes: string | null, photos: File[]) {
@@ -107,41 +160,49 @@ export default function ContractorPortalPage() {
       })
     } catch { /* server action fires regardless */ }
     await loadTicket()
-    flash(resolved ? 'Job marked as complete — the property manager has been notified.' : 'Report submitted — the property manager has been notified.')
   }
 
-  async function handleRescheduleDecision(approved: boolean) {
+  async function handleComplianceCompletion(data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) {
+    let documentUrl: string | null = null
+    if (data.file) {
+      const ext = data.file.name.split('.').pop() || 'pdf'
+      const path = `portal/${token}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error: upErr } = await supabase.storage.from('compliance-documents').upload(path, data.file, { contentType: data.file.type })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('compliance-documents').getPublicUrl(path)
+        if (urlData?.publicUrl) documentUrl = urlData.publicUrl
+      }
+    }
+
     try {
       await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'reschedule-decision', token, approved },
+        body: {
+          source: 'portal-compliance-completion',
+          token,
+          document_url: documentUrl,
+          expiry_date: data.expiryDate,
+          issued_by: data.issuedBy || null,
+          certificate_number: data.certNumber || null,
+          notes: data.notes || null,
+        },
       })
     } catch { /* server action fires regardless */ }
     await loadTicket()
-    flash(approved ? 'Reschedule approved.' : 'Reschedule declined.')
   }
 
   if (loading) return <PortalLoading />
   if (error || (!ticket && !quoteCtx)) return <PortalError message={error ?? undefined} />
 
   if (quoteCtx) {
-    return (
-      <ContractorQuoteView
-        quoteCtx={quoteCtx}
-        onQuoteSubmit={handleQuoteSubmit}
-        justSubmitted={justSubmitted}
-        submitMessage={submitMessage}
-      />
-    )
+    return <ContractorQuoteV2 data={mapQuoteToQuoteData(quoteCtx)} onQuoteSubmit={handleQuoteSubmit} />
   }
 
   return (
-    <ContractorTicketView
-      ticket={ticket!}
+    <ContractorPortalV2
+      data={mapTicketToPortalData(ticket!)}
       onSchedule={handleSchedule}
       onCompletion={handleCompletion}
-      onRescheduleDecision={handleRescheduleDecision}
-      justSubmitted={justSubmitted}
-      submitMessage={submitMessage}
+      onComplianceCompletion={handleComplianceCompletion}
     />
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Circle, Wrench, Search, CalendarCheck, CheckCircle2, Loader2, Phone, CalendarClock, AlertTriangle, Upload, X } from 'lucide-react'
+import { Check, Circle, Wrench, Search, CalendarCheck, CheckCircle2, Loader2, Phone, CalendarClock, AlertTriangle, Upload, X, ShieldCheck, FileText } from 'lucide-react'
+import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { MiniCalendar } from './mini-calendar'
 import { MediaGrid } from './media-grid'
@@ -89,13 +90,18 @@ export type ContractorPortalV2Props = {
   data: ContractorPortalData
   onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>
   onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>
+  onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function ContractorPortalV2({ data, onSchedule, onCompletion }: ContractorPortalV2Props) {
+export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianceCompletion }: ContractorPortalV2Props) {
   const activeIdx = getActiveStageIdx(data)
   const needsScheduling = activeIdx === 0
+  const isCompliance = !!data.compliance_certificate_id
+  const certLabel = data.compliance_cert_type
+    ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
+    : 'Certificate'
 
   return (
     <div className="min-h-screen bg-background" style={{ colorScheme: 'light' }}>
@@ -111,6 +117,11 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion }: Contracto
                 Quote approved &middot; &pound;{Number(data.contractor_quote).toFixed(2)}
               </span>
             )}
+            {isCompliance && data.compliance_expiry_date && (
+              <span className="inline-block rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-medium text-red-700">
+                Expires {fmtDate(data.compliance_expiry_date)}
+              </span>
+            )}
           </div>
           <h1 className="text-xl font-semibold text-foreground leading-snug">{data.property_address}</h1>
           <p className="mt-1.5 text-base font-medium text-muted-foreground">{data.issue_title}</p>
@@ -124,13 +135,15 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion }: Contracto
               {needsScheduling ? (
                 <>
                   <TabsTrigger value="schedule" className={tabTriggerClass}>Schedule</TabsTrigger>
-                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  {!isCompliance && <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>}
                   <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
                 </>
               ) : (
                 <>
-                  <TabsTrigger value="action" className={tabTriggerClass}>{activeIdx === 1 ? 'Complete' : 'Status'}</TabsTrigger>
-                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  <TabsTrigger value="action" className={tabTriggerClass}>
+                    {isCompliance ? 'Renewal' : activeIdx === 1 ? 'Complete' : 'Status'}
+                  </TabsTrigger>
+                  {!isCompliance && <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>}
                   <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
                 </>
               )}
@@ -143,14 +156,16 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion }: Contracto
             )}
             {!needsScheduling && (
               <TabsContent value="action" className="p-5">
-                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} />
+                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} onComplianceCompletion={onComplianceCompletion} />
               </TabsContent>
             )}
-            <TabsContent value="details" className="p-5">
-              <DetailsTab data={data} />
-            </TabsContent>
+            {!isCompliance && (
+              <TabsContent value="details" className="p-5">
+                <DetailsTab data={data} />
+              </TabsContent>
+            )}
             <TabsContent value="info" className="p-5">
-              <ContactTab data={data} />
+              <ContactTab data={data} isCompliance={isCompliance} certLabel={certLabel} />
             </TabsContent>
           </Tabs>
         </div>
@@ -167,10 +182,26 @@ const tabTriggerClass = 'flex-1 rounded-none h-auto text-[13px] py-3 border-b-2 
 
 // ─── Action Tab ─────────────────────────────────────────────────────────
 
-function ActionTab({ data, onSchedule, onCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void> }) {
+function ActionTab({ data, onSchedule, onCompletion, onComplianceCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>; onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void> }) {
   const stageIdx = getActiveStageIdx(data)
+  const isCompliance = !!data.compliance_certificate_id
+  const certLabel = data.compliance_cert_type
+    ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
+    : 'Certificate'
+  const [complianceSubmitted, setComplianceSubmitted] = useState(false)
 
-  if (stageIdx === 2) {
+  // Show success state — either from backend (stageIdx===2) or local submit
+  if (stageIdx === 2 || complianceSubmitted) {
+    if (isCompliance) {
+      return (
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-5 text-center">
+          <ShieldCheck className="size-10 text-green-600 mx-auto mb-3" />
+          <p className="text-base font-semibold text-green-700">Certificate renewed</p>
+          <p className="text-sm text-green-600 mt-1">{certLabel} at {data.property_address}</p>
+          <p className="text-xs text-green-600/70 mt-3">The property manager has been notified.</p>
+        </div>
+      )
+    }
     return (
       <div className="rounded-md bg-green-50 border border-green-200 px-3 py-3 text-sm text-green-700 flex items-center gap-2">
         <CheckCircle2 className="size-4 shrink-0" />
@@ -179,7 +210,21 @@ function ActionTab({ data, onSchedule, onCompletion }: { data: ContractorPortalD
     )
   }
 
-  if (stageIdx === 1) return <CompletionForm data={data} onCompletion={onCompletion} />
+  if (stageIdx === 1) {
+    if (isCompliance && onComplianceCompletion) {
+      return (
+        <ComplianceCertForm
+          data={data}
+          certLabel={certLabel}
+          onSubmit={async (formData) => {
+            await onComplianceCompletion(formData)
+            setComplianceSubmitted(true)
+          }}
+        />
+      )
+    }
+    return <CompletionForm data={data} onCompletion={onCompletion} />
+  }
   return <ScheduleForm data={data} onSchedule={onSchedule} />
 }
 
@@ -330,6 +375,120 @@ function CompletionForm({ data, onCompletion }: { data: ContractorPortalData; on
   )
 }
 
+// ─── Compliance Cert Form ──────────────────────────────────────────────
+
+function ComplianceCertForm({ data, certLabel, onSubmit }: {
+  data: ContractorPortalData
+  certLabel: string
+  onSubmit: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
+}) {
+  const [expiryDate, setExpiryDate] = useState('')
+  const [issuedBy, setIssuedBy] = useState('')
+  const [certNumber, setCertNumber] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit() {
+    if (!expiryDate || !file) return
+    setSubmitting(true)
+    await onSubmit({ expiryDate, issuedBy, certNumber, file, notes })
+    setSubmitting(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="size-5 text-primary" />
+        <SectionLabel>Upload renewed {certLabel}</SectionLabel>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">New expiry date *</label>
+        <input
+          type="date"
+          value={expiryDate}
+          onChange={(e) => setExpiryDate(e.target.value)}
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Issued by</label>
+        <input
+          type="text"
+          value={issuedBy}
+          onChange={(e) => setIssuedBy(e.target.value)}
+          placeholder="e.g. British Gas, Lambeth Council"
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Certificate number</label>
+        <input
+          type="text"
+          value={certNumber}
+          onChange={(e) => setCertNumber(e.target.value)}
+          placeholder="Optional"
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Certificate document *</label>
+        {file ? (
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            className="mt-1.5 flex items-center gap-2 w-full px-3 py-2 border border-border rounded-md text-sm hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-4 text-primary shrink-0" />
+            <span className="truncate flex-1 text-left text-foreground text-[13px]">{file.name}</span>
+            <span className="text-xs text-muted-foreground shrink-0">Change</span>
+          </button>
+        ) : (
+          <label className="mt-1.5 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-border bg-muted hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer py-6">
+            <Upload className="size-6 text-muted-foreground mb-2" />
+            <span className="text-sm text-muted-foreground font-medium">Upload certificate</span>
+            <span className="text-xs text-muted-foreground/70 mt-1">PDF, JPG, PNG up to 10MB</span>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (!f) return
+                if (f.size > 10 * 1024 * 1024) return
+                setFile(f)
+              }}
+            />
+          </label>
+        )}
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-foreground">Notes <span className="font-normal text-muted-foreground">(optional)</span></label>
+        <textarea
+          className="mt-1.5 w-full rounded-md border border-input bg-background px-2.5 py-2 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          rows={2}
+          placeholder="Any notes about the renewal..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || !expiryDate || !file}
+        className="w-full rounded-md px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {submitting ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Submit Certificate'}
+      </button>
+    </div>
+  )
+}
+
 // ─── Details Tab (issue + photos) ───────────────────────────────────────
 
 function DetailsTab({ data }: { data: ContractorPortalData }) {
@@ -344,34 +503,38 @@ function DetailsTab({ data }: { data: ContractorPortalData }) {
 
 // ─── Info Tab (job info + agency + tenant contact) ──────────────────────
 
-function ContactTab({ data }: { data: ContractorPortalData }) {
+function ContactTab({ data, isCompliance, certLabel }: { data: ContractorPortalData; isCompliance?: boolean; certLabel?: string }) {
   return (
     <>
       <SectionLabel>Job info</SectionLabel>
       <div className="mt-2">
-        {data.category && <InfoRow label="Category" value={data.category} />}
+        <InfoRow label="Category" value={isCompliance && certLabel ? `${certLabel} Renewal` : data.category || '—'} />
         <InfoRow label="Priority" value={<span className={data.priority === 'urgent' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>} />
         <InfoRow label="Reported" value={fmtDate(data.date_logged)} />
         {data.scheduled_date && <InfoRow label="Booked" value={fmtDatetime(data.scheduled_date)} />}
-        {data.availability && <InfoRow label="Availability" value={data.availability} last />}
+        {data.availability && <InfoRow label="Availability" value={data.availability} last={isCompliance} />}
       </div>
 
-      <div className="border-t border-border my-4" />
+      {!isCompliance && (
+        <>
+          <div className="border-t border-border my-4" />
 
-      <SectionLabel>Agency</SectionLabel>
-      <div className="mt-2">
-        <InfoRow label="Agency" value={data.agency_name} />
-        {data.agency_phone && <InfoRow label="Phone" value={<a href={`tel:${data.agency_phone}`} className="text-primary hover:underline">{data.agency_phone}</a>} />}
-        {data.agency_email && <InfoRow label="Email" value={<a href={`mailto:${data.agency_email}`} className="text-primary hover:underline text-xs">{data.agency_email}</a>} last />}
-      </div>
+          <SectionLabel>Agency</SectionLabel>
+          <div className="mt-2">
+            <InfoRow label="Agency" value={data.agency_name} />
+            {data.agency_phone && <InfoRow label="Phone" value={<a href={`tel:${data.agency_phone}`} className="text-primary hover:underline">{data.agency_phone}</a>} />}
+            {data.agency_email && <InfoRow label="Email" value={<a href={`mailto:${data.agency_email}`} className="text-primary hover:underline text-xs">{data.agency_email}</a>} last />}
+          </div>
 
-      <div className="border-t border-border my-4" />
+          <div className="border-t border-border my-4" />
 
-      <SectionLabel>Tenant</SectionLabel>
-      <div className="mt-2">
-        <InfoRow label="Name" value={data.tenant_name || <span className="text-muted-foreground font-normal">Not provided</span>} />
-        <InfoRow label="Contact" value={data.tenant_phone ? <a href={`tel:${data.tenant_phone}`} className="text-primary hover:underline inline-flex items-center gap-1"><Phone className="size-3" />{formatPhone(data.tenant_phone)}</a> : <span className="text-muted-foreground font-normal">Not provided</span>} last />
-      </div>
+          <SectionLabel>Tenant</SectionLabel>
+          <div className="mt-2">
+            <InfoRow label="Name" value={data.tenant_name || <span className="text-muted-foreground font-normal">Not provided</span>} />
+            <InfoRow label="Contact" value={data.tenant_phone ? <a href={`tel:${data.tenant_phone}`} className="text-primary hover:underline inline-flex items-center gap-1"><Phone className="size-3" />{formatPhone(data.tenant_phone)}</a> : <span className="text-muted-foreground font-normal">Not provided</span>} last />
+          </div>
+        </>
+      )}
     </>
   )
 }

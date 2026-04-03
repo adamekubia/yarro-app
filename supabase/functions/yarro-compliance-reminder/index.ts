@@ -104,6 +104,7 @@ async function processCert(
         p_issue_description: `Automated compliance renewal — ${certLabel} at ${cert.property_address} expires on ${variables["3"]} (${cert.days_remaining} days remaining).`,
         p_category: "compliance_renewal",
         p_priority: priority,
+        p_compliance_certificate_id: cert.cert_id,
       },
     );
 

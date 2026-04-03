@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, Upload, X, PoundSterling } from 'lucide-react'
+import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, Upload, X, PoundSterling, FileText, ShieldCheck } from 'lucide-react'
+import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import type { ContractorTicket, QuoteContext } from '@/lib/portal-types'
 import { formatDate, formatPhone, formatScheduledSlot } from '@/lib/portal-utils'
 import { PortalShell } from './portal-shell'
@@ -208,6 +209,7 @@ export type ContractorTicketViewProps = {
   ticket: ContractorTicket
   onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>
   onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>
+  onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
   onRescheduleDecision: (approved: boolean) => Promise<void>
   justSubmitted: boolean
   submitMessage: string
@@ -217,6 +219,7 @@ export function ContractorTicketView({
   ticket,
   onSchedule,
   onCompletion,
+  onComplianceCompletion,
   onRescheduleDecision,
   justSubmitted,
   submitMessage,
@@ -233,6 +236,32 @@ export function ContractorTicketView({
   const [submittingCompletion, setSubmittingCompletion] = useState(false)
 
   const [submittingReschedule, setSubmittingReschedule] = useState(false)
+
+  // Compliance renewal state
+  const isComplianceRenewal = !!ticket.compliance_certificate_id
+  const [certExpiryDate, setCertExpiryDate] = useState('')
+  const [certIssuedBy, setCertIssuedBy] = useState('')
+  const [certNumber, setCertNumber] = useState('')
+  const [certFile, setCertFile] = useState<File | null>(null)
+  const [certNotes, setCertNotes] = useState('')
+  const [submittingCert, setSubmittingCert] = useState(false)
+
+  const certLabel = ticket.compliance_cert_type
+    ? CERTIFICATE_LABELS[ticket.compliance_cert_type as CertificateType] || ticket.compliance_cert_type
+    : 'Certificate'
+
+  async function handleCertCompletion() {
+    if (!certExpiryDate || !onComplianceCompletion) return
+    setSubmittingCert(true)
+    await onComplianceCompletion({
+      expiryDate: certExpiryDate,
+      issuedBy: certIssuedBy,
+      certNumber,
+      file: certFile,
+      notes: certNotes,
+    })
+    setSubmittingCert(false)
+  }
 
   const stage = getTicketStage(ticket)
   const hasPendingReschedule = ticket.reschedule_requested && ticket.reschedule_status === 'pending'
@@ -464,8 +493,113 @@ export function ContractorTicketView({
         </div>
       )}
 
-      {/* Completion form */}
-      {stage === 'complete' && !ticket.resolved_at && ticket.scheduled_date && new Date(new Date(ticket.scheduled_date).toDateString()) <= new Date(new Date().toDateString()) && (
+      {/* Compliance renewal form */}
+      {stage === 'complete' && isComplianceRenewal && !ticket.resolved_at && ticket.scheduled_date && new Date(new Date(ticket.scheduled_date).toDateString()) <= new Date(new Date().toDateString()) && (
+        <PortalCard className="mt-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-5 text-primary" />
+            <h3 className="text-sm font-medium text-foreground">Upload renewed {certLabel}</h3>
+          </div>
+
+          {ticket.compliance_expiry_date && (
+            <p className="text-xs text-muted-foreground">
+              Current certificate expired {formatDate(ticket.compliance_expiry_date)}
+            </p>
+          )}
+
+          <div>
+            <label className="text-sm font-medium text-foreground">New expiry date *</label>
+            <input
+              type="date"
+              value={certExpiryDate}
+              onChange={(e) => setCertExpiryDate(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">Issued by</label>
+            <input
+              type="text"
+              value={certIssuedBy}
+              onChange={(e) => setCertIssuedBy(e.target.value)}
+              placeholder="e.g. British Gas, Lambeth Council"
+              className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">Certificate number</label>
+            <input
+              type="text"
+              value={certNumber}
+              onChange={(e) => setCertNumber(e.target.value)}
+              placeholder="Optional"
+              className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">
+              Certificate document *
+            </label>
+            {certFile ? (
+              <button
+                type="button"
+                onClick={() => setCertFile(null)}
+                className="mt-1.5 flex items-center gap-2 w-full px-3 py-2 border border-border rounded-lg text-sm hover:bg-muted/50 transition-colors"
+              >
+                <FileText className="size-4 text-primary shrink-0" />
+                <span className="truncate flex-1 text-left text-foreground">{certFile.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">Change</span>
+              </button>
+            ) : (
+              <label className="mt-1.5 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer py-6">
+                <Upload className="size-6 text-muted-foreground mb-2" />
+                <span className="text-sm text-muted-foreground font-medium">Upload certificate</span>
+                <span className="text-xs text-muted-foreground/70 mt-1">PDF, JPG, PNG up to 10MB</span>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    if (f.size > 10 * 1024 * 1024) return
+                    setCertFile(f)
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">
+              Notes <span className="font-normal text-muted-foreground">(optional)</span>
+            </label>
+            <textarea
+              className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={2}
+              placeholder="Any notes about the renewal..."
+              value={certNotes}
+              onChange={(e) => setCertNotes(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={handleCertCompletion}
+            disabled={submittingCert || !certExpiryDate || !certFile}
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submittingCert ? (
+              <Loader2 className="size-4 animate-spin mx-auto" />
+            ) : 'Submit Certificate'}
+          </button>
+        </PortalCard>
+      )}
+
+      {/* Maintenance completion form (not shown for compliance tickets) */}
+      {stage === 'complete' && !isComplianceRenewal && !ticket.resolved_at && ticket.scheduled_date && new Date(new Date(ticket.scheduled_date).toDateString()) <= new Date(new Date().toDateString()) && (
         <PortalCard className="mt-4 space-y-4">
           <h3 className="text-sm font-medium text-foreground">Has this job been completed?</h3>
 
