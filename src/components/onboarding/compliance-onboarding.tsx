@@ -7,8 +7,10 @@ import { usePM } from '@/contexts/pm-context'
 import {
   CERTIFICATE_TYPES,
   CERTIFICATE_LABELS,
+  CERT_TYPE_CONTRACTOR_CATEGORIES,
   type CertificateType,
 } from '@/lib/constants'
+import { partitionContractors, contractorMatchesCertType } from '@/lib/contractor-utils'
 import { typography } from '@/lib/typography'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -53,6 +55,7 @@ function ToggleOptionButton({ label, selected, onClick }: {
 interface ContractorOption {
   id: string
   contractor_name: string
+  categories: string[] | null
 }
 
 interface CertFormCardProps {
@@ -85,6 +88,14 @@ function CertFormCard({
   const [saving, setSaving] = useState(false)
   const [contractorId, setContractorId] = useState<string>('')
   const [reminderDays, setReminderDays] = useState<number>(60)
+  const [showMismatchWarning, setShowMismatchWarning] = useState(false)
+  const [pendingContractorId, setPendingContractorId] = useState('')
+
+  const relevantCategories = CERT_TYPE_CONTRACTOR_CATEGORIES[certType]
+  const showAutoDispatch = relevantCategories !== null
+  const [matching, other] = showAutoDispatch
+    ? partitionContractors(contractors, certType)
+    : [[], []]
 
   const label = CERTIFICATE_LABELS[certType] || certType
 
@@ -273,33 +284,93 @@ function CertFormCard({
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Remind me</label>
-              <select
-                value={reminderDays}
-                onChange={(e) => setReminderDays(Number(e.target.value))}
-                className="w-full h-12 rounded-xl text-sm bg-background border border-border px-3"
-              >
-                <option value={30}>30 days before</option>
-                <option value={60}>60 days before</option>
-                <option value={90}>90 days before</option>
-              </select>
-            </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Remind me</label>
+            <select
+              value={reminderDays}
+              onChange={(e) => setReminderDays(Number(e.target.value))}
+              className="w-full h-12 rounded-xl text-sm bg-background border border-border px-3"
+            >
+              <option value={30}>30 days before</option>
+              <option value={60}>60 days before</option>
+              <option value={90}>90 days before</option>
+            </select>
+          </div>
+          {showAutoDispatch && (
             <div>
               <label className="text-sm font-medium mb-2 block">Auto-dispatch</label>
               <select
                 value={contractorId}
-                onChange={(e) => setContractorId(e.target.value)}
+                onChange={(e) => {
+                  const selectedId = e.target.value
+                  if (!selectedId) {
+                    setContractorId('')
+                    setShowMismatchWarning(false)
+                    setPendingContractorId('')
+                    return
+                  }
+                  const selected = contractors.find(c => c.id === selectedId)
+                  if (selected && !contractorMatchesCertType(selected, certType)) {
+                    setPendingContractorId(selectedId)
+                    setShowMismatchWarning(true)
+                  } else {
+                    setContractorId(selectedId)
+                    setShowMismatchWarning(false)
+                    setPendingContractorId('')
+                  }
+                }}
                 className="w-full h-12 rounded-xl text-sm bg-background border border-border px-3"
               >
                 <option value="">None</option>
-                {contractors.map((c) => (
+                {matching.map((c) => (
+                  <option key={c.id} value={c.id}>{c.contractor_name}</option>
+                ))}
+                {matching.length > 0 && other.length > 0 && (
+                  <option disabled>── Other contractors ──</option>
+                )}
+                {other.map((c) => (
                   <option key={c.id} value={c.id}>{c.contractor_name}</option>
                 ))}
               </select>
+
+              {showMismatchWarning && (
+                <div className="mt-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2">
+                  <p className="text-sm font-medium text-warning">Contractor may not be qualified</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This contractor doesn&apos;t have the right qualifications for {label}.
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setShowMismatchWarning(false); setPendingContractorId('') }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setContractorId(pendingContractorId)
+                        setShowMismatchWarning(false)
+                        setPendingContractorId('')
+                      }}
+                    >
+                      Continue anyway
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!showMismatchWarning && contractors.length > 0 && matching.length === 0 && (
+                <p className="mt-1.5 text-xs text-warning">
+                  No contractors with matching qualifications.{' '}
+                  <a href="/contractors" className="underline font-medium hover:text-foreground transition-colors">
+                    Add a contractor
+                  </a>
+                </p>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -363,8 +434,9 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
     async function fetchContractors() {
       const { data } = await supabase
         .from('c1_contractors')
-        .select('id, contractor_name')
+        .select('id, contractor_name, categories')
         .eq('property_manager_id', pmId)
+        .eq('active', true)
         .order('contractor_name')
       if (data) setContractors(data)
     }
