@@ -98,6 +98,10 @@ export type ContractorPortalV2Props = {
 export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianceCompletion }: ContractorPortalV2Props) {
   const activeIdx = getActiveStageIdx(data)
   const needsScheduling = activeIdx === 0
+  const isCompliance = !!data.compliance_certificate_id
+  const certLabel = data.compliance_cert_type
+    ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
+    : 'Certificate'
 
   return (
     <div className="min-h-screen bg-background" style={{ colorScheme: 'light' }}>
@@ -113,6 +117,11 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianc
                 Quote approved &middot; &pound;{Number(data.contractor_quote).toFixed(2)}
               </span>
             )}
+            {isCompliance && data.compliance_expiry_date && (
+              <span className="inline-block rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-medium text-red-700">
+                Expires {fmtDate(data.compliance_expiry_date)}
+              </span>
+            )}
           </div>
           <h1 className="text-xl font-semibold text-foreground leading-snug">{data.property_address}</h1>
           <p className="mt-1.5 text-base font-medium text-muted-foreground">{data.issue_title}</p>
@@ -126,13 +135,15 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianc
               {needsScheduling ? (
                 <>
                   <TabsTrigger value="schedule" className={tabTriggerClass}>Schedule</TabsTrigger>
-                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  {!isCompliance && <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>}
                   <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
                 </>
               ) : (
                 <>
-                  <TabsTrigger value="action" className={tabTriggerClass}>{activeIdx === 1 ? 'Complete' : 'Status'}</TabsTrigger>
-                  <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>
+                  <TabsTrigger value="action" className={tabTriggerClass}>
+                    {isCompliance ? 'Renewal Form' : activeIdx === 1 ? 'Complete' : 'Status'}
+                  </TabsTrigger>
+                  {!isCompliance && <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>}
                   <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
                 </>
               )}
@@ -148,11 +159,13 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianc
                 <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} onComplianceCompletion={onComplianceCompletion} />
               </TabsContent>
             )}
-            <TabsContent value="details" className="p-5">
-              <DetailsTab data={data} />
-            </TabsContent>
+            {!isCompliance && (
+              <TabsContent value="details" className="p-5">
+                <DetailsTab data={data} />
+              </TabsContent>
+            )}
             <TabsContent value="info" className="p-5">
-              <ContactTab data={data} />
+              <ContactTab data={data} isCompliance={isCompliance} certLabel={certLabel} />
             </TabsContent>
           </Tabs>
         </div>
@@ -379,12 +392,6 @@ function ComplianceCertForm({ data, certLabel, onSubmit }: {
         <SectionLabel>Upload renewed {certLabel}</SectionLabel>
       </div>
 
-      {data.compliance_expiry_date && (
-        <div className="rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2 text-xs text-destructive">
-          Current certificate expired {fmtDate(data.compliance_expiry_date)}
-        </div>
-      )}
-
       <div>
         <label className="text-sm font-medium text-foreground">New expiry date *</label>
         <input
@@ -485,34 +492,38 @@ function DetailsTab({ data }: { data: ContractorPortalData }) {
 
 // ─── Info Tab (job info + agency + tenant contact) ──────────────────────
 
-function ContactTab({ data }: { data: ContractorPortalData }) {
+function ContactTab({ data, isCompliance, certLabel }: { data: ContractorPortalData; isCompliance?: boolean; certLabel?: string }) {
   return (
     <>
       <SectionLabel>Job info</SectionLabel>
       <div className="mt-2">
-        {data.category && <InfoRow label="Category" value={data.category} />}
+        <InfoRow label="Category" value={isCompliance && certLabel ? `${certLabel} Renewal` : data.category || '—'} />
         <InfoRow label="Priority" value={<span className={data.priority === 'urgent' ? 'text-destructive' : ''}>{data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}</span>} />
         <InfoRow label="Reported" value={fmtDate(data.date_logged)} />
         {data.scheduled_date && <InfoRow label="Booked" value={fmtDatetime(data.scheduled_date)} />}
-        {data.availability && <InfoRow label="Availability" value={data.availability} last />}
+        {data.availability && <InfoRow label="Availability" value={data.availability} last={isCompliance} />}
       </div>
 
-      <div className="border-t border-border my-4" />
+      {!isCompliance && (
+        <>
+          <div className="border-t border-border my-4" />
 
-      <SectionLabel>Agency</SectionLabel>
-      <div className="mt-2">
-        <InfoRow label="Agency" value={data.agency_name} />
-        {data.agency_phone && <InfoRow label="Phone" value={<a href={`tel:${data.agency_phone}`} className="text-primary hover:underline">{data.agency_phone}</a>} />}
-        {data.agency_email && <InfoRow label="Email" value={<a href={`mailto:${data.agency_email}`} className="text-primary hover:underline text-xs">{data.agency_email}</a>} last />}
-      </div>
+          <SectionLabel>Agency</SectionLabel>
+          <div className="mt-2">
+            <InfoRow label="Agency" value={data.agency_name} />
+            {data.agency_phone && <InfoRow label="Phone" value={<a href={`tel:${data.agency_phone}`} className="text-primary hover:underline">{data.agency_phone}</a>} />}
+            {data.agency_email && <InfoRow label="Email" value={<a href={`mailto:${data.agency_email}`} className="text-primary hover:underline text-xs">{data.agency_email}</a>} last />}
+          </div>
 
-      <div className="border-t border-border my-4" />
+          <div className="border-t border-border my-4" />
 
-      <SectionLabel>Tenant</SectionLabel>
-      <div className="mt-2">
-        <InfoRow label="Name" value={data.tenant_name || <span className="text-muted-foreground font-normal">Not provided</span>} />
-        <InfoRow label="Contact" value={data.tenant_phone ? <a href={`tel:${data.tenant_phone}`} className="text-primary hover:underline inline-flex items-center gap-1"><Phone className="size-3" />{formatPhone(data.tenant_phone)}</a> : <span className="text-muted-foreground font-normal">Not provided</span>} last />
-      </div>
+          <SectionLabel>Tenant</SectionLabel>
+          <div className="mt-2">
+            <InfoRow label="Name" value={data.tenant_name || <span className="text-muted-foreground font-normal">Not provided</span>} />
+            <InfoRow label="Contact" value={data.tenant_phone ? <a href={`tel:${data.tenant_phone}`} className="text-primary hover:underline inline-flex items-center gap-1"><Phone className="size-3" />{formatPhone(data.tenant_phone)}</a> : <span className="text-muted-foreground font-normal">Not provided</span>} last />
+          </div>
+        </>
+      )}
     </>
   )
 }
