@@ -141,7 +141,7 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianc
               ) : (
                 <>
                   <TabsTrigger value="action" className={tabTriggerClass}>
-                    {isCompliance ? 'Renewal Form' : activeIdx === 1 ? 'Complete' : 'Status'}
+                    {isCompliance ? 'Renewal' : activeIdx === 1 ? 'Complete' : 'Status'}
                   </TabsTrigger>
                   {!isCompliance && <TabsTrigger value="details" className={tabTriggerClass}>Details</TabsTrigger>}
                   <TabsTrigger value="info" className={tabTriggerClass}>Info</TabsTrigger>
@@ -188,15 +188,17 @@ function ActionTab({ data, onSchedule, onCompletion, onComplianceCompletion }: {
   const certLabel = data.compliance_cert_type
     ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
     : 'Certificate'
+  const [complianceSubmitted, setComplianceSubmitted] = useState(false)
 
-  if (stageIdx === 2) {
+  // Show success state — either from backend (stageIdx===2) or local submit
+  if (stageIdx === 2 || complianceSubmitted) {
     if (isCompliance) {
       return (
-        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-4 text-center">
-          <ShieldCheck className="size-8 text-green-600 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-green-700">Certificate renewed successfully</p>
-          <p className="text-xs text-green-600 mt-1">{certLabel} at {data.property_address}</p>
-          <p className="text-xs text-green-600/70 mt-2">The property manager has been notified.</p>
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-5 text-center">
+          <ShieldCheck className="size-10 text-green-600 mx-auto mb-3" />
+          <p className="text-base font-semibold text-green-700">Certificate renewed</p>
+          <p className="text-sm text-green-600 mt-1">{certLabel} at {data.property_address}</p>
+          <p className="text-xs text-green-600/70 mt-3">The property manager has been notified.</p>
         </div>
       )
     }
@@ -210,7 +212,16 @@ function ActionTab({ data, onSchedule, onCompletion, onComplianceCompletion }: {
 
   if (stageIdx === 1) {
     if (isCompliance && onComplianceCompletion) {
-      return <ComplianceCertForm data={data} certLabel={certLabel} onSubmit={onComplianceCompletion} />
+      return (
+        <ComplianceCertForm
+          data={data}
+          certLabel={certLabel}
+          onSubmit={async (formData) => {
+            await onComplianceCompletion(formData)
+            setComplianceSubmitted(true)
+          }}
+        />
+      )
     }
     return <CompletionForm data={data} onCompletion={onCompletion} />
   }
