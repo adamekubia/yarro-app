@@ -459,7 +459,7 @@ export function TenantOnboarding() {
                   >
                     {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                     {isLast
-                      ? (filledCount > 0 ? `Add ${filledCount + 1} tenant${filledCount > 0 ? 's' : ''}` : 'Add tenant')
+                      ? (filledCount > 0 ? `Add ${filledCount} tenant${filledCount !== 1 ? 's' : ''}` : 'Add tenant')
                       : 'Continue'
                     }
                   </Button>
