@@ -421,9 +421,10 @@ interface CertStep {
 type Phase = 'intro' | 'select-types' | 'certs' | 'notification' | 'summary'
 
 export function ComplianceOnboarding({ certificates, pmId, onComplete }: ComplianceOnboardingProps) {
-  const { refreshPM } = usePM()
+  const { propertyManager, refreshPM } = usePM()
   const router = useRouter()
   const supabase = createClient()
+  const hasContactPref = !!propertyManager?.preferred_contact_method
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [dismissing, setDismissing] = useState(false)
@@ -525,7 +526,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
 
   const advanceCert = () => {
     if (currentCertIndex >= certSteps.length - 1) {
-      setPhase('notification')
+      setPhase('summary')
     } else {
       setCurrentCertIndex(prev => prev + 1)
     }
@@ -537,7 +538,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
       .update({ preferred_contact_method: method })
       .eq('id', pmId)
 
-    setPhase('summary')
+    setPhase('select-types')
   }
 
   const handleDismiss = async () => {
@@ -585,7 +586,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
                 </p>
               </div>
             )}
-            <Button onClick={() => setPhase('notification')} size="lg" className="w-full">
+            <Button onClick={() => setPhase(hasContactPref ? 'select-types' : 'notification')} size="lg" className="w-full">
               Continue
             </Button>
           </div>
@@ -672,7 +673,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
           <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
             <div className="flex items-center px-6 pt-6 pb-2">
               <button
-                onClick={() => setPhase('certs')}
+                onClick={() => setPhase('intro')}
                 className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
