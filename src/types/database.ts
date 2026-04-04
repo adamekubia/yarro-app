@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       c1_compliance_certificates: {
@@ -1170,6 +1195,64 @@ export type Database = {
           },
         ]
       }
+      c1_rent_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          payment_method: string | null
+          property_manager_id: string
+          rent_ledger_id: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          property_manager_id: string
+          rent_ledger_id: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          property_manager_id?: string
+          rent_ledger_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_rent_payments_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rent_payments_rent_ledger_id_fkey"
+            columns: ["rent_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "c1_rent_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rent_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       c1_rooms: {
         Row: {
           created_at: string | null
@@ -1727,6 +1810,10 @@ export type Database = {
         Args: { p_month: number; p_pm_id: string; p_year: number }
         Returns: number
       }
+      bulk_import_contractors: {
+        Args: { p_data: Json; p_pm_id: string }
+        Returns: Json
+      }
       bulk_import_properties: {
         Args: { p_data: Json; p_pm_id: string }
         Returns: Json
@@ -2260,14 +2347,6 @@ export type Database = {
           urgency_label: string
         }[]
       }
-      compliance_set_property_type: {
-        Args: {
-          p_pm_id: string
-          p_property_id: string
-          p_property_type: string
-        }
-        Returns: undefined
-      }
       compliance_submit_contractor_renewal: {
         Args: {
           p_certificate_number?: string
@@ -2294,9 +2373,65 @@ export type Database = {
         }
         Returns: string
       }
-      compliance_upsert_requirements: {
-        Args: { p_pm_id: string; p_property_id: string; p_requirements: Json }
-        Returns: undefined
+      compute_compliance_next_action: {
+        Args: {
+          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
+          p_ticket_id: string
+        }
+        Returns: {
+          next_action: string
+          next_action_reason: string
+        }[]
+      }
+      compute_landlord_next_action: {
+        Args: {
+          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
+          p_ticket_id: string
+        }
+        Returns: {
+          next_action: string
+          next_action_reason: string
+        }[]
+      }
+      compute_maintenance_next_action: {
+        Args: {
+          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
+          p_ticket_id: string
+        }
+        Returns: {
+          next_action: string
+          next_action_reason: string
+        }[]
+      }
+      compute_ooh_next_action: {
+        Args: {
+          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
+          p_ticket_id: string
+        }
+        Returns: {
+          next_action: string
+          next_action_reason: string
+        }[]
+      }
+      compute_rent_arrears_next_action: {
+        Args: {
+          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
+          p_ticket_id: string
+        }
+        Returns: {
+          next_action: string
+          next_action_reason: string
+        }[]
+      }
+      create_rent_arrears_ticket: {
+        Args: {
+          p_issue_description: string
+          p_issue_title: string
+          p_property_id: string
+          p_property_manager_id: string
+          p_tenant_id: string
+        }
+        Returns: string
       }
       create_rent_ledger_entries: {
         Args: {
@@ -2489,6 +2624,7 @@ export type Database = {
         Returns: undefined
       }
       norm_uk_postcode: { Args: { p_in: string }; Returns: string }
+      normalize_uk_phone: { Args: { raw: string }; Returns: string }
       onboarding_create_account: {
         Args: {
           p_business_name?: string
@@ -2501,28 +2637,17 @@ export type Database = {
         }
         Returns: Json
       }
-      onboarding_create_property:
-        | {
-            Args: {
-              p_address: string
-              p_city?: string
-              p_pm_id: string
-              p_property_type?: string
-              p_room_count?: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_address: string
-              p_city: string
-              p_pm_id: string
-              p_postcode: string
-              p_property_type?: string
-              p_room_count?: number
-            }
-            Returns: Json
-          }
+      onboarding_create_property: {
+        Args: {
+          p_address: string
+          p_city: string
+          p_pm_id: string
+          p_postcode: string
+          p_property_type?: string
+          p_room_count?: number
+        }
+        Returns: Json
+      }
       onboarding_create_tenants: {
         Args: { p_pm_id: string; p_property_id: string; p_tenants: Json }
         Returns: Json
@@ -2536,6 +2661,29 @@ export type Database = {
           p_priority?: string
         }
         Returns: Json
+      }
+      record_rent_payment: {
+        Args: {
+          p_amount: number
+          p_notes?: string
+          p_payment_method: string
+          p_pm_id: string
+          p_rent_ledger_id: string
+        }
+        Returns: string
+      }
+      rent_escalation_check: {
+        Args: { p_pm_id: string }
+        Returns: {
+          earliest_overdue: string
+          months_overdue: number
+          property_address: string
+          property_id: string
+          property_manager_id: string
+          tenant_id: string
+          tenant_name: string
+          total_arrears: number
+        }[]
       }
       room_assign_tenant: {
         Args: {
@@ -2716,6 +2864,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       certificate_type: [
