@@ -735,6 +735,136 @@ VALUES (_test_uuid(58), 'weird', now(), _test_uuid(999), true);
 
 SELECT _assert_next_action(58, 'Status guard: landlord + weird status → maintenance', _test_uuid(58), 'new', 'new');
 
+-- ############################################################################
+-- PHASE D: End-to-end rent escalation tests (59-63)
+-- ############################################################################
+-- Simulates the edge function flow via direct RPC calls.
+
+-- ── Setup: fresh tenant + overdue ledger entry (reminder_3 sent 10 days ago) ──
+
+INSERT INTO c1_tenants (id, full_name, property_manager_id)
+VALUES (_test_uuid(900), 'E2E Tenant', _test_uuid(999));
+
+INSERT INTO c1_rent_ledger (id, property_manager_id, room_id, tenant_id, due_date, amount_due, status, reminder_3_sent_at)
+VALUES (_test_uuid(900), _test_uuid(999), _test_uuid(970), _test_uuid(900),
+        CURRENT_DATE - INTERVAL '40 days', 800, 'overdue',
+        now() - INTERVAL '10 days');
+
+-- ============================================================================
+-- TEST 59: rent_escalation_check returns tenant with overdue + reminder_3 past 7d
+-- ============================================================================
+DO $$
+DECLARE
+  v_count integer;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM rent_escalation_check(_test_uuid(999))
+  WHERE tenant_id = _test_uuid(900);
+
+  INSERT INTO _test_results (test_num, test_name, expected, actual, passed)
+  VALUES (59, 'rent_escalation_check finds overdue tenant',
+    '1', v_count::text, v_count = 1);
+END;
+$$;
+
+-- ============================================================================
+-- TEST 60: create_rent_arrears_ticket creates ticket, router returns rent_overdue
+-- ============================================================================
+DO $$
+DECLARE
+  v_ticket_id uuid;
+  v_result record;
+BEGIN
+  v_ticket_id := create_rent_arrears_ticket(
+    _test_uuid(999), _test_uuid(990), _test_uuid(900),
+    'Rent arrears: E2E Tenant', '1 month overdue, £800'
+  );
+
+  SELECT * INTO v_result FROM c1_compute_next_action(v_ticket_id);
+
+  INSERT INTO _test_results (test_num, test_name, expected, actual, passed)
+  VALUES (60, 'Escalated ticket routes to rent_overdue',
+    'needs_attention / rent_overdue',
+    v_result.next_action || ' / ' || v_result.next_action_reason,
+    v_result.next_action = 'needs_attention' AND v_result.next_action_reason = 'rent_overdue');
+END;
+$$;
+
+-- ============================================================================
+-- TEST 61: record_rent_payment clears all arrears → ticket auto-closed
+-- ============================================================================
+DO $$
+DECLARE
+  v_ticket_id uuid;
+  v_status text;
+BEGIN
+  -- Pay the full amount
+  PERFORM record_rent_payment(_test_uuid(900), _test_uuid(999), 800, 'bank_transfer', 'E2E full payment');
+
+  -- Find the rent_arrears ticket for this tenant
+  SELECT id INTO v_ticket_id
+  FROM c1_tickets
+  WHERE tenant_id = _test_uuid(900)
+    AND category = 'rent_arrears'
+  ORDER BY date_logged DESC LIMIT 1;
+
+  SELECT status INTO v_status FROM c1_tickets WHERE id = v_ticket_id;
+
+  INSERT INTO _test_results (test_num, test_name, expected, actual, passed)
+  VALUES (61, 'Full payment auto-closes rent_arrears ticket',
+    'closed', COALESCE(v_status, 'NULL'), v_status = 'closed');
+END;
+$$;
+
+-- ============================================================================
+-- TEST 62: rent_escalation_check no longer returns cleared tenant
+-- ============================================================================
+DO $$
+DECLARE
+  v_count integer;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM rent_escalation_check(_test_uuid(999))
+  WHERE tenant_id = _test_uuid(900);
+
+  INSERT INTO _test_results (test_num, test_name, expected, actual, passed)
+  VALUES (62, 'Cleared tenant not in escalation check',
+    '0', v_count::text, v_count = 0);
+END;
+$$;
+
+-- ============================================================================
+-- TEST 63: dashboard_todo_extras excludes tenant with open rent_arrears ticket
+-- ============================================================================
+-- Create a NEW overdue entry + open ticket for a different tenant to test dedup
+INSERT INTO c1_tenants (id, full_name, property_manager_id)
+VALUES (_test_uuid(901), 'Dedup Dashboard Tenant', _test_uuid(999));
+
+-- Overdue ledger entry for this month
+INSERT INTO c1_rent_ledger (id, property_manager_id, room_id, tenant_id, due_date, amount_due, status)
+VALUES (_test_uuid(901), _test_uuid(999), _test_uuid(970), _test_uuid(901),
+        date_trunc('month', CURRENT_DATE)::date + 1, 750, 'overdue');
+
+-- Create open rent_arrears ticket for this tenant
+INSERT INTO c1_tickets (id, status, date_logged, property_manager_id, category, tenant_id)
+VALUES (_test_uuid(901), 'open', now(), _test_uuid(999), 'rent_arrears', _test_uuid(901));
+
+DO $$
+DECLARE
+  v_count integer;
+BEGIN
+  -- Check dashboard extras does NOT return this tenant's rent entry
+  SELECT count(*) INTO v_count
+  FROM c1_get_dashboard_todo_extras(_test_uuid(999)) AS item
+  WHERE (item->>'source_type') = 'rent'
+    AND (item->>'entity_id') = _test_uuid(901)::text;
+
+  INSERT INTO _test_results (test_num, test_name, expected, actual, passed)
+  VALUES (63, 'Dashboard excludes rent with open arrears ticket',
+    '0', v_count::text, v_count = 0);
+END;
+$$;
+
 -- ============================================================================
 -- Results
 -- ============================================================================
