@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal, Upload } from 'lucide-react'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -96,6 +97,7 @@ export default function ContractorsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [showContractorOnboarding, setShowContractorOnboarding] = useState(false)
   const [search, setSearch] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const filteredContractors = useMemo(() => {
     if (!search) return contractors
     const lower = search.toLowerCase()
@@ -680,12 +682,29 @@ export default function ContractorsPage() {
       title="Contractors"
       count={filteredContractors.length}
       actions={
-        <CommandSearchInput
-          placeholder="Search contractors..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
-        />
+        <div className="flex items-center gap-2">
+          <CommandSearchInput
+            placeholder="Search contractors..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
+          <BulkImportDialog
+            entityType="contractors"
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onComplete={() => fetchContractors()}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            className="gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import
+          </Button>
+        </div>
       }
     >
 

@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download, Send, Loader2 } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download, Upload, Send, Loader2 } from 'lucide-react'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 import { exportToCSV, TENANT_EXPORT_COLUMNS } from '@/lib/export'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
@@ -91,6 +92,7 @@ export default function TenantsPage() {
   const [blastSending, setBlastSending] = useState(false)
   const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const filteredTenants = useMemo(() => {
     if (!search) return tenants
     const lower = search.toLowerCase()
@@ -561,6 +563,21 @@ export default function TenantsPage() {
               )}
             </Button>
           )}
+          <BulkImportDialog
+            entityType="tenants"
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onComplete={() => fetchTenants()}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            className="gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import
+          </Button>
           <Button
             variant="outline"
             size="sm"

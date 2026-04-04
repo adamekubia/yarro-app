@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck, Download } from 'lucide-react'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck, Download, Upload } from 'lucide-react'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 import { exportToCSV, PROPERTY_EXPORT_COLUMNS } from '@/lib/export'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
@@ -114,6 +115,7 @@ export default function PropertiesPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const filteredProperties = useMemo(() => {
     if (!search) return properties
     const lower = search.toLowerCase()
@@ -646,6 +648,21 @@ export default function PropertiesPage() {
             onChange={setSearch}
             className="w-64"
           />
+          <BulkImportDialog
+            entityType="properties"
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onComplete={() => fetchProperties()}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            className="gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import
+          </Button>
           <Button
             variant="outline"
             size="sm"
