@@ -1,11 +1,3 @@
-'use client'
-
-import { useState } from 'react'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
-import { StatusBadge } from '@/components/status-badge'
-import { useOpenTicket } from '@/hooks/use-open-ticket'
-import { formatDistanceToNow } from 'date-fns'
 
 // ─────────────────────────────────────────────────────────
 // Types (shared — exported for use in page.tsx)
@@ -147,225 +139,25 @@ export const NEXT_STEPS: Record<string, string> = {
 // Filtering helpers (used in parent to lift counts)
 // ─────────────────────────────────────────────────────────
 
+// Aligned with polymorphic dispatch: next_action = 'in_progress' states
+export const IN_PROGRESS_REASONS = new Set([
+  'scheduled', 'awaiting_booking', 'awaiting_contractor',
+  'awaiting_landlord', 'allocated_to_landlord', 'landlord_in_progress',
+  'ooh_in_progress',
+])
+
 export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
-    // Non-ticket items are always actionable
-    if (i.source_type && i.source_type !== 'ticket') return true
-    // Ticket-specific filtering
-    if (i.action_type === 'FOLLOW_UP') return false
-    if (i.next_action_reason === 'awaiting_landlord') {
-      const hrs = (Date.now() - new Date(i.waiting_since).getTime()) / 3_600_000
-      if (hrs < 24) return false
-    }
+    if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return true
+    if (IN_PROGRESS_REASONS.has(i.next_action_reason || '')) return false
     return true
   })
 }
 
 export function filterInProgress(todoItems: TodoItem[]): TodoItem[] {
-  return todoItems.filter(i =>
-    (!i.source_type || i.source_type === 'ticket') && i.action_type === 'FOLLOW_UP'
-  )
+  return todoItems.filter(i => {
+    if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return false
+    return IN_PROGRESS_REASONS.has(i.next_action_reason || '')
+  })
 }
 
-// ─────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────
-
-interface TodoPanelProps {
-  actionable: TodoItem[]
-  inProgressItems: TodoItem[]
-}
-
-export function TodoPanel({ actionable, inProgressItems }: TodoPanelProps) {
-  const [leftTab, setLeftTab] = useState<'todo' | 'in_progress'>('todo')
-  const openTicket = useOpenTicket()
-
-  return (
-    <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-
-      {/* Tab row */}
-      <div className="flex items-center justify-between px-6 flex-shrink-0 pt-3 pb-3 border-b border-foreground/10">
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => setLeftTab('todo')}
-            className="flex items-center gap-1.5 transition-colors group focus:outline-none"
-          >
-            <span className={cn(
-              'text-base font-semibold transition-colors',
-              leftTab === 'todo'
-                ? 'text-primary'
-                : 'text-muted-foreground group-hover:text-foreground'
-            )}>
-              To-do
-            </span>
-            {actionable.length > 0 && (
-              <span className={cn(
-                'text-xs font-medium transition-colors',
-                leftTab === 'todo' ? 'text-primary/60' : 'text-muted-foreground/50'
-              )}>
-                {actionable.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setLeftTab('in_progress')}
-            className="flex items-center gap-1.5 transition-colors group focus:outline-none"
-          >
-            <span className={cn(
-              'text-base font-semibold transition-colors',
-              leftTab === 'in_progress'
-                ? 'text-primary'
-                : 'text-muted-foreground group-hover:text-foreground'
-            )}>
-              In Progress
-            </span>
-            {inProgressItems.length > 0 && (
-              <span className={cn(
-                'text-xs font-medium transition-colors',
-                leftTab === 'in_progress' ? 'text-primary/60' : 'text-muted-foreground/50'
-              )}>
-                {inProgressItems.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {leftTab === 'todo' ? (
-      actionable.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-sm text-emerald-600 font-medium">All clear — nothing needs your attention</p>
-        </div>
-      ) : (
-        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          {actionable.map(item => {
-            const ctaText = getCtaText(item)
-            const isHandoff = item.next_action_reason === 'handoff_review'
-            const isPendingReview = item.next_action_reason === 'pending_review'
-            const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-
-            const actionHref = isHandoff
-              ? `/tickets?id=${item.ticket_id}&action=complete`
-              : isPendingReview
-              ? `/tickets?id=${item.ticket_id}&action=review`
-              : null
-
-            const rowContent = (
-              <>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                    {item.priority && (
-                      <StatusBadge
-                        status={item.priority}
-                        size="sm"
-                        className="border-border/50 text-muted-foreground/70"
-                      />
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {(() => {
-                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-                      return (
-                        <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                        </span>
-                      )
-                    })()}
-                    {(() => {
-                      const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                      const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
-                        : waitHrs > 24 ? 'text-xs font-medium text-warning'
-                        : 'text-[11px] text-muted-foreground/60'
-                      return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                    })()}
-                  </div>
-                </div>
-
-                <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">
-                  {ctaText}
-                </span>
-              </>
-            )
-
-            const borderAccent = (item.sla_breached || item.priority_bucket === 'URGENT')
-              ? 'border-l-[3px] border-l-danger'
-              : item.priority_bucket === 'HIGH'
-              ? 'border-l-[3px] border-l-warning'
-              : ''
-            const rowClass = cn("flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer", borderAccent)
-
-            if (actionHref) {
-              return <Link key={item.id} href={actionHref} className={rowClass}>{rowContent}</Link>
-            }
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)}
-                className={cn(rowClass, 'w-full text-left')}
-              >
-                {rowContent}
-              </button>
-            )
-          })}
-        </div>
-      )
-      ) : (
-        /* In Progress tab */
-        inProgressItems.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <p className="text-sm text-muted-foreground">No tickets in progress</p>
-          </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            {inProgressItems.map(item => {
-              const ctaText = getCtaText(item)
-              const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => openTicket(item.ticket_id)}
-                  className="flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer w-full text-left"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                      {item.priority && (
-                        <StatusBadge
-                          status={item.priority}
-                          size="sm"
-                          className="border-border/50 text-muted-foreground/70"
-                        />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                        <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                      </span>
-                      {(() => {
-                        const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                        const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
-                          : waitHrs > 24 ? 'text-xs font-medium text-warning'
-                          : 'text-[11px] text-muted-foreground/60'
-                        return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                      })()}
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">
-                    {ctaText}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )
-      )}
-
-    </div>
-  )
-}

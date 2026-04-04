@@ -46,7 +46,11 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
     return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
   })()
 
+  const isTicket = item.id.startsWith('todo_')
+
   const getHref = (): string | null => {
+    // Ticket-sourced compliance/rent items → open ticket detail, not extras page
+    if (isTicket && (src === 'compliance' || src === 'rent')) return null
     if (src === 'compliance') {
       return item.next_action_reason === 'compliance_missing'
         ? `/properties/${item.property_id}`

@@ -36,12 +36,12 @@ import {
 import { TicketForm } from '@/components/ticket-form'
 import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { filterActionable, filterInProgress, REASON_BADGE } from '@/components/dashboard/todo-panel'
+import { TodoRow } from '@/components/dashboard/todo-row'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { TodoCategoryCard } from '@/components/dashboard/todo-category-card'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
@@ -693,30 +693,14 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground">No tickets in progress</p>
                 </div>
               ) : (
-                inProgressItems.map(item => {
-                  const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-                  return (
-                    <button key={item.id} onClick={() => openTicket(item.ticket_id)} className="flex items-start gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                          </span>
-                          {(() => {
-                            const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                            const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
-                              : waitHrs > 24 ? 'text-xs font-medium text-warning'
-                              : 'text-[11px] text-muted-foreground/60'
-                            return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                          })()}
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })
+                inProgressItems.map(item => (
+                  <TodoRow
+                    key={item.id}
+                    item={item}
+                    onHandoffClick={() => {}}
+                    onTicketClick={(i) => openTicket(i.ticket_id)}
+                  />
+                ))
               )}
             </div>
           </div>
