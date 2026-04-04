@@ -55,7 +55,7 @@ supabase stop
 
 ### Before writing any migration:
 
-1. **Check `supabase/core-rpcs/README.md`** — 61 functions are protected. If your migration uses `CREATE OR REPLACE FUNCTION` on any of them, **STOP and get explicit approval**.
+1. **Check `supabase/core-rpcs/README.md`** — 69 functions are protected. If your migration uses `CREATE OR REPLACE FUNCTION` on any of them, **STOP and get explicit approval**.
 2. A `CREATE OR REPLACE` silently overwrites the existing function. There is no undo in production.
 3. Use `IF NOT EXISTS` on `ALTER TABLE ADD COLUMN` to make migrations idempotent.
 4. Use `ON CONFLICT DO NOTHING` on seed data to prevent duplicate inserts on re-run.

@@ -24,4 +24,4 @@ This folder is the single source of truth for how the Yarro system works under t
 - `.claude/docs/protected-rpcs.md` — deep RPC dependency reference
 - `.claude/docs/setup-guide.md` — environment setup
 - `.claude/docs/git-workflow.md` — git operations
-- `supabase/core-rpcs/README.md` — 61 protected RPCs (alphabetical list)
+- `supabase/core-rpcs/README.md` — 69 protected RPCs (alphabetical list)
