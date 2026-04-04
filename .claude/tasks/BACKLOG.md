@@ -87,6 +87,9 @@ Review each morning when writing the day's PRD.
 - [2026-03-30] Table scroll / page scroll fix — tenants page (and likely all table pages) has broken scroll behaviour. Table should scroll independently or page should scroll naturally. Key pre-demo UI fix. [priority: high]
 - [2026-03-30] Compliance onboarding flow — focus on ONE property: pick a property → select which certs are needed → upload those certs (they may only have 1-2 to hand, option to add rest later) → complete that property's compliance in full. Then send a test reminder message (WhatsApp/email) showing what happens when a cert is about to expire. Gets them to the "aha" moment fast — see the full loop on one property before scaling to the rest. [priority: high]
 
+### Security
+- [2026-04-04] SECURITY: `c1_inbound_reply` (SECURITY DEFINER) doesn't verify `property_manager_id` before updating `c1_messages`. Low risk (attacker would need a valid Twilio SID) but should be hardened with an explicit PM ownership check. Protected RPC — discuss before modifying. [priority: medium]
+
 ### Engineering Maturity (from 2026-03-30 stability audit)
 - [2026-03-30] Commit validation — install commitlint + Husky pre-commit hook to enforce conventional commits. Prevents bad commit messages from new devs. [priority: medium]
 - [2026-03-30] PR template — create `.github/PULL_REQUEST_TEMPLATE.md` with What/Why/How to test/Checklist sections [priority: low]
