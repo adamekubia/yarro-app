@@ -428,19 +428,30 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
   const [phase, setPhase] = useState<Phase>('intro')
   const [dismissing, setDismissing] = useState(false)
   const [contractors, setContractors] = useState<ContractorOption[]>([])
+  const [properties, setProperties] = useState<{ id: string; address: string }[]>([])
 
-  // Fetch contractors for this PM (once)
+  // Fetch contractors + properties for this PM (once)
   useEffect(() => {
-    async function fetchContractors() {
-      const { data } = await supabase
-        .from('c1_contractors')
-        .select('id, contractor_name, categories')
-        .eq('property_manager_id', pmId)
-        .eq('active', true)
-        .order('contractor_name')
-      if (data) setContractors(data)
+    async function fetchData() {
+      const [contractorRes, propertyRes] = await Promise.all([
+        supabase
+          .from('c1_contractors')
+          .select('id, contractor_name, categories')
+          .eq('property_manager_id', pmId)
+          .eq('active', true)
+          .order('contractor_name'),
+        supabase
+          .from('c1_properties')
+          .select('id, address')
+          .eq('property_manager_id', pmId)
+          .order('address'),
+      ])
+      if (contractorRes.data) setContractors(contractorRes.data)
+      if (propertyRes.data) {
+        setProperties(propertyRes.data.map(p => ({ id: p.id, address: p.address || 'Unknown' })))
+      }
     }
-    fetchContractors()
+    fetchData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pmId])
 
@@ -463,18 +474,6 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
   const [currentCertIndex, setCurrentCertIndex] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
-
-  // Derive property info
-  const properties = useMemo(() => {
-    const map = new Map<string, { address: string; certs: CertificateType[] }>()
-    for (const cert of certificates) {
-      if (!map.has(cert.property_id)) {
-        map.set(cert.property_id, { address: cert.property_address, certs: [] })
-      }
-      map.get(cert.property_id)!.certs.push(cert.certificate_type)
-    }
-    return Array.from(map.entries()).map(([id, { address }]) => ({ id, address }))
-  }, [certificates])
 
   const totalCerts = certificates.length
   const currentProperty = properties[currentPropertyIndex]
