@@ -66,7 +66,7 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
       (r) => r.certificate_type === formData.certificate_type && r.cert_id
     )
 
-    const { error } = await supabase.rpc('compliance_upsert_certificate', {
+    const { data: newCertId, error } = await supabase.rpc('compliance_upsert_certificate', {
       p_property_id: propertyId,
       p_pm_id: pmId,
       p_certificate_type: formData.certificate_type,
@@ -79,7 +79,8 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
       p_contractor_id: formData.contractor_id,
     })
 
-    if (error) throw new Error('Failed to add certificate')
+    if (error) throw new Error(error.message || 'Failed to add certificate')
+    if (!newCertId) throw new Error('Certificate was not created')
 
     toast.success(wasReplacement ? 'Certificate replaced' : 'Certificate added')
     await fetchStatus()

@@ -456,7 +456,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
     }
     return map
   })
-  const [savingRequirements, setSavingRequirements] = useState(false)
+  const savingRequirements = false // requirements layer removed
 
   // Cert form state
   const [certSteps, setCertSteps] = useState<CertStep[]>([])
@@ -503,30 +503,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
       return
     }
 
-    // All properties done — save requirements and build cert steps
-    setSavingRequirements(true)
-    for (const prop of properties) {
-      const selectedTypes = selections.get(prop.id) || []
-      const requirements = CERTIFICATE_TYPES.map(ct => ({
-        certificate_type: ct,
-        is_required: selectedTypes.includes(ct),
-      }))
-
-      const { error } = await supabase.rpc('compliance_upsert_requirements', {
-        p_property_id: prop.id,
-        p_pm_id: pmId,
-        p_requirements: requirements,
-      })
-
-      if (error) {
-        toast.error(`Failed to save requirements: ${error.message}`)
-        setSavingRequirements(false)
-        return
-      }
-    }
-    setSavingRequirements(false)
-
-    // Build cert steps from selections
+    // Build cert steps from selections (requirements layer removed — certs are added directly)
     const steps: CertStep[] = []
     for (const prop of properties) {
       const selectedTypes = selections.get(prop.id) || []

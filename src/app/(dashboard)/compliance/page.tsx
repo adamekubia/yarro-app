@@ -147,14 +147,15 @@ export default function CompliancePage() {
 
   const handleAddCertificate = async (formData: CertificateFormData) => {
     if (!propertyManager || !formData.property_id) throw new Error('Missing property')
-    const { error } = await supabase.rpc('compliance_upsert_certificate', {
+    const { data: newCertId, error } = await supabase.rpc('compliance_upsert_certificate', {
       p_property_id: formData.property_id, p_pm_id: propertyManager.id,
       p_certificate_type: formData.certificate_type, p_issued_date: formData.issued_date,
       p_expiry_date: formData.expiry_date, p_certificate_number: formData.certificate_number,
       p_issued_by: formData.issued_by, p_notes: formData.notes,
       p_reminder_days_before: formData.reminder_days_before, p_contractor_id: formData.contractor_id,
     })
-    if (error) throw new Error('Failed to add certificate')
+    if (error) throw new Error(error.message || 'Failed to add certificate')
+    if (!newCertId) throw new Error('Certificate was not created')
     toast.success('Certificate added')
     await fetchData()
   }
