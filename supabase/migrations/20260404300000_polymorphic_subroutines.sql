@@ -102,6 +102,18 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Scheduled (job_stage checked BEFORE messages — matches original monolith order)
+  IF lower(p_ticket.job_stage) IN ('booked', 'scheduled') OR p_ticket.scheduled_date IS NOT NULL THEN
+    RETURN QUERY SELECT 'in_progress'::text, 'scheduled'::text;
+    RETURN;
+  END IF;
+
+  -- Sent / awaiting booking
+  IF lower(p_ticket.job_stage) = 'sent' THEN
+    RETURN QUERY SELECT 'in_progress'::text, 'awaiting_booking'::text;
+    RETURN;
+  END IF;
+
   -- Message-based states
   SELECT m.stage INTO v_msg_stage
   FROM c1_messages m WHERE m.ticket_id = p_ticket_id;
@@ -123,18 +135,6 @@ BEGIN
 
   IF lower(v_msg_stage) IN ('waiting_contractor', 'contractor_notified') THEN
     RETURN QUERY SELECT 'in_progress'::text, 'awaiting_contractor'::text;
-    RETURN;
-  END IF;
-
-  -- Scheduled
-  IF lower(p_ticket.job_stage) IN ('booked', 'scheduled') OR p_ticket.scheduled_date IS NOT NULL THEN
-    RETURN QUERY SELECT 'in_progress'::text, 'scheduled'::text;
-    RETURN;
-  END IF;
-
-  -- Sent / awaiting booking
-  IF lower(p_ticket.job_stage) = 'sent' THEN
-    RETURN QUERY SELECT 'in_progress'::text, 'awaiting_booking'::text;
     RETURN;
   END IF;
 
