@@ -703,7 +703,7 @@ export default function ContractorsPage() {
               <p className="font-medium">No contractors yet</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Add contractors manually or use the{' '}
-                <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
+                <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
               </p>
             </div>
           }

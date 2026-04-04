@@ -588,7 +588,7 @@ export default function TenantsPage() {
               <p className="font-medium">No tenants yet</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Add tenants manually or use the{' '}
-                <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
+                <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
               </p>
             </div>
           }
