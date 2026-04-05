@@ -4,7 +4,8 @@ import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Loader2, ArrowRight } from 'lucide-react'
 import { ENTITY_CONFIGS, type EntityType } from '@/lib/bulk-import/config'
 import {
   detectHasHeaders,
@@ -60,16 +61,19 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       const detection = detectHasHeaders(rows, entityType)
       setHasHeaders(detection.hasHeaders)
       setHeaderConfidence(detection.confidence)
-
-      const hdrs = detection.hasHeaders ? rows[0].map((h) => h.trim()) : rows[0].map((_, i) => `Column ${i + 1}`)
-      const result = matchColumns(hdrs, entityType)
-      setMatches(result.matches)
-      setMerges(result.merges)
-      setSkippedHeaders(result.skippedHeaders)
-      setStep('map')
+      // Stay on paste step — user sees preview, then clicks "Link Data"
     },
     [entityType]
   )
+
+  const handleProceedToMap = useCallback(() => {
+    const hdrs = hasHeaders ? rawRows[0].map((h) => h.trim()) : rawRows[0].map((_, i) => `Column ${i + 1}`)
+    const result = matchColumns(hdrs, entityType)
+    setMatches(result.matches)
+    setMerges(result.merges)
+    setSkippedHeaders(result.skippedHeaders)
+    setStep('map')
+  }, [rawRows, hasHeaders, entityType])
 
   // ─── Step 2: Header toggle (re-runs matching) ──
 
@@ -215,11 +219,56 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
 
       {/* Step 1: Paste */}
       {step === 'paste' && (
-        <div className="px-1">
+        <div className="space-y-4">
           <PasteInput
             onParsed={handleParsed}
             onError={(err) => toast.error(err)}
           />
+
+          {/* Preview after paste */}
+          {rawRows.length > 0 && (
+            <div className="space-y-4">
+              {/* Preview table */}
+              <div className="relative">
+                <div className="border border-border rounded-xl overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50 border-b">
+                        {(hasHeaders ? rawRows[0] : rawRows[0].map((_, i) => `Col ${i + 1}`)).map((h, i) => (
+                          <th key={i} className="px-4 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">
+                            {hasHeaders ? h.trim() : `Col ${i + 1}`}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(hasHeaders ? rawRows.slice(1, 6) : rawRows.slice(0, 5)).map((row, rowIdx) => (
+                        <tr key={rowIdx}>
+                          {row.map((cell, colIdx) => (
+                            <td key={colIdx} className="px-4 py-2 whitespace-nowrap text-foreground">
+                              {cell.trim() || <span className="text-muted-foreground">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent rounded-b-xl pointer-events-none" />
+              </div>
+
+              {/* CTA */}
+              <div className="text-center space-y-3 py-2">
+                <p className="text-sm text-muted-foreground">
+                  {dataRows.length} rows detected. Next step: link columns to your database.
+                </p>
+                <Button onClick={handleProceedToMap} className="gap-2">
+                  <ArrowRight className="h-4 w-4" />
+                  Link Data
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
