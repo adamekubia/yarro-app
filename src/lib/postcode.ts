@@ -68,9 +68,14 @@ export function extractUKPostcode(address: string): string | null {
 export async function lookupPostcodeCity(postcode: string): Promise<string | null> {
   if (!postcode) return null
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
     // Encode postcode for URL (handle spaces)
     const encoded = encodeURIComponent(postcode.trim())
-    const response = await fetch(`https://api.postcodes.io/postcodes/${encoded}`)
+    const response = await fetch(`https://api.postcodes.io/postcodes/${encoded}`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
     if (!response.ok) return null
     const data = await response.json()
     if (data.status !== 200 || !data.result) return null

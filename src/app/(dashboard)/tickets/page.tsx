@@ -192,8 +192,9 @@ export default function TicketsPage() {
       .lte('date_logged', dateRange.label === 'Custom' ? dateRange.to.toISOString() : new Date().toISOString())
       .order('date_logged', { ascending: false })
 
-    const { data } = await query
+    const { data, error } = await query
 
+    if (error) { toast.error('Failed to load tickets'); setLoading(false); return }
     if (data) {
       // Map next_action_reason → display label
       const reasonToDisplayStage: Record<string, string> = {

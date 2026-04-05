@@ -253,12 +253,13 @@ export default function ContractorsPage() {
   }, [selectedContractor, resetData])
 
   const fetchAllProperties = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_properties')
       .select('id, address')
       .eq('property_manager_id', propertyManager!.id)
       .order('address')
 
+    if (error) { toast.error('Failed to load properties'); return }
     if (data) {
       setAllProperties(data)
     }
@@ -270,11 +271,12 @@ export default function ContractorsPage() {
       return
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_properties')
       .select('id, address')
       .in('id', propertyIds)
 
+    if (error) { toast.error('Failed to load property addresses'); return }
     if (data) {
       setPropertyAddresses(data)
     } else {
@@ -283,7 +285,7 @@ export default function ContractorsPage() {
   }
 
   const fetchContractors = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_contractors')
       .select('*')
       .eq('property_manager_id', propertyManager!.id)
@@ -291,6 +293,7 @@ export default function ContractorsPage() {
       .order('category')
       .order('contractor_name')
 
+    if (error) { toast.error('Failed to load contractors'); setLoading(false); return }
     if (data) {
       setContractors(data)
       if (data.length === 0 && !propertyManager?.onboarding_completed_at) {

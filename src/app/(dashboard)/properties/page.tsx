@@ -259,20 +259,22 @@ export default function PropertiesPage() {
   })
 
   const fetchLandlords = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_landlords')
       .select('id, full_name, phone, email')
       .eq('property_manager_id', propertyManager!.id)
       .order('full_name')
 
+    if (error) { toast.error('Failed to load landlords'); return }
     if (data) setLandlordOptions(data)
   }
 
   const fetchComplianceStatuses = async () => {
-    const { data } = await supabase.rpc('compliance_get_all_statuses', {
+    const { data, error } = await supabase.rpc('compliance_get_all_statuses', {
       p_pm_id: propertyManager!.id,
     })
 
+    if (error) { toast.error('Failed to load compliance statuses'); return }
     if (!data) return
 
     // Group by property_id and find the worst status per property
@@ -320,12 +322,13 @@ export default function PropertiesPage() {
   }, [selectedProperty, resetData])
 
   const fetchProperties = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('v_properties_hub')
       .select('*')
       .eq('property_manager_id', propertyManager!.id)
       .order('address')
 
+    if (error) { toast.error('Failed to load properties'); setLoading(false); return }
     if (data) {
       setProperties(data)
     }
