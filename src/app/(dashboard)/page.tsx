@@ -366,7 +366,7 @@ export default function DashboardPage() {
       toast.error('Could not load dashboard. Please refresh.')
       setLoading(false)
     }
-  }, [propertyManager, dateRange, supabase, refreshPM])
+  }, [propertyManager?.id, dateRange, supabase, refreshPM])
 
   useEffect(() => {
     fetchData()
