@@ -373,8 +373,8 @@ export default function DashboardPage() {
   }, [fetchData])
 
   // Lift filtered lists to parent scope for stat cards + TodoPanel props
-  const actionable = filterActionable(todoItems)
-  const inProgressItems = filterInProgress(todoItems)
+  const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
+  const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
 
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
