@@ -94,7 +94,7 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
     mergeRules: [
       {
         sourceSets: [
-          ['street', 'street_address', 'address_line_1', 'address line 1', 'addr'],
+          ['street', 'street_address', 'address_line_1', 'address line 1', 'addr', 'address', 'property_address', 'property address'],
           ['postcode', 'post_code', 'pc', 'zip', 'zip_code'],
         ],
         targetColumn: 'address',
@@ -327,7 +327,7 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
     mergeRules: [
       {
         sourceSets: [
-          ['street', 'street_address', 'address_line_1', 'address line 1', 'addr'],
+          ['street', 'street_address', 'address_line_1', 'address line 1', 'addr', 'address', 'property_address', 'property address'],
           ['postcode', 'post_code', 'pc', 'zip', 'zip_code'],
         ],
         targetColumn: 'address',

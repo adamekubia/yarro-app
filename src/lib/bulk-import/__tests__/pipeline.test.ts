@@ -287,18 +287,14 @@ describe('normalizeRows', () => {
   it('end-to-end: Property Address + Postcode columns merge into address', () => {
     const headers = ['Property Address', 'Postcode', 'Name', 'Phone']
     const { matches, merges } = matchColumns(headers, 'unified')
-    // Both should be direct matches, not merges
-    expect(matches[0].targetColumn).toBe('address')
-    expect(matches[0].confidence).not.toBe('merge')
-    expect(matches[1].targetColumn).toBe('postcode')
-    expect(matches[1].confidence).not.toBe('merge')
+    // Should be detected as a merge (address + postcode → address)
+    expect(matches[0].confidence).toBe('merge')
+    expect(matches[1].confidence).toBe('merge')
+    expect(merges).toHaveLength(1)
+    expect(merges[0].rule.targetColumn).toBe('address')
     const dataRows = [['123 High St, Manchester', 'M1 1AA', 'John Smith', '07123456789']]
     const mapped = applyMapping(dataRows, matches, merges)
-    expect(mapped[0].address).toBe('123 High St, Manchester')
-    expect(mapped[0].postcode).toBe('M1 1AA')
-    const normalized = normalizeRows(mapped, 'unified')
-    expect(normalized[0].address).toBe('123 High St, Manchester, M1 1AA')
-    expect(normalized[0].postcode).toBeUndefined()
+    expect(mapped[0].address).toBe('123 High St, Manchester, M1 1AA')
   })
 })
 
