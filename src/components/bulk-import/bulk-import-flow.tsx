@@ -201,26 +201,11 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
 
   // ─── Render ──
 
-  const stepKeys = ['paste', 'map', 'confirm', 'results'] as const
-  const currentStepIdx = stepKeys.indexOf(step === 'importing' ? 'confirm' : step as typeof stepKeys[number])
-
   return (
-    <div className="space-y-5">
-      {/* Progress dots — matches onboarding pattern */}
-      <div className="flex items-center justify-center gap-1.5 pt-1">
-        {stepKeys.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1 rounded-full transition-all ${
-              i === currentStepIdx ? 'w-6 bg-primary' : i < currentStepIdx ? 'w-6 bg-primary/30' : 'w-1.5 bg-border'
-            }`}
-          />
-        ))}
-      </div>
-
+    <div className="max-w-3xl mx-auto space-y-5">
       {/* Instructional title */}
       {step === 'map' && (
-        <div className="text-center space-y-2 py-2">
+        <div className="text-center space-y-2 py-4">
           <h2 className="text-2xl font-semibold text-foreground">Link your columns</h2>
           <p className="text-sm text-muted-foreground">
             Match your CSV columns to the right fields. Columns that don&apos;t match can be skipped.
@@ -230,7 +215,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
 
       {/* Step 1: Paste */}
       {step === 'paste' && (
-        <div className="px-2">
+        <div className="px-4">
           <PasteInput
             onParsed={handleParsed}
             onError={(err) => toast.error(err)}

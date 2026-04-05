@@ -353,6 +353,15 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
         combiner: 'concat_space',
         label: 'First Name + Last Name combined into Tenant Name',
       },
+      {
+        sourceSets: [
+          ['first_name', 'firstname', 'first name', 'forename', 'given_name'],
+          ['last_name', 'lastname', 'last name', 'surname', 'family_name'],
+        ],
+        targetColumn: 'landlord_name',
+        combiner: 'concat_space',
+        label: 'First Name + Last Name combined into Landlord Name',
+      },
     ],
   },
 }

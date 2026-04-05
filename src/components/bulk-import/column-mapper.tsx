@@ -15,13 +15,13 @@ import { ArrowRight, Info, Pencil } from 'lucide-react'
 import { ENTITY_CONFIGS, type EntityType, type MergeRule } from '@/lib/bulk-import/config'
 import type { ColumnMatch, MergeInfo } from '@/lib/bulk-import/pipeline'
 
-// Groups for section layout + dropdown grouping
+// Section groups — order matters (Property first, then Tenant near top)
 const SECTION_GROUPS: { label: string; keys: string[] }[] = [
   { label: 'Property', keys: ['address', 'postcode', 'property_type', 'city'] },
+  { label: 'Tenant', keys: ['full_name', 'phone', 'email'] },
   { label: 'Landlord', keys: ['landlord_name', 'landlord_phone', 'landlord_email'] },
   { label: 'Room', keys: ['room_number', 'room_name', 'monthly_rent', 'rent_due_day'] },
   { label: 'Tenancy', keys: ['tenancy_start_date', 'tenancy_end_date'] },
-  { label: 'Contact', keys: ['full_name', 'phone', 'email'] },
 ]
 
 function getGroupForTarget(targetKey: string | null): string {
@@ -30,6 +30,11 @@ function getGroupForTarget(targetKey: string | null): string {
     if (group.keys.includes(targetKey)) return group.label
   }
   return 'Skipped'
+}
+
+/** Normalize header text for merge alias matching */
+function norm(s: string): string {
+  return s.trim().toLowerCase().replace(/[_\s-]/g, '')
 }
 
 interface ColumnMapperProps {
@@ -48,49 +53,43 @@ export function ColumnMapper({
   onMappingComplete,
 }: ColumnMapperProps) {
   const config = ENTITY_CONFIGS[entityType]
-
   const [localMatches, setLocalMatches] = useState<ColumnMatch[]>(() => [...matches])
 
-  // Which targets are currently used (including merge targets)
+  // Which targets are currently used
   const usedTargets = useMemo(() => {
-    const used = new Set<string>()
-    localMatches.forEach((m) => {
-      if (m.targetColumn && m.confidence !== 'unmatched') used.add(m.targetColumn)
+    const used = new Map<string, number>() // target → source index
+    localMatches.forEach((m, idx) => {
+      if (m.targetColumn && m.confidence !== 'unmatched') used.set(m.targetColumn, idx)
     })
     return used
   }, [localMatches])
 
-  // Collect all keys consumed by active merges — these should be hidden from dropdowns
+  // Keys consumed by active merges — hidden from dropdowns
   const mergeConsumedKeys = useMemo(() => {
     const consumed = new Set<string>()
     localMatches.forEach((m) => {
-      if (m.confidence === 'merge' && m.targetColumn) {
-        consumed.add(m.targetColumn)
-      }
+      if (m.confidence === 'merge' && m.targetColumn) consumed.add(m.targetColumn)
     })
     return consumed
   }, [localMatches])
 
-  // Detect active merges from current localMatches
+  // Active merge labels for display
   const activeMerges = useMemo(() => {
     const active: { rule: MergeRule; label: string }[] = []
     for (const rule of config.mergeRules) {
-      const allSourcesFound = rule.sourceSets.every((aliasSet) =>
+      const allFound = rule.sourceSets.every((aliasSet) =>
         localMatches.some((m) => {
           if (!m.targetColumn || m.confidence === 'unmatched') return false
-          const nt = m.targetColumn.toLowerCase().replace(/[_\s-]/g, '')
-          return aliasSet.some((a) => a.toLowerCase().replace(/[_\s-]/g, '') === nt)
+          return aliasSet.some((a) => norm(a) === norm(m.targetColumn!))
         })
       )
-      if (allSourcesFound) active.push({ rule, label: rule.label })
+      if (allFound) active.push({ rule, label: rule.label })
     }
     return active
   }, [localMatches, config.mergeRules])
 
-  // Check if required fields are mapped
   const addressMapped = usedTargets.has('address') || usedTargets.has('postcode')
   const canContinue = addressMapped
-
   const skippedCount = localMatches.filter((m) => !m.targetColumn || m.confidence === 'unmatched').length
 
   // Group CSV columns by section
@@ -107,11 +106,68 @@ export function ColumnMapper({
       arr.push(idx)
       groups.set(group, arr)
     })
-
     return [...groups.entries()].filter(([, indices]) => indices.length > 0)
   }, [localMatches])
 
+  // Check if a merge option exists for a given source header + target key
+  // Returns merge label if this header can merge with another already-mapped header into targetKey
+  const getMergeOption = (sourceIdx: number, targetKey: string): string | null => {
+    const header = sourceHeaders[sourceIdx]
+    for (const rule of config.mergeRules) {
+      if (rule.targetColumn !== targetKey) continue
+      // Check: does one source set match this header, and another match an already-mapped header?
+      for (let i = 0; i < rule.sourceSets.length; i++) {
+        const mySet = rule.sourceSets[i]
+        if (!mySet.some((a) => norm(a) === norm(header))) continue
+        // This header matches source set i. Check if other source sets are covered by other mapped headers.
+        const otherSetsMatched = rule.sourceSets.every((otherSet, j) => {
+          if (j === i) return true // skip my own set
+          return localMatches.some((m, mIdx) => {
+            if (mIdx === sourceIdx) return false // not myself
+            if (m.confidence === 'unmatched' || !m.targetColumn) return false
+            return otherSet.some((a) => norm(a) === norm(sourceHeaders[mIdx]))
+          })
+        })
+        if (otherSetsMatched) {
+          // Find the other header's name for display
+          const otherIdx = localMatches.findIndex((m, mIdx) => {
+            if (mIdx === sourceIdx) return false
+            return rule.sourceSets.some((set, j) => j !== i && set.some((a) => norm(a) === norm(sourceHeaders[mIdx])))
+          })
+          const otherHeader = otherIdx >= 0 ? sourceHeaders[otherIdx] : ''
+          return `merge with ${otherHeader}`
+        }
+      }
+    }
+    return null
+  }
+
   const handleChange = (sourceIndex: number, targetKey: string | null) => {
+    // Check if this is a merge selection
+    if (targetKey && targetKey.startsWith('__merge__')) {
+      const actualTarget = targetKey.replace('__merge__', '')
+      // Find the merge rule
+      const header = sourceHeaders[sourceIndex]
+      for (const rule of config.mergeRules) {
+        if (rule.targetColumn !== actualTarget) continue
+        const mySetIdx = rule.sourceSets.findIndex((set) => set.some((a) => norm(a) === norm(header)))
+        if (mySetIdx === -1) continue
+        // Set all participating sources to merge confidence
+        setLocalMatches((prev) => prev.map((m, idx) => {
+          if (idx === sourceIndex) {
+            return { ...m, targetColumn: actualTarget, confidence: 'merge' as const, needsReview: false }
+          }
+          // Find other sources that belong to this merge
+          const isOtherSource = rule.sourceSets.some((set, j) => j !== mySetIdx && set.some((a) => norm(a) === norm(sourceHeaders[idx])))
+          if (isOtherSource && (m.targetColumn === actualTarget || m.confidence === 'unmatched' || !m.targetColumn)) {
+            return { ...m, targetColumn: actualTarget, confidence: 'merge' as const, needsReview: false }
+          }
+          return m
+        }))
+        return
+      }
+    }
+
     setLocalMatches((prev) => prev.map((m, idx) => {
       if (idx === sourceIndex) {
         return {
@@ -125,7 +181,6 @@ export function ColumnMapper({
     }))
   }
 
-  // Unmerge: reset merged columns back to unmatched dropdowns
   const handleUnmerge = (mergeTargetColumn: string) => {
     setLocalMatches((prev) => prev.map((m) => {
       if (m.confidence === 'merge' && m.targetColumn === mergeTargetColumn) {
@@ -135,23 +190,15 @@ export function ColumnMapper({
     }))
   }
 
-  // Compute valid merges from current state for parent
   const handleContinue = () => {
-    // Only pass merges that are still valid (all sources still have merge confidence)
     const validMerges = initialMerges.filter((merge) =>
       merge.sourceIndices.every((idx) => localMatches[idx]?.confidence === 'merge')
     )
     onMappingComplete(localMatches, validMerges)
   }
 
-  // Filter dropdown options: hide merge-consumed keys
-  const isKeyAvailable = (key: string, currentTarget: string | null): boolean => {
-    if (mergeConsumedKeys.has(key) && key !== currentTarget) return false
-    return true
-  }
-
   return (
-    <div className="space-y-8 px-2">
+    <div className="space-y-8 px-4">
       {/* Grouped mapping rows */}
       {groupedRows.map(([groupLabel, indices]) => (
         <div key={groupLabel} className="space-y-2">
@@ -173,9 +220,7 @@ export function ColumnMapper({
 
                 {isMerge ? (() => {
                   const mergeRule = config.mergeRules.find((r) =>
-                    r.sourceSets.some((aliasSet) =>
-                      aliasSet.some((a) => a.toLowerCase().replace(/[_\s-]/g, '') === header.toLowerCase().replace(/[_\s-]/g, ''))
-                    )
+                    r.sourceSets.some((aliasSet) => aliasSet.some((a) => norm(a) === norm(header)))
                   )
                   const targetCol = mergeRule ? config.columns.find((c) => c.key === mergeRule.targetColumn) : null
                   return (
@@ -186,7 +231,7 @@ export function ColumnMapper({
                       <button
                         onClick={() => handleUnmerge(match.targetColumn!)}
                         className="ml-2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                        title="Unmerge and remap manually"
+                        title="Unmerge and remap"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -214,13 +259,34 @@ export function ColumnMapper({
                           {group.keys.map((key) => {
                             const col = config.columns.find((c) => c.key === key)
                             if (!col) return null
-                            if (!isKeyAvailable(key, currentTarget)) return null
+                            if (mergeConsumedKeys.has(key) && currentTarget !== key) return null
+
                             const inUse = usedTargets.has(key) && currentTarget !== key
+                            const mergeLabel = inUse ? getMergeOption(idx, key) : null
+
+                            if (inUse && !mergeLabel) {
+                              return (
+                                <SelectItem key={key} value={key} disabled>
+                                  {col.label}
+                                  {col.required && <span className="text-destructive ml-1">*</span>}
+                                  <span className="text-muted-foreground ml-1 text-[10px]">(in use)</span>
+                                </SelectItem>
+                              )
+                            }
+
+                            if (inUse && mergeLabel) {
+                              return (
+                                <SelectItem key={key} value={`__merge__${key}`}>
+                                  {col.label}
+                                  <span className="text-primary ml-1 text-[10px]">({mergeLabel})</span>
+                                </SelectItem>
+                              )
+                            }
+
                             return (
-                              <SelectItem key={key} value={key} disabled={inUse}>
+                              <SelectItem key={key} value={key}>
                                 {col.label}
                                 {col.required && <span className="text-destructive ml-1">*</span>}
-                                {inUse && <span className="text-muted-foreground ml-1 text-[10px]">(in use)</span>}
                               </SelectItem>
                             )
                           })}
@@ -248,7 +314,7 @@ export function ColumnMapper({
       )}
 
       {/* Summary + Continue */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-2 pb-2">
         <span className="text-xs text-muted-foreground">
           {sourceHeaders.length - skippedCount} mapped, {skippedCount} skipped
         </span>
