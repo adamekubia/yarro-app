@@ -213,7 +213,7 @@ export function ColumnMapper({
             return (
               <div
                 key={idx}
-                className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center bg-muted/30 border border-border rounded-xl px-4 py-3"
+                className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center bg-card border border-border rounded-xl px-4 py-3"
               >
                 <span className="text-sm font-medium text-foreground truncate">{header}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
