@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/types/database'
 
@@ -157,8 +157,12 @@ export function PMProvider({ children }: { children: ReactNode }) {
     window.location.href = '/login'
   }, [])
 
+  const contextValue = useMemo(() => ({
+    propertyManager, authUser, loading, signOut, refreshPM
+  }), [propertyManager, authUser, loading, signOut, refreshPM])
+
   return (
-    <PMContext.Provider value={{ propertyManager, authUser, loading, signOut, refreshPM }}>
+    <PMContext.Provider value={contextValue}>
       {children}
     </PMContext.Provider>
   )
