@@ -1,7 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Upload, Info, AlertTriangle, XCircle, CheckCircle2, SkipForward } from 'lucide-react'
+import { ENTITY_CONFIGS } from '@/lib/bulk-import/config'
 import type { ValidatedRow, MergeInfo } from '@/lib/bulk-import/pipeline'
 import type { EntityType } from '@/lib/bulk-import/config'
 
@@ -22,13 +24,13 @@ export function ConfirmImport({
   onConfirm,
   onBack,
 }: ConfirmImportProps) {
+  const config = ENTITY_CONFIGS[entityType]
   const validCount = validatedRows.filter((r) => Object.keys(r.errors).length === 0).length
   const errorCount = validatedRows.filter((r) => Object.keys(r.errors).length > 0).length
   const warningCount = validatedRows.filter(
     (r) => Object.keys(r.errors).length === 0 && Object.keys(r.warnings).length > 0
   ).length
 
-  // Count entities for unified
   const isUnified = entityType === 'unified'
   const uniqueAddresses = isUnified
     ? new Set(validatedRows.filter((r) => r.data.address).map((r) => r.data.address.toLowerCase().trim())).size
@@ -40,7 +42,19 @@ export function ConfirmImport({
     ? validatedRows.filter((r) => r.data.full_name || r.data.phone).length
     : 0
 
-  // Collect unique errors for display
+  // Preview: columns that have data + first 5 valid rows
+  const previewData = useMemo(() => {
+    const validRows = validatedRows.filter((r) => Object.keys(r.errors).length === 0)
+    const sampleRows = validRows.slice(0, 5)
+
+    // Find columns that have data in any of the sample rows
+    const columnsWithData = config.columns.filter((col) =>
+      sampleRows.some((r) => r.data[col.key])
+    )
+
+    return { columns: columnsWithData, rows: sampleRows }
+  }, [validatedRows, config.columns])
+
   const errorDetails = validatedRows
     .filter((r) => Object.keys(r.errors).length > 0)
     .slice(0, 10)
@@ -52,10 +66,10 @@ export function ConfirmImport({
   return (
     <div className="space-y-5 px-2">
       {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground">Review your import</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Check the summary below, then confirm to import.
+      <div className="text-center space-y-2 py-2">
+        <h2 className="text-2xl font-semibold text-foreground">Review your import</h2>
+        <p className="text-sm text-muted-foreground">
+          Check the preview below, then confirm to import.
         </p>
       </div>
 
@@ -79,6 +93,38 @@ export function ConfirmImport({
         <div className="bg-card rounded-xl border border-border p-4 text-center">
           <p className="text-2xl font-bold">{validCount}</p>
           <p className="text-xs text-muted-foreground">Rows to import</p>
+        </div>
+      )}
+
+      {/* Preview table with gradient fade */}
+      {previewData.columns.length > 0 && previewData.rows.length > 0 && (
+        <div className="relative">
+          <div className="border border-border rounded-xl overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  {previewData.columns.map((col) => (
+                    <th key={col.key} className="px-4 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {previewData.rows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {previewData.columns.map((col) => (
+                      <td key={col.key} className="px-4 py-2.5 whitespace-nowrap text-foreground">
+                        {row.data[col.key] || <span className="text-muted-foreground">—</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Gradient fade overlay */}
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent rounded-b-xl pointer-events-none" />
         </div>
       )}
 
@@ -116,7 +162,7 @@ export function ConfirmImport({
         <div className="flex items-start gap-2.5 text-sm bg-muted/30 border border-border rounded-xl px-4 py-3">
           <SkipForward className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
           <div>
-            <span className="text-muted-foreground">Skipped columns (not needed for import): </span>
+            <span className="text-muted-foreground">Skipped columns: </span>
             <span className="text-foreground">{skippedHeaders.join(', ')}</span>
           </div>
         </div>

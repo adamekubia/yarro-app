@@ -88,8 +88,9 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   // ─── Step 2 → Step 3: User finishes mapping, process data ──
 
   const handleMappingComplete = useCallback(
-    async (finalMatches: ColumnMatch[]) => {
+    async (finalMatches: ColumnMatch[], validMerges: MergeInfo[]) => {
       setMatches(finalMatches)
+      setMerges(validMerges)
       setProcessing(true)
       setStep('confirm')
 
@@ -99,8 +100,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         .map((m) => m.sourceHeader)
       setSkippedHeaders(skipped)
 
-      // Re-detect merges based on final matches
-      const finalMerges = merges // Keep existing merges from initial detection
+      const finalMerges = validMerges
 
       // Run pipeline
       const mapped = applyMapping(dataRows, finalMatches, finalMerges)
@@ -218,11 +218,14 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         ))}
       </div>
 
-      {/* Subheader */}
+      {/* Instructional title */}
       {step === 'map' && (
-        <p className="text-sm text-muted-foreground text-center px-2">
-          Link your columns to the right field. Columns that don&apos;t match can be skipped.
-        </p>
+        <div className="text-center space-y-2 py-2">
+          <h2 className="text-2xl font-semibold text-foreground">Link your columns</h2>
+          <p className="text-sm text-muted-foreground">
+            Match your CSV columns to the right fields. Columns that don&apos;t match can be skipped.
+          </p>
+        </div>
       )}
 
       {/* Step 1: Paste */}
