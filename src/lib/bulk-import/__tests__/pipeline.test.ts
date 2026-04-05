@@ -144,10 +144,10 @@ describe('matchColumns', () => {
   })
 
   describe('alias scoping', () => {
-    it('"name" does not match anything for properties', () => {
+    it('"name" maps to tenant name for properties (cross-entity)', () => {
       const { matches } = matchColumns(['name'], 'properties')
-      expect(matches[0].targetColumn).toBeNull()
-      expect(matches[0].confidence).toBe('unmatched')
+      expect(matches[0].targetColumn).toBe('full_name')
+      expect(matches[0].confidence).toBe('alias')
     })
   })
 

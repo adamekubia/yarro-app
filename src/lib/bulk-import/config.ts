@@ -69,6 +69,27 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
         required: false,
         aliases: ['ll_email', 'owner_email'],
       },
+      {
+        key: 'full_name',
+        label: 'Tenant Name',
+        required: false,
+        aliases: [
+          'tenant_name', 'tenant', 'name', 'occupant', 'resident',
+          'first_name', 'firstname', 'first name',
+        ],
+      },
+      {
+        key: 'phone',
+        label: 'Tenant Phone',
+        required: false,
+        aliases: ['tel', 'mobile', 'cell', 'ph', 'telephone', 'phone_number', 'mob'],
+      },
+      {
+        key: 'email',
+        label: 'Tenant Email',
+        required: false,
+        aliases: ['e_mail', 'email_address', 'mail', 'contact_email'],
+      },
     ],
     mergeRules: [
       {
@@ -89,6 +110,15 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
         targetColumn: 'address',
         combiner: 'concat_comma_space',
         label: 'Address Line 1 + Line 2 + Postcode combined into Address',
+      },
+      {
+        sourceSets: [
+          ['first_name', 'firstname', 'first name', 'forename', 'given_name'],
+          ['last_name', 'lastname', 'last name', 'surname', 'family_name'],
+        ],
+        targetColumn: 'full_name',
+        combiner: 'concat_space',
+        label: 'First Name + Last Name combined into Tenant Name',
       },
     ],
   },
