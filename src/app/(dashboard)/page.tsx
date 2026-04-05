@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
@@ -147,20 +147,25 @@ export default function DashboardPage() {
   const [spotlightVisible, setSpotlightVisible] = useState(false)
   const supabase = createClient()
 
-  const fetchData = useCallback(async () => {
-    if (!propertyManager) return
-    setLoading(true)
-
-    try {
-    // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    // Fire-and-forget: auto-generate rent entries for current month (idempotent)
+  // Fire-and-forget: auto-generate rent entries once per component lifecycle
+  const rentEntriesGenerated = useRef(false)
+  useEffect(() => {
+    if (!propertyManager?.id || rentEntriesGenerated.current) return
+    rentEntriesGenerated.current = true
     const now = new Date()
     supabase.rpc('auto_generate_rent_entries' as never, {
       p_pm_id: propertyManager.id,
       p_month: now.getMonth() + 1,
       p_year: now.getFullYear(),
     } as never)
+  }, [propertyManager?.id, supabase])
 
+  const fetchData = useCallback(async () => {
+    if (!propertyManager) return
+    setLoading(true)
+
+    try {
+    // Fetch tickets — next_action/next_action_reason is the single source of truth for state
     const [ticketsRes, convosRes, todoRes, eventsRes, todoExtrasRes, onboardingRes] = await Promise.all([
       supabase
         .from('c1_tickets')
