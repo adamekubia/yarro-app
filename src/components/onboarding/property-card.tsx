@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Search, MapPin, Check, ChevronLeft } from 'lucide-react'
+import { Loader2, Search, MapPin, Check, ChevronLeft, Upload } from 'lucide-react'
 import { typography } from '@/lib/typography'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 
 interface PropertyCardProps {
   pmId: string
@@ -28,6 +29,7 @@ export function PropertyCard({ pmId, onComplete }: PropertyCardProps) {
   const [lookingUp, setLookingUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stage, setStage] = useState<Stage>('postcode')
+  const [importOpen, setImportOpen] = useState(false)
 
   const [postcode, setPostcode] = useState('')
   const [postcodeResult, setPostcodeResult] = useState<PostcodeResult | null>(null)
@@ -184,6 +186,21 @@ export function PropertyCard({ pmId, onComplete }: PropertyCardProps) {
                 {lookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
             </div>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <Upload className="w-4 h-4" />
+              Bulk upload from spreadsheet
+            </button>
+            <BulkImportDialog
+              entityType="unified"
+              open={importOpen}
+              onOpenChange={(open) => {
+                setImportOpen(open)
+                if (!open) window.location.reload()
+              }}
+            />
           </div>
         )}
 
