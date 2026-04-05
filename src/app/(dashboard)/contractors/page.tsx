@@ -295,6 +295,8 @@ export default function ContractorsPage() {
       setContractors(data)
       if (data.length === 0 && !propertyManager?.onboarding_completed_at) {
         setShowContractorOnboarding(true)
+      } else {
+        setShowContractorOnboarding(false)
       }
     } else if (!propertyManager?.onboarding_completed_at) {
       setShowContractorOnboarding(true)

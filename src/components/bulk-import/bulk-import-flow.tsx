@@ -6,7 +6,7 @@ import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { ArrowLeft, ArrowRight, Loader2, Upload } from 'lucide-react'
+import { ArrowLeft, Loader2, Upload } from 'lucide-react'
 import { ENTITY_CONFIGS, type EntityType } from '@/lib/bulk-import/config'
 import {
   detectHasHeaders,
@@ -15,15 +15,15 @@ import {
   normalizeRows,
   validateRows,
   type ColumnMatch,
+  type MergeInfo,
   type ValidatedRow,
   type ImportSummary,
 } from '@/lib/bulk-import/pipeline'
 import { PasteInput } from './paste-input'
-import { ColumnMapper } from './column-mapper'
 import { PreviewTable } from './preview-table'
 import { ImportResults } from './import-results'
 
-type Step = 'paste' | 'map' | 'preview' | 'importing' | 'results'
+type Step = 'paste' | 'preview' | 'importing' | 'results'
 
 interface BulkImportFlowProps {
   entityType: EntityType
@@ -42,6 +42,8 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   const [hasHeaders, setHasHeaders] = useState(true)
   const [headerConfidence, setHeaderConfidence] = useState(100)
   const [matches, setMatches] = useState<ColumnMatch[]>([])
+  const [merges, setMerges] = useState<MergeInfo[]>([])
+  const [skippedHeaders, setSkippedHeaders] = useState<string[]>([])
   const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([])
   const [normalizedData, setNormalizedData] = useState<Record<string, string>[]>([])
   const [summary, setSummary] = useState<ImportSummary | null>(null)
@@ -50,9 +52,18 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   const headers = hasHeaders ? rawRows[0]?.map((h) => h.trim()) || [] : rawRows[0]?.map((_, i) => `Column ${i + 1}`) || []
   const dataRows = hasHeaders ? rawRows.slice(1) : rawRows
   const validCount = validatedRows.filter((r) => Object.keys(r.errors).length === 0).length
-  const requiredMapped = config.columns
-    .filter((c) => c.required)
-    .every((c) => matches.some((m) => m.targetColumn === c.key && !m.needsReview))
+
+  // ── Recompute mapping from current state ──
+  const recompute = useCallback(
+    (currentMatches: ColumnMatch[], currentMerges: MergeInfo[], currentDataRows: string[][]) => {
+      const mapped = applyMapping(currentDataRows, currentMatches, currentMerges)
+      const normalized = normalizeRows(mapped, entityType)
+      const validated = validateRows(normalized, entityType)
+      setNormalizedData(normalized)
+      setValidatedRows(validated)
+    },
+    [entityType]
+  )
 
   // ─── Handlers ──────────────────────────────────────────
 
@@ -63,11 +74,20 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       setHasHeaders(detection.hasHeaders)
       setHeaderConfidence(detection.confidence)
 
-      // Auto-advance to mapping
       const hdrs = detection.hasHeaders ? rows[0].map((h) => h.trim()) : rows[0].map((_, i) => `Column ${i + 1}`)
-      const columnMatches = matchColumns(hdrs, entityType)
-      setMatches(columnMatches)
-      setStep('map')
+      const dRows = detection.hasHeaders ? rows.slice(1) : rows
+      const result = matchColumns(hdrs, entityType)
+      setMatches(result.matches)
+      setMerges(result.merges)
+      setSkippedHeaders(result.skippedHeaders)
+
+      // Immediately compute mapped data and show preview
+      const mapped = applyMapping(dRows, result.matches, result.merges)
+      const normalized = normalizeRows(mapped, entityType)
+      const validated = validateRows(normalized, entityType)
+      setNormalizedData(normalized)
+      setValidatedRows(validated)
+      setStep('preview')
     },
     [entityType]
   )
@@ -76,20 +96,41 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
     (checked: boolean) => {
       setHasHeaders(checked)
       const hdrs = checked ? rawRows[0].map((h) => h.trim()) : rawRows[0].map((_, i) => `Column ${i + 1}`)
-      const columnMatches = matchColumns(hdrs, entityType)
-      setMatches(columnMatches)
+      const dRows = checked ? rawRows.slice(1) : rawRows
+      const result = matchColumns(hdrs, entityType)
+      setMatches(result.matches)
+      setMerges(result.merges)
+      setSkippedHeaders(result.skippedHeaders)
+      recompute(result.matches, result.merges, dRows)
     },
-    [rawRows, entityType]
+    [rawRows, entityType, recompute]
   )
 
-  const handleContinueToPreview = useCallback(() => {
-    const mapped = applyMapping(dataRows, matches)
-    const normalized = normalizeRows(mapped, entityType)
-    const validated = validateRows(normalized, entityType)
-    setNormalizedData(normalized)
-    setValidatedRows(validated)
-    setStep('preview')
-  }, [dataRows, matches, entityType])
+  const handleColumnChange = useCallback(
+    (targetColumn: string, sourceIndex: number | null) => {
+      const updated = matches.map((m) => {
+        // Clear any existing match to this target (except merges)
+        if (m.targetColumn === targetColumn && m.confidence !== 'merge') {
+          return { ...m, targetColumn: null, confidence: 'unmatched' as const, needsReview: false }
+        }
+        // Assign the new source to this target
+        if (sourceIndex !== null && m.sourceIndex === sourceIndex) {
+          return { ...m, targetColumn, confidence: 'exact' as const, needsReview: false }
+        }
+        return m
+      })
+      setMatches(updated)
+
+      // Recalculate skipped
+      const newSkipped = updated
+        .filter((m) => m.confidence === 'unmatched' && !m.mergedFrom)
+        .map((m) => m.sourceHeader)
+      setSkippedHeaders(newSkipped)
+
+      recompute(updated, merges, dataRows)
+    },
+    [matches, merges, dataRows, recompute]
+  )
 
   const handleEdit = useCallback(
     (rowIndex: number, field: string, value: string) => {
@@ -105,7 +146,6 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
     if (!propertyManager) return
     setStep('importing')
 
-    // Only send valid rows
     const rowsToImport = validatedRows
       .filter((r) => Object.keys(r.errors).length === 0)
       .map((r) => r.data)
@@ -147,6 +187,8 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
     setStep('paste')
     setRawRows([])
     setMatches([])
+    setMerges([])
+    setSkippedHeaders([])
     setValidatedRows([])
     setNormalizedData([])
     setSummary(null)
@@ -158,10 +200,10 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
     <div className="space-y-4">
       {/* Step indicator */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {(['paste', 'map', 'preview', 'results'] as const).map((s, i) => (
-          <span key={s} className={step === s ? 'text-foreground font-medium' : ''}>
+        {(['paste', 'preview', 'results'] as const).map((s, i) => (
+          <span key={s} className={step === s || (step === 'importing' && s === 'preview') ? 'text-foreground font-medium' : ''}>
             {i > 0 && <span className="mx-2">→</span>}
-            {s === 'paste' ? 'Paste' : s === 'map' ? 'Map Columns' : s === 'preview' ? 'Preview' : 'Results'}
+            {s === 'paste' ? 'Paste' : s === 'preview' ? 'Preview' : 'Results'}
           </span>
         ))}
       </div>
@@ -174,8 +216,8 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         />
       )}
 
-      {/* Step 2: Map Columns */}
-      {step === 'map' && (
+      {/* Step 2: Preview (combined mapping + preview) */}
+      {step === 'preview' && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -191,44 +233,21 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
             </label>
           </div>
 
-          <ColumnMapper
-            matches={matches}
-            entityType={entityType}
-            sampleRows={dataRows.slice(0, 3)}
-            onChange={setMatches}
-          />
-
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => setStep('paste')} className="gap-1.5">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleContinueToPreview}
-              disabled={!requiredMapped}
-              className="gap-1.5"
-            >
-              Continue
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Preview */}
-      {step === 'preview' && (
-        <div className="space-y-4">
           <PreviewTable
             rows={validatedRows}
             entityType={entityType}
+            matches={matches}
+            merges={merges}
+            skippedHeaders={skippedHeaders}
+            sourceHeaders={headers}
             onEdit={handleEdit}
+            onColumnChange={handleColumnChange}
           />
 
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => setStep('map')} className="gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => { reset(); setStep('paste') }} className="gap-1.5">
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              Start over
             </Button>
             <Button
               size="sm"
@@ -243,7 +262,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         </div>
       )}
 
-      {/* Step 4: Importing */}
+      {/* Step 3: Importing */}
       {step === 'importing' && (
         <div className="flex flex-col items-center gap-4 py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -253,7 +272,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         </div>
       )}
 
-      {/* Step 5: Results */}
+      {/* Step 4: Results */}
       {step === 'results' && summary && (
         <ImportResults
           summary={summary}

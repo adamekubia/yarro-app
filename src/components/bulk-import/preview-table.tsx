@@ -2,18 +2,39 @@
 
 import { useState, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
-import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ENTITY_CONFIGS, type EntityType } from '@/lib/bulk-import/config'
-import { PREVIEW_ROWS, type ValidatedRow } from '@/lib/bulk-import/pipeline'
+import { PREVIEW_ROWS, type ValidatedRow, type ColumnMatch, type MergeInfo } from '@/lib/bulk-import/pipeline'
 
 interface PreviewTableProps {
   rows: ValidatedRow[]
   entityType: EntityType
+  matches: ColumnMatch[]
+  merges: MergeInfo[]
+  skippedHeaders: string[]
+  sourceHeaders: string[]
   onEdit: (rowIndex: number, field: string, value: string) => void
+  onColumnChange: (targetColumn: string, sourceIndex: number | null) => void
 }
 
-export function PreviewTable({ rows, entityType, onEdit }: PreviewTableProps) {
+export function PreviewTable({
+  rows,
+  entityType,
+  matches,
+  merges,
+  skippedHeaders,
+  sourceHeaders,
+  onEdit,
+  onColumnChange,
+}: PreviewTableProps) {
   const config = ENTITY_CONFIGS[entityType]
   const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null)
 
@@ -24,10 +45,24 @@ export function PreviewTable({ rows, entityType, onEdit }: PreviewTableProps) {
   ).length
   const errorCount = rows.filter((r) => Object.keys(r.errors).length > 0).length
 
-  // Only show columns that have data or are required
+  // Active columns: required columns + any column with data
   const activeColumns = config.columns.filter(
-    (col) => col.required || rows.some((r) => r.data[col.key])
+    (col) => col.required || col.requiredHint || rows.some((r) => r.data[col.key])
   )
+
+  // Missing required columns
+  const missingRequired = config.columns.filter(
+    (c) => c.required && !matches.some((m) => m.targetColumn === c.key && !m.needsReview)
+  )
+
+  // Get which source column maps to a target
+  const getSourceForTarget = (targetKey: string): string | null => {
+    const match = matches.find((m) => m.targetColumn === targetKey && !m.needsReview && m.confidence !== 'merge')
+    if (match) return match.sourceHeader
+    const merge = merges.find((m) => m.rule.targetColumn === targetKey)
+    if (merge) return merge.sourceIndices.map((i) => sourceHeaders[i]).join(' + ')
+    return null
+  }
 
   const handleBlur = useCallback(
     (rowIndex: number, field: string, value: string) => {
@@ -39,6 +74,32 @@ export function PreviewTable({ rows, entityType, onEdit }: PreviewTableProps) {
 
   return (
     <div className="space-y-3">
+      {/* Info banners */}
+      {merges.length > 0 && (
+        <div className="space-y-1">
+          {merges.map((merge, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/30 rounded-lg px-3 py-2">
+              <Info className="h-3.5 w-3.5 flex-shrink-0" />
+              {merge.rule.label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {skippedHeaders.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30 rounded-lg px-3 py-2">
+          <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+          {skippedHeaders.length} column{skippedHeaders.length !== 1 ? 's' : ''} skipped: {skippedHeaders.join(', ')}
+        </div>
+      )}
+
+      {missingRequired.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+          <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
+          Missing required: {missingRequired.map((c) => c.label).join(', ')}
+        </div>
+      )}
+
       {/* Summary bar */}
       <div className="flex items-center gap-4 text-xs">
         <span className="flex items-center gap-1 text-emerald-600">
@@ -67,13 +128,51 @@ export function PreviewTable({ rows, entityType, onEdit }: PreviewTableProps) {
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground w-10">#</th>
-              {activeColumns.map((col) => (
-                <th key={col.key} className="px-3 py-2 text-left font-medium text-muted-foreground min-w-[120px]">
-                  {col.label}
-                  {col.required && <span className="text-destructive ml-0.5">*</span>}
-                </th>
-              ))}
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-16">Status</th>
+              {activeColumns.map((col) => {
+                const source = getSourceForTarget(col.key)
+                return (
+                  <th key={col.key} className="px-1 py-1 text-left min-w-[120px]">
+                    <Select
+                      value={col.key}
+                      onValueChange={(val) => {
+                        if (val === '__skip__') {
+                          onColumnChange(col.key, null)
+                        } else {
+                          // val is a source index
+                          onColumnChange(col.key, parseInt(val))
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-auto border-0 bg-transparent shadow-none px-2 py-1 text-xs font-medium hover:bg-muted/80">
+                        <div className="flex flex-col items-start">
+                          <span className="flex items-center gap-1">
+                            {col.label}
+                            {col.required && <span className="text-destructive">*</span>}
+                            {col.requiredHint && <span className="text-muted-foreground font-normal">({col.requiredHint})</span>}
+                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                          </span>
+                          {source && (
+                            <span className="text-[10px] text-muted-foreground font-normal">
+                              ← {source}
+                            </span>
+                          )}
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__skip__">
+                          <span className="text-muted-foreground">Skip this column</span>
+                        </SelectItem>
+                        {sourceHeaders.map((h, idx) => (
+                          <SelectItem key={idx} value={String(idx)}>
+                            {h}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </th>
+                )
+              })}
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

@@ -1,4 +1,4 @@
-// Bulk import pipeline: parsing, header detection, column matching,
+// Bulk import pipeline: parsing, header detection, column matching with merges,
 // normalization, and validation.
 //
 // This is a UI convenience layer — it helps users map their spreadsheet
@@ -7,11 +7,11 @@
 
 import Papa from 'papaparse'
 import { normalizeRecord } from '@/lib/normalize'
-import { ENTITY_CONFIGS, type EntityType, type ColumnDef } from './config'
+import { ENTITY_CONFIGS, type EntityType, type MergeRule } from './config'
 
 // ─── Types ─────────────────────────────────────────────────
 
-export type MatchConfidence = 'exact' | 'alias' | 'unmatched'
+export type MatchConfidence = 'exact' | 'alias' | 'merge' | 'unmatched'
 
 export interface ColumnMatch {
   sourceIndex: number
@@ -19,14 +19,16 @@ export interface ColumnMatch {
   targetColumn: string | null
   confidence: MatchConfidence
   needsReview: boolean
+  mergedFrom?: { sourceIndices: number[]; label: string }
+}
+
+export interface MergeInfo {
+  rule: MergeRule
+  sourceIndices: number[] // indices of matched source columns, in order of sourceSets
 }
 
 export interface ParseResult {
   rows: string[][]
-  hasHeaders: boolean
-  headerConfidence: number
-  headers: string[]
-  dataRows: string[][]
   error?: string
 }
 
@@ -49,12 +51,10 @@ export interface ImportSummary {
 
 const MAX_ROWS = 500
 const PREVIEW_ROWS = 50
-const HEADER_SAMPLE_SIZE = 20
 
 // ─── Step 1: Parsing ───────────────────────────────────────
-// PapaParse for both paste and file input. Auto-detects delimiters.
 
-export function parseText(rawText: string): { rows: string[][]; error?: string } {
+export function parseText(rawText: string): ParseResult {
   const trimmed = rawText.trim()
   if (!trimmed) return { rows: [], error: 'No data provided' }
 
@@ -74,7 +74,7 @@ export function parseText(rawText: string): { rows: string[][]; error?: string }
   return { rows }
 }
 
-export function parseFile(file: File): Promise<{ rows: string[][]; error?: string }> {
+export function parseFile(file: File): Promise<ParseResult> {
   return new Promise((resolve) => {
     Papa.parse<string[]>(file, {
       header: false,
@@ -100,7 +100,6 @@ export function parseFile(file: File): Promise<{ rows: string[][]; error?: strin
 }
 
 // ─── Step 2: Header Detection ──────────────────────────────
-// Heuristic: check if first row looks like headers vs data.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^[\d\s\+\-\(\)]{7,}$/
@@ -128,48 +127,104 @@ export function detectHasHeaders(
     c.label.toLowerCase(),
     ...c.aliases,
   ])
+  // Also include merge rule source aliases
+  const mergeAliases = config.mergeRules.flatMap((r) => r.sourceSets.flat())
+  const allKnown = [...allNames, ...mergeAliases]
 
-  // Check if first row values match known column names/aliases
   const normalized = firstRow.map((v) => v.trim().toLowerCase().replace(/[_\s-]/g, ''))
   const headerMatches = normalized.filter((v) =>
-    allNames.some((name) => name.toLowerCase().replace(/[_\s-]/g, '') === v)
+    allKnown.some((name) => name.toLowerCase().replace(/[_\s-]/g, '') === v)
   ).length
 
-  // Check if first row looks like data (emails, phones, postcodes)
   const dataLikeCount = firstRow.filter(looksLikeData).length
 
-  // Score
   if (headerMatches >= 2) return { hasHeaders: true, confidence: 95 }
   if (headerMatches >= 1 && dataLikeCount === 0) return { hasHeaders: true, confidence: 80 }
   if (dataLikeCount >= 2) return { hasHeaders: false, confidence: 90 }
   if (dataLikeCount >= 1) return { hasHeaders: false, confidence: 70 }
 
-  // Ambiguous — first row is all short text with no numbers
   const allShortText = firstRow.every((v) => v.trim().length < 30 && !/\d/.test(v))
   if (allShortText) return { hasHeaders: true, confidence: 60 }
 
   return { hasHeaders: false, confidence: 50 }
 }
 
-// ─── Step 3: Column Matching (2-tier) ──────────────────────
-// Tier 1: Exact match after normalization
-// Tier 2: Alias dictionary (entity-scoped)
+// ─── Step 3: Column Matching ───────────────────────────────
+// Priority: merge > exact > alias > unmatched
 
 function normalizeHeader(h: string): string {
   return h.trim().toLowerCase().replace(/[_\s-]/g, '')
 }
 
+/** Check if a header matches any alias in a set */
+function matchesAliasSet(headerNormalized: string, aliases: string[]): boolean {
+  return aliases.some((a) => normalizeHeader(a) === headerNormalized)
+}
+
+/** Detect merges first, then match remaining columns */
 export function matchColumns(
   headers: string[],
   entityType: EntityType
-): ColumnMatch[] {
+): { matches: ColumnMatch[]; merges: MergeInfo[]; skippedHeaders: string[] } {
   const config = ENTITY_CONFIGS[entityType]
+  const normalizedHeaders = headers.map((h) => normalizeHeader(h))
+  const consumed = new Set<number>() // indices consumed by merges
+  const merges: MergeInfo[] = []
+
+  // ── Phase 0: Merge detection (highest priority) ──
+  for (const rule of config.mergeRules) {
+    const sourceIndices: number[] = []
+    let allFound = true
+
+    for (const aliasSet of rule.sourceSets) {
+      const idx = normalizedHeaders.findIndex(
+        (nh, i) => !consumed.has(i) && matchesAliasSet(nh, aliasSet)
+      )
+      if (idx === -1) {
+        allFound = false
+        break
+      }
+      sourceIndices.push(idx)
+    }
+
+    if (allFound) {
+      // Check: is the target column already claimed by an exact match?
+      const targetAlreadyExact = normalizedHeaders.findIndex(
+        (nh, i) => !consumed.has(i) && !sourceIndices.includes(i) &&
+          (normalizeHeader(config.columns.find((c) => c.key === rule.targetColumn)?.key || '') === nh ||
+           normalizeHeader(config.columns.find((c) => c.key === rule.targetColumn)?.label || '') === nh)
+      )
+
+      if (targetAlreadyExact !== -1) {
+        // Both merge sources AND exact target exist → all marked needsReview later
+        continue
+      }
+
+      sourceIndices.forEach((i) => consumed.add(i))
+      merges.push({ rule, sourceIndices })
+    }
+  }
+
+  // ── Phase 1+2: Exact + Alias matching on unclaimed columns ──
   const matches: ColumnMatch[] = []
-  const usedTargets = new Set<string>()
 
   for (let i = 0; i < headers.length; i++) {
+    if (consumed.has(i)) {
+      // This column was consumed by a merge — find which merge
+      const merge = merges.find((m) => m.sourceIndices.includes(i))
+      matches.push({
+        sourceIndex: i,
+        sourceHeader: headers[i].trim(),
+        targetColumn: merge?.rule.targetColumn || null,
+        confidence: 'merge',
+        needsReview: false,
+        mergedFrom: merge ? { sourceIndices: merge.sourceIndices, label: merge.rule.label } : undefined,
+      })
+      continue
+    }
+
     const sourceHeader = headers[i].trim()
-    const normalized = normalizeHeader(sourceHeader)
+    const nh = normalizedHeaders[i]
     let match: ColumnMatch = {
       sourceIndex: i,
       sourceHeader,
@@ -178,18 +233,18 @@ export function matchColumns(
       needsReview: false,
     }
 
-    // Tier 1: Exact match after normalization
+    // Tier 1: Exact match (key or label)
     const exactMatch = config.columns.find(
-      (c) => normalizeHeader(c.key) === normalized || normalizeHeader(c.label) === normalized
+      (c) => normalizeHeader(c.key) === nh || normalizeHeader(c.label) === nh
     )
     if (exactMatch) {
       match = { ...match, targetColumn: exactMatch.key, confidence: 'exact' }
     }
 
-    // Tier 2: Alias dictionary
+    // Tier 2: Alias match
     if (!match.targetColumn) {
       const aliasMatch = config.columns.find((c) =>
-        c.aliases.some((alias) => normalizeHeader(alias) === normalized)
+        c.aliases.some((alias) => normalizeHeader(alias) === nh)
       )
       if (aliasMatch) {
         match = { ...match, targetColumn: aliasMatch.key, confidence: 'alias' }
@@ -199,7 +254,7 @@ export function matchColumns(
     matches.push(match)
   }
 
-  // Enforce: only one source per target. Duplicates → both need review.
+  // ── Duplicate target detection ──
   const targetCounts = new Map<string, number[]>()
   matches.forEach((m, idx) => {
     if (m.targetColumn) {
@@ -217,39 +272,55 @@ export function matchColumns(
     }
   }
 
-  return matches
+  // Collect skipped headers (unmatched, not consumed by merge)
+  const skippedHeaders = matches
+    .filter((m) => m.confidence === 'unmatched' && !m.mergedFrom)
+    .map((m) => m.sourceHeader)
+
+  return { matches, merges, skippedHeaders }
 }
 
-// ─── Step 4: Apply Mapping ─────────────────────────────────
-// Transform raw string[][] rows into Record<string, string>[] using column matches.
+// ─── Step 4: Apply Mapping + Merges ────────────────────────
 
 export function applyMapping(
   dataRows: string[][],
-  matches: ColumnMatch[]
+  matches: ColumnMatch[],
+  merges: MergeInfo[]
 ): Record<string, string>[] {
   return dataRows.map((row) => {
     const record: Record<string, string> = {}
+
+    // Apply direct column matches
     for (const match of matches) {
-      if (match.targetColumn && !match.needsReview) {
+      if (match.targetColumn && !match.needsReview && match.confidence !== 'merge') {
         const value = row[match.sourceIndex]?.trim() ?? ''
         if (value) {
           record[match.targetColumn] = value
         }
       }
     }
+
+    // Apply merges
+    for (const merge of merges) {
+      const parts = merge.sourceIndices.map((i) => row[i]?.trim() ?? '')
+      const combined = merge.rule.combiner === 'concat_space'
+        ? parts.filter(Boolean).join(' ')
+        : parts.filter(Boolean).join(', ')
+      if (combined) {
+        record[merge.rule.targetColumn] = combined
+      }
+    }
+
     return record
   })
 }
 
 // ─── Step 5: Normalization ─────────────────────────────────
-// Uses normalizeRecord() for phone/name/email/address.
-// Additional: trim property_address and role_tag.
 
 export function normalizeRows(
   rows: Record<string, string>[],
   entityType: EntityType
 ): Record<string, string>[] {
-  // Map entityType to normalizeRecord's expected types
   const normalizeType = entityType === 'contractors' ? 'contractors'
     : entityType === 'tenants' ? 'tenants'
     : 'properties'
@@ -257,7 +328,6 @@ export function normalizeRows(
   return rows.map((row) => {
     const normalized = normalizeRecord(normalizeType, { ...row }) as Record<string, string>
 
-    // normalizeRecord doesn't handle these fields — trim manually
     if (normalized.property_address) {
       normalized.property_address = normalized.property_address.trim()
     }
@@ -265,7 +335,7 @@ export function normalizeRows(
       normalized.role_tag = normalized.role_tag.trim()
     }
 
-    // Remove empty string values — RPC expects null, not ''
+    // Remove empty string values
     for (const key of Object.keys(normalized)) {
       if (normalized[key] === '' || normalized[key] === undefined) {
         delete normalized[key]
@@ -277,8 +347,6 @@ export function normalizeRows(
 }
 
 // ─── Step 6: Validation ────────────────────────────────────
-// Validates each row against entity-specific rules.
-// Returns errors (block import) and warnings (show but don't block).
 
 export function validateRows(
   rows: Record<string, string>[],
@@ -290,7 +358,7 @@ export function validateRows(
     const errors: Record<string, string> = {}
     const warnings: Record<string, string> = {}
 
-    // Check required fields
+    // Check required fields (hard-required only)
     for (const col of config.columns) {
       if (col.required && (!data[col.key] || data[col.key].trim() === '')) {
         errors[col.key] = `${col.label} is required`
@@ -299,7 +367,6 @@ export function validateRows(
 
     // Entity-specific validation
     if (entityType === 'properties') {
-      // Address postcode warning
       if (data.address && !/[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}/i.test(data.address)) {
         warnings.address = 'No UK postcode detected in address'
       }
@@ -310,14 +377,12 @@ export function validateRows(
       if (!data.full_name && !data.phone) {
         errors.full_name = 'Name or phone is required'
       }
-      // Email format
       if (data.email && !EMAIL_RE.test(data.email)) {
         warnings.email = 'Email may not be valid'
       }
     }
 
     if (entityType === 'contractors') {
-      // Email format
       if (data.contractor_email && !EMAIL_RE.test(data.contractor_email)) {
         warnings.contractor_email = 'Email may not be valid'
       }
@@ -328,29 +393,21 @@ export function validateRows(
 }
 
 // ─── Full Pipeline ─────────────────────────────────────────
-// Orchestrates: parse → detect headers → match → map → normalize → validate
 
 export function runPipeline(
   rows: string[][],
   entityType: EntityType,
   hasHeaders: boolean
-): {
-  matches: ColumnMatch[]
-  headers: string[]
-  dataRows: string[][]
-  mappedRows: Record<string, string>[]
-  normalizedRows: Record<string, string>[]
-  validatedRows: ValidatedRow[]
-} {
+) {
   const headers = hasHeaders ? rows[0].map((h) => h.trim()) : rows[0].map((_, i) => `Column ${i + 1}`)
   const dataRows = hasHeaders ? rows.slice(1) : rows
 
-  const matches = matchColumns(headers, entityType)
-  const mappedRows = applyMapping(dataRows, matches)
+  const { matches, merges, skippedHeaders } = matchColumns(headers, entityType)
+  const mappedRows = applyMapping(dataRows, matches, merges)
   const normalizedRows = normalizeRows(mappedRows, entityType)
   const validatedRows = validateRows(normalizedRows, entityType)
 
-  return { matches, headers, dataRows, mappedRows, normalizedRows, validatedRows }
+  return { matches, merges, skippedHeaders, headers, dataRows, mappedRows, normalizedRows, validatedRows }
 }
 
 export { MAX_ROWS, PREVIEW_ROWS }

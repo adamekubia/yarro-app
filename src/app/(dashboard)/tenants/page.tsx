@@ -258,9 +258,11 @@ export default function TenantsPage() {
         address: (t.c1_properties as unknown as { address: string } | null)?.address,
       }))
       setTenants(mapped)
-      // Show tenant onboarding if no tenants and still onboarding
+      // Show/hide tenant onboarding based on current data
       if (mapped.length === 0 && !propertyManager?.onboarding_completed_at) {
         setShowTenantOnboarding(true)
+      } else {
+        setShowTenantOnboarding(false)
       }
     } else if (!propertyManager?.onboarding_completed_at) {
       setShowTenantOnboarding(true)
