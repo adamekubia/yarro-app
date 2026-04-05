@@ -243,7 +243,7 @@ export default function TenantsPage() {
   }, [selectedTenant, resetData])
 
   const fetchTenants = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_tenants')
       .select(`
         *,
@@ -252,6 +252,7 @@ export default function TenantsPage() {
       .eq('property_manager_id', propertyManager!.id)
       .order('full_name')
 
+    if (error) { toast.error('Failed to load tenants'); setLoading(false); return }
     if (data) {
       const mapped = data.map((t) => ({
         ...t,
@@ -271,20 +272,22 @@ export default function TenantsPage() {
   }
 
   const fetchBlastTargets = async () => {
-    const { data } = await supabase.rpc('get_onboarding_send_targets', {
+    const { data, error } = await supabase.rpc('get_onboarding_send_targets', {
       p_pm_id: propertyManager!.id,
       p_entity_type: 'tenant',
     })
+    if (error) { toast.error('Failed to load send targets'); return }
     if (data) setBlastTargets(data as typeof blastTargets)
   }
 
   const fetchProperties = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('c1_properties')
       .select('id, address')
       .eq('property_manager_id', propertyManager!.id)
       .order('address')
 
+    if (error) { toast.error('Failed to load properties'); return }
     if (data) {
       setProperties(data)
     }
