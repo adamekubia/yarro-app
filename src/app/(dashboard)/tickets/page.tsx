@@ -597,10 +597,7 @@ export default function TicketsPage() {
   ]
 
   // Open handoffs and pending_review only show in banners, not in the table
-  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
   const isPendingReview = (t: TicketRow) => t.pending_review === true && t.status === 'open' && t.archived !== true
-  const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
-
   // Active filter state
   const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0 || search.trim() !== ''
   const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length + (search.trim() ? 1 : 0)
