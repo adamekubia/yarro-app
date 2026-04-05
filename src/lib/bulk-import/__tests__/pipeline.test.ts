@@ -298,3 +298,119 @@ describe('validateRows', () => {
     expect(result[0].errors.contractor_name).toBe('Contractor Name is required')
   })
 })
+
+// ─── Unified entity type ──────────────────────────────────
+
+describe('unified: matchColumns', () => {
+  it('detects room columns', () => {
+    const { matches } = matchColumns(['Address', 'Room', 'Tenant Name', 'Phone'], 'unified')
+    expect(matches[0].targetColumn).toBe('address')
+    expect(matches[1].targetColumn).toBe('room_number')
+    expect(matches[2].targetColumn).toBe('full_name')
+    expect(matches[3].targetColumn).toBe('phone')
+  })
+
+  it('detects rent and tenancy columns', () => {
+    const { matches } = matchColumns(['Address', 'Room', 'Rent', 'Move In'], 'unified')
+    expect(matches[2].targetColumn).toBe('monthly_rent')
+    expect(matches[3].targetColumn).toBe('tenancy_start_date')
+  })
+
+  it('detects landlord + room + tenant in one row', () => {
+    const { matches } = matchColumns(
+      ['Address', 'Landlord Name', 'Room Number', 'Name', 'Tel'],
+      'unified'
+    )
+    expect(matches[0].targetColumn).toBe('address')
+    expect(matches[1].targetColumn).toBe('landlord_name')
+    expect(matches[2].targetColumn).toBe('room_number')
+    expect(matches[3].targetColumn).toBe('full_name')
+    expect(matches[4].targetColumn).toBe('phone')
+  })
+
+  it('merges first_name + last_name into full_name', () => {
+    const { matches, merges } = matchColumns(
+      ['Address', 'First Name', 'Last Name', 'Room'],
+      'unified'
+    )
+    expect(merges).toHaveLength(1)
+    expect(merges[0].rule.targetColumn).toBe('full_name')
+    expect(matches[1].confidence).toBe('merge')
+    expect(matches[2].confidence).toBe('merge')
+  })
+
+  it('merges street + postcode into address', () => {
+    const { merges } = matchColumns(
+      ['Street', 'Postcode', 'Room', 'Name'],
+      'unified'
+    )
+    expect(merges).toHaveLength(1)
+    expect(merges[0].rule.targetColumn).toBe('address')
+  })
+})
+
+describe('unified: detectHasHeaders', () => {
+  it('detects room-related column names as headers', () => {
+    const rows = [
+      ['Address', 'Room', 'Tenant Name', 'Phone'],
+      ['123 High St, M1 1AA', 'Room 1', 'John Smith', '07123456789'],
+    ]
+    const result = detectHasHeaders(rows, 'unified')
+    expect(result.hasHeaders).toBe(true)
+    expect(result.confidence).toBeGreaterThanOrEqual(80)
+  })
+})
+
+describe('unified: validateRows', () => {
+  it('requires address', () => {
+    const rows = [{ room_number: 'Room 1', full_name: 'John' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].errors.address).toBe('Address is required')
+  })
+
+  it('requires postcode in address', () => {
+    const rows = [{ address: '123 High Street Manchester' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].errors.address).toContain('postcode')
+  })
+
+  it('allows valid address with optional room and tenant', () => {
+    const rows = [{ address: '123 High St, M1 1AA' }]
+    const result = validateRows(rows, 'unified')
+    expect(Object.keys(result[0].errors)).toHaveLength(0)
+  })
+
+  it('errors on room without address', () => {
+    const rows = [{ room_number: 'Room 1' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].errors.room_number).toBe('Room requires an address')
+  })
+
+  it('validates rent_due_day range', () => {
+    const rows = [{ address: '123 High St, M1 1AA', rent_due_day: '30' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].errors.rent_due_day).toContain('1–28')
+  })
+
+  it('accepts valid rent_due_day', () => {
+    const rows = [{ address: '123 High St, M1 1AA', rent_due_day: '15' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].errors.rent_due_day).toBeUndefined()
+  })
+
+  it('warns on invalid property_type', () => {
+    const rows = [{ address: '123 High St, M1 1AA', property_type: 'flat' }]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].warnings.property_type).toContain('HMO or Single Let')
+  })
+
+  it('accepts hmo and single_let property types', () => {
+    const rows = [
+      { address: '123 High St, M1 1AA', property_type: 'hmo' },
+      { address: '456 Low St, M2 2BB', property_type: 'Single Let' },
+    ]
+    const result = validateRows(rows, 'unified')
+    expect(result[0].warnings.property_type).toBeUndefined()
+    expect(result[1].warnings.property_type).toBeUndefined()
+  })
+})

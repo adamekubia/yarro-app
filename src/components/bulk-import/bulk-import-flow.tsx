@@ -179,7 +179,15 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       setStep('results')
 
       if (result.created > 0) {
-        toast.success(`${result.created} ${config.label.toLowerCase()} imported`)
+        if (entityType === 'unified') {
+          const parts = []
+          if (result.properties_created) parts.push(`${result.properties_created} properties`)
+          if (result.rooms_created) parts.push(`${result.rooms_created} rooms`)
+          if (result.tenants_created) parts.push(`${result.tenants_created} tenants`)
+          toast.success(parts.length > 0 ? `Imported: ${parts.join(', ')}` : `${result.created} records imported`)
+        } else {
+          toast.success(`${result.created} ${config.label.toLowerCase()} imported`)
+        }
       }
 
       onComplete?.(result)
@@ -261,7 +269,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
               className="gap-1.5"
             >
               <Upload className="h-3.5 w-3.5" />
-              Import {validCount} {config.label.toLowerCase()}
+              Import {validCount} {entityType === 'unified' ? 'rows' : config.label.toLowerCase()}
             </Button>
           </div>
         </div>
@@ -281,6 +289,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       {step === 'results' && summary && (
         <ImportResults
           summary={summary}
+          entityType={entityType}
           entityLabel={config.label}
           onImportMore={reset}
           onDone={() => onCancel?.()}

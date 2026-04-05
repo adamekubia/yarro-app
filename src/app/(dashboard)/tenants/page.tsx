@@ -568,8 +568,10 @@ export default function TenantsPage() {
           <BulkImportDialog
             entityType="tenants"
             open={importOpen}
-            onOpenChange={setImportOpen}
-            onComplete={() => fetchTenants()}
+            onOpenChange={(open) => {
+              setImportOpen(open)
+              if (!open) fetchTenants()
+            }}
           />
           <Button
             variant="outline"

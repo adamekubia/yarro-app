@@ -1822,6 +1822,10 @@ export type Database = {
         Args: { p_data: Json; p_pm_id: string }
         Returns: Json
       }
+      bulk_import_unified: {
+        Args: { p_data: Json; p_pm_id: string }
+        Returns: Json
+      }
       c1_allocate_to_landlord: { Args: { p_ticket_id: string }; Returns: Json }
       c1_check_same_day_reminder: {
         Args: { p_ticket_id: string }

@@ -1,7 +1,7 @@
 // Entity type configurations for bulk import
 // Column definitions, aliases, merge rules, and required fields — scoped per entity type.
 
-export type EntityType = 'properties' | 'tenants' | 'contractors'
+export type EntityType = 'properties' | 'tenants' | 'contractors' | 'unified'
 
 export interface ColumnDef {
   key: string
@@ -210,5 +210,143 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
       },
     ],
     mergeRules: [],
+  },
+  unified: {
+    rpcName: 'bulk_import_unified',
+    label: 'Properties, Rooms & Tenants',
+    columns: [
+      // ── Property columns (match c1_properties) ──
+      {
+        key: 'address',
+        label: 'Address',
+        required: true,
+        aliases: [
+          'addr', 'street', 'property_address', 'location', 'property',
+          'full_address', 'street_address', 'address_line_1', 'address line 1',
+        ],
+      },
+      {
+        key: 'property_type',
+        label: 'Property Type',
+        required: false,
+        aliases: ['type', 'prop_type', 'building_type'],
+      },
+      {
+        key: 'city',
+        label: 'City',
+        required: false,
+        aliases: ['town', 'area', 'region', 'city/town'],
+      },
+      {
+        key: 'landlord_name',
+        label: 'Landlord Name',
+        required: false,
+        aliases: ['ll_name', 'owner', 'owner_name', 'landlord'],
+      },
+      {
+        key: 'landlord_phone',
+        label: 'Landlord Phone',
+        required: false,
+        aliases: ['ll_phone', 'owner_phone', 'll_tel', 'll_mobile'],
+      },
+      {
+        key: 'landlord_email',
+        label: 'Landlord Email',
+        required: false,
+        aliases: ['ll_email', 'owner_email'],
+      },
+      // ── Room columns (match c1_rooms) ──
+      {
+        key: 'room_number',
+        label: 'Room',
+        required: false,
+        aliases: [
+          'room', 'room_no', 'rm', 'unit', 'unit_number',
+          'bed', 'bedroom', 'room number',
+        ],
+      },
+      {
+        key: 'room_name',
+        label: 'Room Name',
+        required: false,
+        aliases: ['room_label', 'room_desc'],
+      },
+      {
+        key: 'monthly_rent',
+        label: 'Monthly Rent',
+        required: false,
+        aliases: ['rent', 'rent_amount', 'rent_pcm', 'pcm', 'monthly rent'],
+      },
+      {
+        key: 'rent_due_day',
+        label: 'Rent Due Day',
+        required: false,
+        aliases: ['rent_day', 'due_day', 'payment_day'],
+      },
+      {
+        key: 'tenancy_start_date',
+        label: 'Tenancy Start',
+        required: false,
+        aliases: ['move_in', 'start_date', 'tenancy_start', 'move_in_date', 'move in date'],
+      },
+      {
+        key: 'tenancy_end_date',
+        label: 'Tenancy End',
+        required: false,
+        aliases: ['move_out', 'end_date', 'tenancy_end', 'move_out_date', 'move out date'],
+      },
+      // ── Tenant columns (match c1_tenants) ──
+      {
+        key: 'full_name',
+        label: 'Tenant Name',
+        required: false,
+        aliases: [
+          'tenant_name', 'tenant', 'name', 'occupant', 'resident',
+          'first_name', 'firstname', 'first name',
+        ],
+      },
+      {
+        key: 'phone',
+        label: 'Tenant Phone',
+        required: false,
+        aliases: ['tel', 'mobile', 'cell', 'ph', 'telephone', 'phone_number', 'mob'],
+      },
+      {
+        key: 'email',
+        label: 'Tenant Email',
+        required: false,
+        aliases: ['e_mail', 'email_address', 'mail', 'contact_email'],
+      },
+    ],
+    mergeRules: [
+      {
+        sourceSets: [
+          ['street', 'street_address', 'address_line_1', 'address line 1', 'addr'],
+          ['postcode', 'post_code', 'pc', 'zip', 'zip_code'],
+        ],
+        targetColumn: 'address',
+        combiner: 'concat_comma_space',
+        label: 'Street + Postcode combined into Address',
+      },
+      {
+        sourceSets: [
+          ['address_line_1', 'address line 1'],
+          ['address_line_2', 'address line 2'],
+          ['postcode', 'post_code', 'pc'],
+        ],
+        targetColumn: 'address',
+        combiner: 'concat_comma_space',
+        label: 'Address Line 1 + Line 2 + Postcode combined into Address',
+      },
+      {
+        sourceSets: [
+          ['first_name', 'firstname', 'first name', 'forename', 'given_name'],
+          ['last_name', 'lastname', 'last name', 'surname', 'family_name'],
+        ],
+        targetColumn: 'full_name',
+        combiner: 'concat_space',
+        label: 'First Name + Last Name combined into Tenant Name',
+      },
+    ],
   },
 }

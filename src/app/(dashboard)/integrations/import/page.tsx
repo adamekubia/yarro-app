@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Building2, Users, Wrench } from 'lucide-react'
+import { Building2, Users, Wrench, Layers } from 'lucide-react'
 import { BulkImportFlow } from '@/components/bulk-import/bulk-import-flow'
 import type { EntityType } from '@/lib/bulk-import/config'
 
 const ENTITY_OPTIONS: { type: EntityType; label: string; icon: React.ReactNode; description: string }[] = [
+  { type: 'unified', label: 'Everything', icon: <Layers className="h-5 w-5" />, description: 'Properties, rooms & tenants from one spreadsheet' },
   { type: 'properties', label: 'Properties', icon: <Building2 className="h-5 w-5" />, description: 'Addresses, landlord details' },
   { type: 'tenants', label: 'Tenants', icon: <Users className="h-5 w-5" />, description: 'Names, phones, property links' },
   { type: 'contractors', label: 'Contractors', icon: <Wrench className="h-5 w-5" />, description: 'Names, trades, contact details' },
@@ -24,7 +25,7 @@ export default function ImportPage() {
         {!entityType ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">What are you importing?</p>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {ENTITY_OPTIONS.map((opt) => (
                 <button
                   key={opt.type}
@@ -50,7 +51,9 @@ export default function ImportPage() {
                 Change type
               </Button>
               <span className="text-sm text-muted-foreground">
-                Importing: <span className="font-medium text-foreground">{ENTITY_OPTIONS.find((o) => o.type === entityType)?.label}</span>
+                Importing: <span className="font-medium text-foreground">
+                  {entityType === 'unified' ? 'Properties, Rooms & Tenants' : ENTITY_OPTIONS.find((o) => o.type === entityType)?.label}
+                </span>
               </span>
             </div>
             <BulkImportFlow

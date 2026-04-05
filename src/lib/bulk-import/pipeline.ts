@@ -40,11 +40,23 @@ export interface ValidatedRow {
 
 export interface ImportSummary {
   batch_id: string
-  results: { row: number; status: 'created' | 'skipped' | 'error'; error?: string; id?: string }[]
+  results: {
+    row: number
+    status: 'created' | 'skipped' | 'error'
+    error?: string
+    id?: string
+    needs_room_assignment?: boolean
+  }[]
   total: number
   created: number
   skipped: number
   errors: number
+  // Unified import fields (optional for backward compat)
+  properties_created?: number
+  properties_existing?: number
+  rooms_created?: number
+  tenants_created?: number
+  tenants_need_room?: number
 }
 
 // ─── Constants ─────────────────────────────────────────────
@@ -323,7 +335,7 @@ export function normalizeRows(
 ): Record<string, string>[] {
   const normalizeType = entityType === 'contractors' ? 'contractors'
     : entityType === 'tenants' ? 'tenants'
-    : 'properties'
+    : 'properties' // unified uses properties normalization (covers tenant fields too)
 
   return rows.map((row) => {
     const normalized = normalizeRecord(normalizeType, { ...row }) as Record<string, string>
@@ -385,6 +397,37 @@ export function validateRows(
     if (entityType === 'contractors') {
       if (data.contractor_email && !EMAIL_RE.test(data.contractor_email)) {
         warnings.contractor_email = 'Email may not be valid'
+      }
+    }
+
+    if (entityType === 'unified') {
+      // Address is required
+      if (!data.address || data.address.trim() === '') {
+        errors.address = 'Address is required'
+      } else if (!/[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}/i.test(data.address)) {
+        errors.address = 'Address must include a UK postcode'
+      }
+      // Room number without address makes no sense
+      if (data.room_number && (!data.address || data.address.trim() === '')) {
+        errors.room_number = 'Room requires an address'
+      }
+      // property_type must be hmo or single_let if provided
+      if (data.property_type) {
+        const pt = data.property_type.trim().toLowerCase().replace(/[\s-]/g, '_')
+        if (pt !== 'hmo' && pt !== 'single_let' && pt !== 'singlelet') {
+          warnings.property_type = 'Property type should be HMO or Single Let'
+        }
+      }
+      // rent_due_day must be 1-28
+      if (data.rent_due_day) {
+        const day = parseInt(data.rent_due_day, 10)
+        if (isNaN(day) || day < 1 || day > 28) {
+          errors.rent_due_day = 'Rent due day must be 1–28'
+        }
+      }
+      // Email validation
+      if (data.email && !EMAIL_RE.test(data.email)) {
+        warnings.email = 'Email may not be valid'
       }
     }
 

@@ -37,7 +37,9 @@ export function BulkImportDialog({ entityType, open, onOpenChange, onComplete }:
         }}
       >
         <DialogHeader>
-          <DialogTitle>Import {config.label}</DialogTitle>
+          <DialogTitle>
+            {entityType === 'unified' ? 'Import Properties, Rooms & Tenants' : `Import ${config.label}`}
+          </DialogTitle>
         </DialogHeader>
         <BulkImportFlow
           entityType={entityType}

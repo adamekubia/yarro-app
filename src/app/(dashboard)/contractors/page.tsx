@@ -694,8 +694,10 @@ export default function ContractorsPage() {
           <BulkImportDialog
             entityType="contractors"
             open={importOpen}
-            onOpenChange={setImportOpen}
-            onComplete={() => fetchContractors()}
+            onOpenChange={(open) => {
+              setImportOpen(open)
+              if (!open) fetchContractors()
+            }}
           />
           <Button
             variant="outline"
