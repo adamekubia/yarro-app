@@ -19,6 +19,7 @@ import {
   type ValidatedRow,
   type ImportSummary,
 } from '@/lib/bulk-import/pipeline'
+import { enrichAddressesWithCities } from '@/lib/postcode'
 import { PasteInput } from './paste-input'
 import { PreviewTable } from './preview-table'
 import { ImportResults } from './import-results'
@@ -47,6 +48,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([])
   const [normalizedData, setNormalizedData] = useState<Record<string, string>[]>([])
   const [summary, setSummary] = useState<ImportSummary | null>(null)
+  const [enrichingCities, setEnrichingCities] = useState(false)
 
   // Derived
   const headers = hasHeaders ? rawRows[0]?.map((h) => h.trim()) || [] : rawRows[0]?.map((_, i) => `Column ${i + 1}`) || []
@@ -61,9 +63,39 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       const validated = validateRows(normalized, entityType)
       setNormalizedData(normalized)
       setValidatedRows(validated)
+      return normalized
     },
     [entityType]
   )
+
+  // ── Background city enrichment ──
+  const enrichCities = useCallback(async (data: Record<string, string>[]) => {
+    if (entityType !== 'unified') return
+
+    const addressesNeedingCity = data
+      .filter((r) => r.address && !r.city)
+      .map((r) => r.address)
+
+    if (addressesNeedingCity.length === 0) return
+
+    setEnrichingCities(true)
+    try {
+      const cityMap = await enrichAddressesWithCities([...new Set(addressesNeedingCity)])
+      const updated = data.map((r) => {
+        if (r.address && !r.city) {
+          const city = cityMap.get(r.address)
+          if (city) return { ...r, city }
+        }
+        return r
+      })
+      setNormalizedData(updated)
+      setValidatedRows(validateRows(updated, entityType))
+    } catch {
+      // City enrichment is best-effort — don't block on failure
+    } finally {
+      setEnrichingCities(false)
+    }
+  }, [entityType])
 
   // ─── Handlers ──────────────────────────────────────────
 
@@ -88,8 +120,11 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       setNormalizedData(normalized)
       setValidatedRows(validated)
       setStep('preview')
+
+      // Background: enrich cities from postcodes
+      enrichCities(normalized)
     },
-    [entityType]
+    [entityType, enrichCities]
   )
 
   const handleHeaderToggle = useCallback(
@@ -190,7 +225,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
       toast.error('Import failed — please try again')
       setStep('preview')
     }
-  }, [propertyManager, validatedRows, config, supabase, onComplete])
+  }, [propertyManager, validatedRows, config, supabase, onComplete, entityType])
 
   const reset = useCallback(() => {
     setStep('paste')
@@ -201,12 +236,13 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
     setValidatedRows([])
     setNormalizedData([])
     setSummary(null)
+    setEnrichingCities(false)
   }, [])
 
   // ─── Render ────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 px-2">
       {/* Step indicator */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         {(['paste', 'preview', 'results'] as const).map((s, i) => (
@@ -225,34 +261,10 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         />
       )}
 
-      {/* Step 2: Preview (combined mapping + preview) */}
+      {/* Step 2: Preview */}
       {step === 'preview' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="has-headers"
-              checked={hasHeaders}
-              onCheckedChange={(checked) => handleHeaderToggle(checked === true)}
-            />
-            <label htmlFor="has-headers" className="text-sm">
-              First row is headers
-              {headerConfidence < 70 && (
-                <span className="text-amber-600 ml-2 text-xs">(not sure — please verify)</span>
-              )}
-            </label>
-          </div>
-
-          <PreviewTable
-            rows={validatedRows}
-            entityType={entityType}
-            matches={matches}
-            merges={merges}
-            sourceHeaders={headers}
-            skippedHeaders={skippedHeaders}
-            onEdit={handleEdit}
-            onColumnChange={handleColumnChange}
-          />
-
+          {/* Action bar — top */}
           <div className="flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={() => { reset(); setStep('paste') }} className="gap-1.5">
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -268,6 +280,37 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
               Import {validCount} {entityType === 'unified' ? 'rows' : config.label.toLowerCase()}
             </Button>
           </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="has-headers"
+              checked={hasHeaders}
+              onCheckedChange={(checked) => handleHeaderToggle(checked === true)}
+            />
+            <label htmlFor="has-headers" className="text-sm font-medium text-foreground">
+              First row is headers
+              {headerConfidence < 70 && (
+                <span className="text-muted-foreground ml-2 text-xs font-normal">(not sure — please verify)</span>
+              )}
+            </label>
+            {enrichingCities && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Looking up cities...
+              </span>
+            )}
+          </div>
+
+          <PreviewTable
+            rows={validatedRows}
+            entityType={entityType}
+            matches={matches}
+            merges={merges}
+            sourceHeaders={headers}
+            skippedHeaders={skippedHeaders}
+            onEdit={handleEdit}
+            onColumnChange={handleColumnChange}
+          />
         </div>
       )}
 
@@ -276,7 +319,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
         <div className="flex flex-col items-center gap-4 py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">
-            Importing {validCount} {config.label.toLowerCase()}...
+            Importing {validCount} {entityType === 'unified' ? 'rows' : config.label.toLowerCase()}...
           </p>
         </div>
       )}

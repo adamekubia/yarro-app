@@ -80,67 +80,69 @@ export function PreviewTable({
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Info banners */}
       {merges.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {merges.map((merge, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/30 rounded-lg px-3 py-2">
-              <Info className="h-3.5 w-3.5 flex-shrink-0" />
-              {merge.rule.label}
+            <div key={i} className="flex items-center gap-2.5 text-sm bg-muted/50 border border-border rounded-xl px-4 py-3">
+              <Info className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-foreground">{merge.rule.label}</span>
             </div>
           ))}
         </div>
       )}
 
       {skippedHeaders.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30 rounded-lg px-3 py-2">
-          <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-          {skippedHeaders.length} CSV column{skippedHeaders.length !== 1 ? 's' : ''} not mapped: {skippedHeaders.join(', ')}
+        <div className="flex items-center gap-2.5 text-sm bg-muted/50 border border-border rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-foreground">
+            {skippedHeaders.length} CSV column{skippedHeaders.length !== 1 ? 's' : ''} not mapped: {skippedHeaders.join(', ')}
+          </span>
         </div>
       )}
 
       {missingRequired.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-          <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
-          Missing required: {missingRequired.map((c) => c.label).join(', ')}
+        <div className="flex items-center gap-2.5 text-sm bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3">
+          <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <span className="text-foreground">Missing required: {missingRequired.map((c) => c.label).join(', ')}</span>
         </div>
       )}
 
       {/* Summary bar */}
-      <div className="flex items-center gap-4 text-xs">
-        <span className="flex items-center gap-1 text-emerald-600">
-          <CheckCircle2 className="h-3 w-3" /> {validCount} valid
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" /> {validCount} valid
         </span>
         {warningCount > 0 && (
-          <span className="flex items-center gap-1 text-amber-600">
-            <AlertTriangle className="h-3 w-3" /> {warningCount} warnings
+          <span className="flex items-center gap-1.5 text-amber-600">
+            <AlertTriangle className="h-3.5 w-3.5" /> {warningCount} warnings
           </span>
         )}
         {errorCount > 0 && (
-          <span className="flex items-center gap-1 text-destructive">
-            <XCircle className="h-3 w-3" /> {errorCount} errors
+          <span className="flex items-center gap-1.5 text-destructive">
+            <XCircle className="h-3.5 w-3.5" /> {errorCount} errors
           </span>
         )}
         {rows.length > PREVIEW_ROWS && (
-          <span className="text-muted-foreground ml-auto">
+          <span className="ml-auto">
             Showing {PREVIEW_ROWS} of {rows.length}
           </span>
         )}
       </div>
 
-      {/* Table — simple spreadsheet: headers + data */}
-      <div className="border rounded-lg overflow-x-auto">
+      {/* Table */}
+      <div className="border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-10">#</th>
+              <th className="px-4 py-2.5 text-left font-medium text-muted-foreground w-10">#</th>
               {sortedColumns.map((col) => {
                 const isMapped = mappedTargets.has(col.key)
                 const sourceIdx = getSourceForTarget(col.key)
 
                 return (
-                  <th key={col.key} className={cn('px-1 py-1 text-left min-w-[120px]', !isMapped && 'opacity-50')}>
+                  <th key={col.key} className={cn('px-1 py-1.5 text-left min-w-[130px]', !isMapped && 'opacity-50')}>
                     <Select
                       value={sourceIdx !== null ? String(sourceIdx) : '__none__'}
                       onValueChange={(val) => {
@@ -148,7 +150,7 @@ export function PreviewTable({
                       }}
                     >
                       <SelectTrigger className={cn(
-                        'h-auto border-0 bg-transparent shadow-none px-2 py-1 text-xs font-medium hover:bg-muted/80',
+                        'h-auto border-0 bg-transparent shadow-none px-3 py-1.5 text-xs font-medium hover:bg-muted/80 rounded-lg',
                         !isMapped && 'text-muted-foreground'
                       )}>
                         <span className="truncate">
@@ -182,7 +184,7 @@ export function PreviewTable({
                   </th>
                 )
               })}
-              <th className="px-3 py-2 w-8" />
+              <th className="px-4 py-2.5 w-8" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -192,7 +194,7 @@ export function PreviewTable({
 
               return (
                 <tr key={rowIdx} className={cn(hasErrors && 'bg-destructive/5')}>
-                  <td className="px-3 py-1.5 text-muted-foreground">{rowIdx + 1}</td>
+                  <td className="px-4 py-2 text-muted-foreground">{rowIdx + 1}</td>
                   {sortedColumns.map((col) => {
                     const value = row.data[col.key] || ''
                     const error = row.errors[col.key]
@@ -204,7 +206,7 @@ export function PreviewTable({
                       <td
                         key={col.key}
                         className={cn(
-                          'px-3 py-1.5',
+                          'px-4 py-2',
                           error && 'ring-1 ring-inset ring-destructive/50',
                           !error && warning && 'ring-1 ring-inset ring-amber-500/50',
                           !isMapped && 'opacity-40'
@@ -231,7 +233,7 @@ export function PreviewTable({
                       </td>
                     )
                   })}
-                  <td className="px-3 py-1.5">
+                  <td className="px-4 py-2">
                     {hasErrors ? (
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
                     ) : hasWarnings ? (
