@@ -107,22 +107,17 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   )
 
   const handleColumnChange = useCallback(
-    (currentTarget: string, newTarget: string | null) => {
-      const updated = matches.map((m) => {
+    (targetColumn: string, sourceIndex: number | null) => {
+      const updated = matches.map((m, idx) => {
         if (m.confidence === 'merge') return m // Don't touch merges
 
-        // Find the source that was mapped to currentTarget and reassign it
-        if (m.targetColumn === currentTarget) {
-          return {
-            ...m,
-            targetColumn: newTarget,
-            confidence: newTarget ? ('exact' as const) : ('unmatched' as const),
-            needsReview: false,
-          }
-        }
-        // If newTarget is already claimed by another source, unclaim it
-        if (newTarget && m.targetColumn === newTarget) {
+        // Unmap any source currently pointing to this target
+        if (m.targetColumn === targetColumn && idx !== sourceIndex) {
           return { ...m, targetColumn: null, confidence: 'unmatched' as const, needsReview: false }
+        }
+        // Assign the new source to this target
+        if (sourceIndex !== null && idx === sourceIndex) {
+          return { ...m, targetColumn: targetColumn, confidence: 'exact' as const, needsReview: false }
         }
         return m
       })
@@ -252,6 +247,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
             entityType={entityType}
             matches={matches}
             merges={merges}
+            sourceHeaders={headers}
             skippedHeaders={skippedHeaders}
             onEdit={handleEdit}
             onColumnChange={handleColumnChange}

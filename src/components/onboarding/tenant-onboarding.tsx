@@ -351,7 +351,7 @@ export function TenantOnboarding() {
               Bulk upload from CSV
             </button>
             <BulkImportDialog
-              entityType="tenants"
+              entityType="unified"
               open={importOpen}
               onOpenChange={(open) => {
                 setImportOpen(open)

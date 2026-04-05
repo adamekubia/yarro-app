@@ -566,7 +566,7 @@ export default function TenantsPage() {
             </Button>
           )}
           <BulkImportDialog
-            entityType="tenants"
+            entityType="unified"
             open={importOpen}
             onOpenChange={(open) => {
               setImportOpen(open)

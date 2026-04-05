@@ -116,7 +116,6 @@ export default function PropertiesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [importOpen, setImportOpen] = useState(false)
-  const [unifiedImportOpen, setUnifiedImportOpen] = useState(false)
   const filteredProperties = useMemo(() => {
     if (!search) return properties
     const lower = search.toLowerCase()
@@ -650,37 +649,22 @@ export default function PropertiesPage() {
             className="w-64"
           />
           <BulkImportDialog
-            entityType="properties"
+            entityType="unified"
             open={importOpen}
             onOpenChange={(open) => {
               setImportOpen(open)
               if (!open) fetchProperties()
             }}
           />
-          <BulkImportDialog
-            entityType="unified"
-            open={unifiedImportOpen}
-            onOpenChange={(open) => {
-              setUnifiedImportOpen(open)
-              if (!open) fetchProperties()
-            }}
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Upload className="h-3.5 w-3.5" />
-                Import
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setImportOpen(true)}>
-                Properties only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setUnifiedImportOpen(true)}>
-                With rooms &amp; tenants
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            className="gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import
+          </Button>
           <Button
             variant="outline"
             size="sm"
