@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
-import { REASON_BADGE } from '@/components/dashboard/todo-panel'
+import { REASON_BADGE, getCtaText, getTodoHref } from '@/components/dashboard/todo-panel'
 import type { TodoItem } from '@/components/dashboard/todo-panel'
 import {
   ShieldCheck,
@@ -33,35 +33,8 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
     : src === 'handoff' ? MessageSquare
     : null
 
-  const ctaText = (() => {
-    if (src === 'compliance') {
-      if (item.next_action_reason === 'compliance_expired') return 'Renew'
-      if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
-      if (item.next_action_reason === 'compliance_missing') return 'Add'
-      return 'View'
-    }
-    if (src === 'rent') return item.next_action_reason === 'rent_partial' ? 'Follow up' : 'Chase'
-    if (src === 'tenancy') return item.next_action_reason === 'tenancy_expired' ? 'Update' : 'Review'
-    if (src === 'handoff') return 'Create ticket'
-    return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
-  })()
-
-  const isTicket = item.id.startsWith('todo_')
-
-  const getHref = (): string | null => {
-    // Ticket-sourced compliance/rent items → open ticket detail, not extras page
-    if (isTicket && (src === 'compliance' || src === 'rent')) return null
-    if (src === 'compliance') {
-      return item.next_action_reason === 'compliance_missing'
-        ? `/properties/${item.property_id}`
-        : `/compliance/${item.entity_id}`
-    }
-    if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
-    if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
-    if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
-    return null
-  }
-  const href = getHref()
+  const ctaText = getCtaText(item)
+  const href = getTodoHref(item)
 
   const handleClick = () => {
     if (src === 'handoff') {

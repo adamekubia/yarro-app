@@ -13,10 +13,6 @@ import {
   User,
 
   Search,
-  ShieldCheck,
-
-  Banknote,
-  Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -43,7 +39,7 @@ import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { filterActionable, filterInProgress, REASON_BADGE } from '@/components/dashboard/todo-panel'
 import { TodoRow } from '@/components/dashboard/todo-row'
 
-import { TodoCategoryCard } from '@/components/dashboard/todo-category-card'
+import { JobsList } from '@/components/dashboard/jobs-list'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
@@ -545,13 +541,8 @@ export default function DashboardPage() {
                       />
                     )
                   })()}
-                  <TodoCategoryCard
-                    icon={Wrench}
-                    title="Maintenance"
-                    accentColor="bg-primary"
-                    items={maintenanceTodos}
-                    expanded={expandedCategory === 'maintenance'}
-                    onToggle={() => setExpandedCategory(expandedCategory === 'maintenance' ? null : 'maintenance')}
+                  <JobsList
+                    items={onboardingDone ? actionable : maintenanceTodos}
                     onHandoffClick={(item) => {
                       const convo = handoffConversations.find(c => c.id === item.entity_id)
                       if (convo) { setSelectedHandoff(convo); setCreateTicketOpen(true) }
@@ -561,31 +552,6 @@ export default function DashboardPage() {
                       openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
                     }}
                   />
-                  {/* Only show Compliance + Finance after onboarding is complete */}
-                  {onboardingDone && (
-                    <>
-                      <TodoCategoryCard
-                        icon={ShieldCheck}
-                        title="Compliance"
-                        accentColor="bg-warning"
-                        items={complianceTodos}
-                        expanded={expandedCategory === 'compliance'}
-                        onToggle={() => setExpandedCategory(expandedCategory === 'compliance' ? null : 'compliance')}
-                        onHandoffClick={() => {}}
-                        onTicketClick={() => {}}
-                      />
-                      <TodoCategoryCard
-                        icon={Banknote}
-                        title="Finance"
-                        accentColor="bg-danger"
-                        items={financeTodos}
-                        expanded={expandedCategory === 'finance'}
-                        onToggle={() => setExpandedCategory(expandedCategory === 'finance' ? null : 'finance')}
-                        onHandoffClick={() => {}}
-                        onTicketClick={() => {}}
-                      />
-                    </>
-                  )}
                 </>
               )}
             </div>
