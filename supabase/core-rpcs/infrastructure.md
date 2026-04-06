@@ -155,7 +155,7 @@ These run on pg_cron schedules. If broken, automated workflows stop silently.
 
 ### c1_get_dashboard_todo
 - **Purpose:** Fetches prioritized to-do list scored by system.
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Live in:** `20260405600000_dashboard_todo_perf.sql`
 - **Called by:** Dashboard `page.tsx`
 - **Breaks:** Dashboard to-do queue empty
 
