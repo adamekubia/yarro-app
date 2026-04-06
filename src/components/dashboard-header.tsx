@@ -16,6 +16,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import { usePM } from '@/contexts/pm-context'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -197,7 +198,7 @@ export function DashboardHeader() {
         })),
         ...(compliance.data || []).map((c) => ({
           id: c.id,
-          label: c.certificate_type || 'Unknown',
+          label: CERTIFICATE_LABELS[c.certificate_type as CertificateType] || c.certificate_type || 'Unknown',
           type: 'compliance' as const,
           href: `/compliance/${c.id}`,
         })),

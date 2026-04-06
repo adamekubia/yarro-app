@@ -19,6 +19,9 @@ const CERT_LABELS: Record<string, string> = {
   legionella: "Legionella Risk Assessment",
   smoke_alarms: "Smoke Alarms",
   co_alarms: "CO Alarms",
+  building_insurance: "Building Insurance",
+  landlord_insurance: "Landlord Insurance",
+  rent_guarantee_insurance: "Rent Guarantee Insurance",
 };
 
 interface ExpiringCert {
