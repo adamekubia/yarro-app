@@ -139,6 +139,10 @@ $$;
 
 
 -- ─── 3. get_rent_reminders_due (not protected) ────────────────────────
+-- Must DROP first: adding property_id changes RETURNS TABLE signature,
+-- which CREATE OR REPLACE cannot do.
+
+DROP FUNCTION IF EXISTS public.get_rent_reminders_due();
 
 CREATE OR REPLACE FUNCTION public.get_rent_reminders_due()
 RETURNS TABLE (
