@@ -74,11 +74,11 @@ All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action
 - **Breaks:** Compliance tickets stuck — no state progression
 
 ### compute_rent_arrears_next_action
-- **Purpose:** Rent arrears tracking — aggregates overdue entries per tenant, detects partial payments.
+- **Purpose:** Rent arrears tracking — aggregates overdue entries per tenant, detects partial payments. Also escalates priority based on ticket age (Medium→High at 7d, High→Urgent at 14d).
 - **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
-- **Live in:** `20260404300000_polymorphic_subroutines.sql`
-- **Reads:** `c1_rent_ledger` (aggregation by tenant_id)
-- **Breaks:** Rent arrears tickets never update state, never auto-close
+- **Live in:** `20260407400000_rent_day1_tickets.sql` (was `20260404300000_polymorphic_subroutines.sql`)
+- **Reads:** `c1_rent_ledger` (aggregation by tenant_id), `c1_tickets` (priority escalation)
+- **Breaks:** Rent arrears tickets never update state, never auto-close, never escalate priority
 
 ### compute_landlord_next_action
 - **Purpose:** Landlord-managed ticket outcomes (need_help, resolved, in_progress).
@@ -106,11 +106,11 @@ All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action
 ## Rent Arrears Functions
 
 ### create_rent_arrears_ticket
-- **Purpose:** Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if open.
-- **Signature:** `(p_property_manager_id uuid, p_property_id uuid, p_tenant_id uuid, p_issue_title text, p_issue_description text) RETURNS uuid`
-- **Live in:** `20260404300000_polymorphic_subroutines.sql`
-- **Called by:** `yarro-rent-reminder` edge function (escalation pass)
-- **Breaks:** Rent escalation creates no tickets — overdue tenants invisible on dashboard
+- **Purpose:** Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if open. Priority only escalates (never downgrades).
+- **Signature:** `(p_property_manager_id uuid, p_property_id uuid, p_tenant_id uuid, p_issue_title text, p_issue_description text, p_priority text DEFAULT 'Medium') RETURNS uuid`
+- **Live in:** `20260407400000_rent_day1_tickets.sql` (was `20260404300000_polymorphic_subroutines.sql`)
+- **Called by:** `yarro-rent-reminder` edge function (early ticket pass + escalation pass)
+- **Breaks:** Rent tickets not created — overdue tenants invisible on dashboard
 
 ### record_rent_payment
 - **Purpose:** Records payment with audit trail. Trigger recomputes ledger. Auto-closes ticket if all arrears cleared.

@@ -13,6 +13,7 @@ interface RentReminder {
   room_id: string;
   tenant_id: string;
   property_manager_id: string;
+  property_id: string;
   due_date: string;
   amount_due: number;
   amount_paid: number;
@@ -224,6 +225,17 @@ Deno.serve(async (_req: Request) => {
 
     const results: ReminderResult[] = [];
     for (const entry of entries as RentReminder[]) {
+      // Skip ticket-only entries (no WhatsApp needed)
+      if (entry.reminder_level === 0) {
+        results.push({
+          ledger_id: entry.ledger_id,
+          tenant_name: entry.tenant_name,
+          reminder_level: 0,
+          sent: false,
+          skipped: true,
+        });
+        continue;
+      }
       try {
         const result = await processReminder(supabase, entry);
         results.push(result);
@@ -248,6 +260,55 @@ Deno.serve(async (_req: Request) => {
     const sent = results.filter((r) => r.sent).length;
     const skipped = results.filter((r) => r.skipped).length;
     const failed = results.filter((r) => !r.sent && !r.skipped).length;
+
+    // ─── Early ticket pass: create tickets for overdue entries ───
+    let earlyTickets = 0;
+    try {
+      const overdueEntries = (entries as RentReminder[]).filter(
+        (e) => e.reminder_level === 0 || e.status === "overdue" || e.status === "partial",
+      );
+
+      for (const entry of overdueEntries) {
+        const daysOverdue = Math.max(
+          0,
+          Math.floor((Date.now() - new Date(entry.due_date).getTime()) / 86400000),
+        );
+        const priority =
+          daysOverdue >= 14 ? "Urgent" : daysOverdue >= 7 ? "High" : "Medium";
+
+        const title = `Rent arrears: ${entry.tenant_name || "Unknown tenant"}`;
+        const desc = `£${Number(entry.amount_due - (entry.amount_paid || 0)).toFixed(2)} overdue since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`;
+
+        const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
+          p_property_manager_id: entry.property_manager_id,
+          p_property_id: entry.property_id,
+          p_tenant_id: entry.tenant_id,
+          p_issue_title: title,
+          p_issue_description: desc,
+          p_priority: priority,
+        });
+
+        if (ticketError) {
+          console.error(
+            `[${FN}] create_rent_arrears_ticket failed for tenant ${entry.tenant_id}:`,
+            ticketError.message,
+          );
+          await alertTelegram(FN, "create_rent_arrears_ticket (early)", ticketError.message, {
+            tenant: entry.tenant_name,
+            property: entry.property_address,
+          });
+        } else {
+          earlyTickets++;
+          console.log(
+            `[${FN}] Created early rent ticket for ${entry.tenant_name} at ${entry.property_address} (${daysOverdue}d overdue, ${priority})`,
+          );
+        }
+      }
+    } catch (earlyErr) {
+      const msg = earlyErr instanceof Error ? earlyErr.message : String(earlyErr);
+      console.error(`[${FN}] Early ticket pass error:`, msg);
+      await alertTelegram(FN, "Early ticket pass", msg);
+    }
 
     // ─── Escalation pass: create tickets for tenants past all reminders ───
     let escalated = 0;
@@ -288,6 +349,7 @@ Deno.serve(async (_req: Request) => {
             p_tenant_id: esc.tenant_id,
             p_issue_title: title,
             p_issue_description: desc,
+            p_priority: "High",
           });
 
           if (ticketError) {
@@ -319,16 +381,16 @@ Deno.serve(async (_req: Request) => {
       await alertTelegram(FN, "Escalation pass", msg);
     }
 
-    const summary = { total: results.length, sent, skipped, failed, escalated, results };
+    const summary = { total: results.length, sent, skipped, failed, earlyTickets, escalated, results };
 
     console.log(
-      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated`,
+      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed, ${earlyTickets} early tickets, ${escalated} escalated`,
     );
 
-    if (sent > 0 || escalated > 0) {
+    if (sent > 0 || earlyTickets > 0 || escalated > 0) {
       await alertInfo(
         FN,
-        `Rent reminders: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated to tickets`,
+        `Rent reminders: ${sent} sent, ${skipped} skipped, ${failed} failed, ${earlyTickets} early tickets, ${escalated} escalated`,
       );
     }
 

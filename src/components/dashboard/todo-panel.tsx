@@ -114,6 +114,8 @@ export const REASON_BADGE: Record<string, { label: string; dot: string; text: st
   // Rent
   rent_overdue:         { label: 'Overdue',              dot: 'bg-danger',           text: 'text-danger' },
   rent_partial:         { label: 'Partial payment',      dot: 'bg-warning',          text: 'text-warning' },
+  rent_partial_payment: { label: 'Partial payment',      dot: 'bg-warning',          text: 'text-warning' },
+  rent_cleared:         { label: 'Cleared',              dot: 'bg-success',          text: 'text-success' },
   // Tenancy
   tenancy_ending:       { label: 'Ending soon',          dot: 'bg-warning',          text: 'text-warning' },
   tenancy_expired:      { label: 'Tenancy ended',        dot: 'bg-danger',           text: 'text-danger' },
@@ -172,9 +174,8 @@ export function getTodoHref(item: TodoItem): string | null {
       ? `/properties/${item.property_id}`
       : `/compliance/${item.entity_id}`
   }
-  if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
-  if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
-  if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
+  if (src === 'tenancy') return `/properties/${item.property_id}`
+  // Everything else (tickets, rent tickets, handoffs, pending_review) → open drawer
   return null
 }
 

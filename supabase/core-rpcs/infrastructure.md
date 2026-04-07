@@ -154,8 +154,8 @@ These run on pg_cron schedules. If broken, automated workflows stop silently.
 ## Dashboard
 
 ### c1_get_dashboard_todo
-- **Purpose:** Fetches prioritized to-do list scored by system.
-- **Live in:** `20260405600000_dashboard_todo_perf.sql`
+- **Purpose:** Fetches prioritized to-do list scored by system. Includes rent-specific labels (rent_overdue, rent_partial_payment).
+- **Live in:** `20260407400000_rent_day1_tickets.sql` (was `20260407100000_dashboard_todo_sla_due_at.sql`)
 - **Called by:** Dashboard `page.tsx`
 - **Breaks:** Dashboard to-do queue empty
 
