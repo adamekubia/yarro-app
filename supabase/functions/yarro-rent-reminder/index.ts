@@ -261,32 +261,78 @@ Deno.serve(async (_req: Request) => {
     const skipped = results.filter((r) => r.skipped).length;
     const failed = results.filter((r) => !r.sent && !r.skipped).length;
 
-    // ─── Early ticket pass: create tickets for overdue entries ───
+    // ─── Early ticket pass: create/update tickets for overdue entries ───
+    // Group by tenant to compute accurate totals (a tenant may have multiple
+    // overdue months). One RPC call per tenant with aggregated data.
     let earlyTickets = 0;
     try {
       const overdueEntries = (entries as RentReminder[]).filter(
         (e) => e.reminder_level === 0 || e.status === "overdue" || e.status === "partial",
       );
 
+      // Aggregate per tenant: total owed, earliest due date, partial info
+      const tenantAgg = new Map<
+        string,
+        {
+          tenant_name: string;
+          property_manager_id: string;
+          property_id: string;
+          property_address: string;
+          total_owed: number;
+          total_due: number;
+          total_paid: number;
+          earliest_due: string;
+          has_partial: boolean;
+          rooms: Set<string>;
+        }
+      >();
+
       for (const entry of overdueEntries) {
+        const existing = tenantAgg.get(entry.tenant_id);
+        const owed = entry.amount_due - (entry.amount_paid || 0);
+        if (existing) {
+          existing.total_owed += owed;
+          existing.total_due += entry.amount_due;
+          existing.total_paid += entry.amount_paid || 0;
+          if (entry.due_date < existing.earliest_due) existing.earliest_due = entry.due_date;
+          if (entry.status === "partial" || (entry.amount_paid && entry.amount_paid > 0))
+            existing.has_partial = true;
+          existing.rooms.add(entry.room_number);
+        } else {
+          tenantAgg.set(entry.tenant_id, {
+            tenant_name: entry.tenant_name,
+            property_manager_id: entry.property_manager_id,
+            property_id: entry.property_id,
+            property_address: entry.property_address,
+            total_owed: owed,
+            total_due: entry.amount_due,
+            total_paid: entry.amount_paid || 0,
+            earliest_due: entry.due_date,
+            has_partial: entry.status === "partial" || (entry.amount_paid != null && entry.amount_paid > 0),
+            rooms: new Set([entry.room_number]),
+          });
+        }
+      }
+
+      for (const [tenantId, agg] of tenantAgg) {
         const daysOverdue = Math.max(
           0,
-          Math.floor((Date.now() - new Date(entry.due_date).getTime()) / 86400000),
+          Math.floor((Date.now() - new Date(agg.earliest_due).getTime()) / 86400000),
         );
         const priority =
           daysOverdue >= 14 ? "Urgent" : daysOverdue >= 7 ? "High" : "Medium";
 
-        const owed = Number(entry.amount_due - (entry.amount_paid || 0)).toFixed(2);
-        const title = `${entry.tenant_name || "Unknown tenant"} owes £${owed}`;
-        const desc =
-          entry.amount_paid && entry.amount_paid > 0
-            ? `£${owed} outstanding (£${Number(entry.amount_paid).toFixed(2)} of £${Number(entry.amount_due).toFixed(2)} paid) since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`
-            : `£${owed} overdue since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`;
+        const owedStr = Number(agg.total_owed).toFixed(2);
+        const roomList = [...agg.rooms].sort().join(", ");
+        const title = `${agg.tenant_name || "Unknown tenant"} owes £${owedStr}`;
+        const desc = agg.has_partial
+          ? `£${owedStr} outstanding (£${Number(agg.total_paid).toFixed(2)} of £${Number(agg.total_due).toFixed(2)} paid) since ${formatFriendlyDate(agg.earliest_due)} at ${agg.property_address}, Room ${roomList}`
+          : `£${owedStr} overdue since ${formatFriendlyDate(agg.earliest_due)} at ${agg.property_address}, Room ${roomList}`;
 
         const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
-          p_property_manager_id: entry.property_manager_id,
-          p_property_id: entry.property_id,
-          p_tenant_id: entry.tenant_id,
+          p_property_manager_id: agg.property_manager_id,
+          p_property_id: agg.property_id,
+          p_tenant_id: tenantId,
           p_issue_title: title,
           p_issue_description: desc,
           p_priority: priority,
@@ -294,17 +340,17 @@ Deno.serve(async (_req: Request) => {
 
         if (ticketError) {
           console.error(
-            `[${FN}] create_rent_arrears_ticket failed for tenant ${entry.tenant_id}:`,
+            `[${FN}] create_rent_arrears_ticket failed for tenant ${tenantId}:`,
             ticketError.message,
           );
           await alertTelegram(FN, "create_rent_arrears_ticket (early)", ticketError.message, {
-            tenant: entry.tenant_name,
-            property: entry.property_address,
+            tenant: agg.tenant_name,
+            property: agg.property_address,
           });
         } else {
           earlyTickets++;
           console.log(
-            `[${FN}] Created early rent ticket for ${entry.tenant_name} at ${entry.property_address} (${daysOverdue}d overdue, ${priority})`,
+            `[${FN}] Rent ticket for ${agg.tenant_name}: £${owedStr} owed, ${daysOverdue}d overdue, ${priority}`,
           );
         }
       }

@@ -87,28 +87,36 @@ DECLARE
   v_months_overdue integer;
   v_total_arrears numeric;
   v_has_partial boolean;
+  v_earliest_due date;
   v_days_overdue integer;
   v_new_priority text;
   v_effective_priority text;
 BEGIN
-  -- ── Priority escalation based on ticket age ──
-  v_days_overdue := (CURRENT_DATE - p_ticket.date_logged::date);
+  -- ── Priority escalation based on earliest overdue due_date ──
+  SELECT MIN(due_date) INTO v_earliest_due
+  FROM c1_rent_ledger
+  WHERE tenant_id = p_ticket.tenant_id
+    AND status IN ('overdue', 'partial');
 
-  v_new_priority := CASE
-    WHEN v_days_overdue >= 14 THEN 'Urgent'
-    WHEN v_days_overdue >= 7  THEN 'High'
-    ELSE 'Medium'
-  END;
+  IF v_earliest_due IS NOT NULL THEN
+    v_days_overdue := (CURRENT_DATE - v_earliest_due);
 
-  -- Compute effective priority (only escalate, never downgrade)
-  v_effective_priority := CASE
-    WHEN v_new_priority = 'Urgent' THEN 'Urgent'
-    WHEN v_new_priority = 'High' AND p_ticket.priority NOT IN ('Urgent') THEN 'High'
-    ELSE p_ticket.priority
-  END;
+    v_new_priority := CASE
+      WHEN v_days_overdue >= 14 THEN 'Urgent'
+      WHEN v_days_overdue >= 7  THEN 'High'
+      ELSE 'Medium'
+    END;
 
-  IF v_effective_priority IS DISTINCT FROM p_ticket.priority THEN
-    UPDATE c1_tickets SET priority = v_effective_priority WHERE id = p_ticket_id;
+    -- Compute effective priority (only escalate, never downgrade)
+    v_effective_priority := CASE
+      WHEN v_new_priority = 'Urgent' THEN 'Urgent'
+      WHEN v_new_priority = 'High' AND p_ticket.priority NOT IN ('Urgent') THEN 'High'
+      ELSE p_ticket.priority
+    END;
+
+    IF v_effective_priority IS DISTINCT FROM p_ticket.priority THEN
+      UPDATE c1_tickets SET priority = v_effective_priority WHERE id = p_ticket_id;
+    END IF;
   END IF;
 
   -- ── Query all overdue/partial entries for this tenant ──
@@ -242,7 +250,9 @@ AS $$
 
   UNION ALL
 
-  -- Overdue entries needing ticket creation (day 1+, no open ticket yet)
+  -- Overdue entries for ticket creation/updates (day 1+)
+  -- No NOT EXISTS guard: entries with existing tickets still returned
+  -- so the edge function can update title/description/priority via dedup.
   SELECT
     rl.id AS ledger_id,
     rl.room_id,
@@ -265,12 +275,6 @@ AS $$
   WHERE rl.due_date < CURRENT_DATE
     AND rl.due_date >= CURRENT_DATE - interval '90 days'
     AND rl.status NOT IN ('paid', 'cancelled')
-    AND NOT EXISTS (
-      SELECT 1 FROM c1_tickets tk
-      WHERE tk.tenant_id = rl.tenant_id
-        AND tk.category = 'rent_arrears'
-        AND tk.status = 'open'
-    )
 
   ORDER BY due_date ASC, reminder_level ASC;
 $$;
