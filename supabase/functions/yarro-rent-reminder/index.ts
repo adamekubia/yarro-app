@@ -276,8 +276,12 @@ Deno.serve(async (_req: Request) => {
         const priority =
           daysOverdue >= 14 ? "Urgent" : daysOverdue >= 7 ? "High" : "Medium";
 
-        const title = `Rent arrears: ${entry.tenant_name || "Unknown tenant"}`;
-        const desc = `£${Number(entry.amount_due - (entry.amount_paid || 0)).toFixed(2)} overdue since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`;
+        const owed = Number(entry.amount_due - (entry.amount_paid || 0)).toFixed(2);
+        const title = `${entry.tenant_name || "Unknown tenant"} owes £${owed}`;
+        const desc =
+          entry.amount_paid && entry.amount_paid > 0
+            ? `£${owed} outstanding (£${Number(entry.amount_paid).toFixed(2)} of £${Number(entry.amount_due).toFixed(2)} paid) since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`
+            : `£${owed} overdue since ${formatFriendlyDate(entry.due_date)} at ${entry.property_address}, Room ${entry.room_number}`;
 
         const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
           p_property_manager_id: entry.property_manager_id,
@@ -340,8 +344,8 @@ Deno.serve(async (_req: Request) => {
           total_arrears: number;
           earliest_overdue: string;
         }>) {
-          const title = `Rent arrears: ${esc.tenant_name || "Unknown tenant"}`;
-          const desc = `${esc.months_overdue} month(s) overdue, £${Number(esc.total_arrears).toFixed(2)} total arrears since ${esc.earliest_overdue}`;
+          const title = `${esc.tenant_name || "Unknown tenant"} owes £${Number(esc.total_arrears).toFixed(2)}`;
+          const desc = `£${Number(esc.total_arrears).toFixed(2)} overdue since ${formatFriendlyDate(esc.earliest_overdue)} at ${esc.property_address}`;
 
           const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
             p_property_manager_id: esc.property_manager_id,

@@ -44,9 +44,10 @@ BEGIN
     AND status = 'open';
 
   IF FOUND THEN
-    -- Ticket already exists — update description + escalate priority (never downgrade)
+    -- Ticket already exists — update title, description + escalate priority (never downgrade)
     UPDATE c1_tickets
-    SET issue_description = p_issue_description,
+    SET issue_title = p_issue_title,
+        issue_description = p_issue_description,
         priority = CASE
           WHEN p_priority = 'Urgent' THEN 'Urgent'
           WHEN p_priority = 'High' AND priority NOT IN ('Urgent') THEN 'High'
@@ -663,11 +664,29 @@ BEGIN
     'priority_score', s.priority_score,
     'priority_bucket', s.priority_bucket,
     'waiting_since', s.waiting_since,
-    'sla_breached', COALESCE(s.sla_due_at < now(), false),
-    'sla_due_at', s.sla_due_at,
+    'sla_breached', CASE WHEN s.category IN ('rent_arrears', 'compliance_renewal') THEN false ELSE COALESCE(s.sla_due_at < now(), false) END,
+    'sla_due_at', CASE WHEN s.category IN ('rent_arrears', 'compliance_renewal') THEN NULL ELSE s.sla_due_at END,
     'created_at', s.date_logged
   )
   FROM scored s
   ORDER BY s.priority_score DESC, s.waiting_since ASC;
 END;
 $function$;
+
+
+-- ─── 6. One-time data fix: normalize existing rent ticket titles ──────
+-- Fixes tickets created before the title format change.
+-- New format: "{tenant_name} owes £{amount}"
+
+UPDATE c1_tickets t
+SET issue_title = COALESCE(ten.full_name, 'Unknown tenant') || ' owes £' ||
+    TRIM(to_char(
+      COALESCE((SELECT SUM(rl.amount_due - COALESCE(rl.amount_paid, 0))
+       FROM c1_rent_ledger rl
+       WHERE rl.tenant_id = t.tenant_id
+         AND rl.status IN ('overdue', 'partial')), 0),
+      'FM999999990.00'))
+FROM c1_tenants ten
+WHERE ten.id = t.tenant_id
+  AND t.category = 'rent_arrears'
+  AND t.status = 'open';
