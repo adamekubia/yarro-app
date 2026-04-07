@@ -10,7 +10,7 @@ What we monitor, where alerts go, and what a healthy system looks like.
 |------|-------------|-----------------|-----------|
 | **Sentry** | Frontend error tracking — catches every unhandled JS error, groups them, shows stack traces | Sentry dashboard + email | 5,000 errors/month |
 | **UptimeRobot** | Uptime monitoring — pings the site every 5 min, alerts if it's down | Email + Telegram (configurable) | 50 monitors |
-| **Telegram Bot** | Edge function error alerts — structured messages from Supabase functions | Faraaz's phone (Telegram) | Unlimited |
+| **Telegram Bot** | Edge function error alerts — structured messages from Supabase functions | Telegram (configurable) | Unlimited |
 | **Vercel Dashboard** | Deployment status, build logs, function logs | Vercel web UI | Included |
 | **Supabase Dashboard** | Database health, auth logs, edge function logs (7-day retention) | Supabase web UI | Included |
 
@@ -62,7 +62,7 @@ Slow queries or high error rate        → Supabase dashboard (manual check)
 ### UptimeRobot
 
 1. Go to https://uptimerobot.com → Create free account
-2. Add monitor: HTTP(s), URL = `https://yarro-pm.vercel.app`, check every 5 min
+2. Add monitor: HTTP(s), URL = `https://yarro-app-adam.vercel.app`, check every 5 min
 3. Add alert contact: your email + optionally Telegram
 4. Done. You'll get an email if the site goes down.
 
